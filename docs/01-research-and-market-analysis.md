@@ -1,7 +1,7 @@
 # 01 · Research & Market Analysis
 
 **Product:** *Who Sabi?* (working title), a Naija pop-culture trivia game played with friends
-**Version:** 1.0 · **Date:** 14 October 2026 · **Status:** Draft for founder review
+**Version:** 1.1 · **Date:** 15 October 2026 · **Status:** Draft for founder review · *1.1 updates §9 for the full web app*
 
 > Every figure below carries its source. Figures marked *(inferred)* are our own estimates and should be re-checked before they go into a pitch deck.
 
@@ -154,7 +154,7 @@ HQ reached over 700k concurrent players in late 2017 and shut down in February 2
 
 ## 9. Key decisions this research supports
 
-1. **Android first** (React Native/Expo also ships iOS from the same code). A **web "join link"** lets a friend play a party round in the browser without installing.
+1. **Android first**, with iOS and a **full web app** from the same React Native/Expo code. Any invite link can be played in the browser without installing, and a light web client keeps party links fast inside WhatsApp.
 2. **Async turn-based 1v1 and group play is the core.** Live party rooms are second, and the daily challenge drives the habit.
 3. **No cash and no wallet.** Monetise with rewarded ads, cosmetics, the "Sabi Pass" subscription and sponsored packs.
 4. **Distribution:** WhatsApp sharing, TikTok creators, and campus leagues.

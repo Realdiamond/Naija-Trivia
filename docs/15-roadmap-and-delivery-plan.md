@@ -1,6 +1,6 @@
 # 15 · Roadmap, Team & Delivery Plan
 
-**Version:** 1.0 · **Date:** 14 Oct 2026
+**Version:** 1.1 · **Date:** 15 Oct 2026 · *1.1 adds the web app and the admin console & analytics build, a data & admin engineer, and the updated budget*
 
 ---
 
@@ -16,10 +16,12 @@ gantt
   Design system & key screens                    :a2, 2026-11-09, 28d
   Infra, CI/CD, auth                             :a3, 2026-11-09, 28d
   section MVP "Jollof"
-  Content pipeline + CMS + 3,000 Qs              :b1, 2026-11-16, 84d
+  Content pipeline + admin CMS + 3,000 Qs        :b1, 2026-11-16, 84d
   Duel (async) end-to-end                        :b2, 2026-11-23, 56d
+  Admin console + analytics pipeline             :b10, 2026-11-23, 70d
+  Web app (Expo web, PWA, web push)              :b9, 2026-12-07, 56d
   Daily challenge + leaderboards                 :b3, 2026-12-14, 28d
-  Party rooms + web guest client                 :b4, 2026-12-21, 42d
+  Party rooms + web party client                 :b4, 2026-12-21, 42d
   Economy, ads, IAP                              :b5, 2027-01-04, 28d
   Share cards, deep links, push                  :b6, 2026-12-28, 28d
   Hardening, load test, pen test                 :b7, 2027-01-25, 14d
@@ -30,8 +32,10 @@ gantt
   section v1.1 "Suya"
   Group leagues, Sabi Pass, cosmetics, Pidgin UI :d1, 2027-03-15, 56d
   Question Factory                               :d2, 2027-04-05, 35d
+  Web purchases (Paystack) + web ads             :d3, 2027-03-15, 35d
+  Admin v1.1 (campaigns, experiments, paths)     :d4, 2027-03-29, 42d
   section v2 "Pepper Soup"
-  Sponsor portal & prize events                  :e1, 2027-05-10, 42d
+  Sponsor portal, brand reports, prize events    :e1, 2027-05-10, 42d
   Campus Clash                                   :e2, 2027-05-24, 42d
   Yoruba/Igbo/Hausa                              :e3, 2027-05-31, 70d
 ```
@@ -39,26 +43,26 @@ gantt
 | Milestone | Week | Definition of done |
 |---|---|---|
 | M0 Kickoff | 0 | Team in place, docs signed off |
-| M1 "First duel" | 8 | Two internal users complete a duel on real devices against staging |
-| M2 Feature complete | 12 | All P0 stories done, 2,000+ approved questions |
-| M3 Beta | 14 | Closed track live, 500+ testers |
-| M4 Soft launch | 17 | Public Play listing in Nigeria, iOS on TestFlight/App Store |
+| M1 "First duel" | 8 | Two internal users complete a duel against staging, one on an Android phone and one in the web app, and the duel shows on both players' admin timelines |
+| M2 Feature complete | 12 | All P0 stories done on Android, iOS and web; admin console MVP modules live (doc 18 §4); 2,000+ approved questions |
+| M3 Beta | 14 | Closed track and invite-only web build live, 500+ testers |
+| M4 Soft launch | 17 | Public Play listing in Nigeria, the web app public at whosabi.ng, iOS on TestFlight/App Store |
 | M5 Public launch | 21 at the earliest; timed to the next cultural moment (doc 12 §4) | Marketing push, sponsor pack live |
-| M6 v1.1 | 27 | Leagues and Sabi Pass live |
-| M7 v2 | ~40 | Sponsor portal, Campus Clash season 1, local languages |
+| M6 v1.1 | 27 | Leagues and Sabi Pass live; web purchases and ads; admin push campaigns and experiments UI |
+| M7 v2 | ~40 | Sponsor portal and brand reports, Campus Clash season 1, local languages |
 
 ## 2. MVP sprint plan (2-week sprints)
 
-| Sprint | Engineering | Design | Content |
-|---|---|---|---|
-| S0 (W0–1) | Monorepo, Terraform base, CI, Expo skeleton, auth (guest + OTP) | Brand, design tokens, FTUE and question screen | Hire writers, style guide, CMS spec |
-| S1 (W2–3) | Content service + CMS v0 (CRUD, CSV import), question serving, game-rules package | Home, duel flow, results | 500 Qs |
-| S2 (W4–5) | Duel state machine, serve/answer, timing clamp, push (your turn) | Party lobby and in-game | 1,000 Qs |
-| S3 (W6–7) | Duel complete (rounds, tiebreak, expiry, random matchmaking + bot), friends | Daily, share cards | 1,600 Qs |
-| S4 (W8–9) | Daily + leaderboards, Colyseus party room v1, deep links + link service | Shop, profile, settings | 2,200 Qs |
-| S5 (W10–11) | Web guest client, ledger + coins, lifelines, AdMob + SSV, RevenueCat | Polish, motion, accessibility | 2,800 Qs |
-| S6 (W12–13) | Data Saver, analytics events, Sentry, account deletion/DSAR, anti-cheat signals, load and pen test fixes | Store assets | 3,000+ Qs, calibration from internal play |
-| Beta (W14–16) | Bug fixes, economy tuning, performance on low-end devices | Iterate from feedback | Weekly refresh begins |
+| Sprint | App, API & realtime | Web & admin/data | Design | Content |
+|---|---|---|---|---|
+| S0 (W0–1) | Monorepo, Terraform base, CI, Expo skeleton with Android, iOS **and web** targets, auth (guest + OTP) | Platform-adapter pattern and lint rule; web build in CI; tracking-plan package | Brand, design tokens, FTUE and question screen | Hire writers, style guide, CMS spec |
+| S1 (W2–3) | Content service, question serving, game-rules package | Admin console shell (SSO, roles, audit log) + content module v0 (CRUD, CSV import); ingest service, ClickHouse and loader | Home, duel flow, results | 500 Qs |
+| S2 (W4–5) | Duel state machine, serve/answer, timing clamp, push (your turn) | Web sessions (refresh cookie), web OTP, web push; client SDK for sessions, screens and time | Party lobby and in-game; desktop layouts | 1,000 Qs |
+| S3 (W6–7) | Duel complete (rounds, tiebreak, expiry, random matchmaking + bot), friends | Player search and User 360 (timeline, sessions and time); invite links into the web app | Daily, share cards | 1,600 Qs |
+| S4 (W8–9) | Daily + leaderboards, Colyseus party room v1, deep links + link service | Overview and Live monitor; engagement & time, growth, retention and gameplay dashboards; PWA and offline practice | Shop, profile, settings; admin console screens | 2,200 Qs |
+| S5 (W10–11) | Web party client, ledger + coins, lifelines, AdMob + SSV, RevenueCat | Monetisation, economy, content and tech dashboards; LiveOps (config, flags, kill switches, Daily scheduler); segments; Metabase | Polish, motion, accessibility | 2,800 Qs |
+| S6 (W12–13) | Data Saver, Sentry, account deletion/DSAR, anti-cheat signals, load and pen test fixes | Moderation, integrity, support and compliance modules; alerts; KPI reconciliation; browser-matrix fixes | Store assets | 3,000+ Qs, calibration from internal play |
+| Beta (W14–16) | Bug fixes, economy tuning, performance on low-end devices | Web performance budget, tracking checks, admin polish from staff feedback | Iterate from feedback | Weekly refresh begins |
 
 ## 3. Team
 
@@ -67,13 +71,14 @@ gantt
 |---|---|---|
 | Product lead / founder | 1 | Vision, priorities, sponsor sales (early), legal coordination |
 | Tech lead (full-stack, backend-leaning) | 1 | Architecture, API, realtime, infra |
-| Mobile engineer (React Native) | 1 | App, performance on low-end devices, store releases |
-| Full-stack engineer | 1 | CMS, web guest client, link service, analytics |
+| Mobile engineer (React Native) | 1 | The universal app (Android, iOS and web screens), performance on low-end devices, store releases |
+| Full-stack engineer | 1 | Web platform adapters (sessions, push, PWA), web party client, link service, admin content module |
+| Data & admin engineer (full-stack) | 1 | Event pipeline (SDK, ingest, ClickHouse), admin console (User 360, live monitor, dashboards, segments), KPI definitions and reconciliation |
 | Product designer (UI/UX + illustration direction) | 1 | Design system, flows, share cards, store assets |
 | Content lead / editor | 1 | Question pipeline, writers, LiveOps calendar, community |
 | Freelance writers | 5–8 part-time | Questions |
 | Illustrator (contract) | 0.5 | Avatars, cosmetics, pack covers |
-| QA (contract, from S4) | 0.5–1 | Device lab, Maestro flows, field tests |
+| QA (contract, from S4) | 0.5–1 | Device lab, browser matrix, Maestro and Playwright flows, field tests |
 | DPO (outsourced) | – | NDPA compliance |
 
 ### Added for v1.1–v2
@@ -83,18 +88,20 @@ Partnerships / sponsorship sales lead, community manager, second backend enginee
 
 | Item | ₦ |
 |---|---|
-| Salaries (5 FTE × ~5 months; blended ~₦1.5M a month) | 37,500,000 |
+| Salaries (6 FTE × ~5 months; blended ~₦1.5M a month) | 45,000,000 |
 | Freelance writers (3,000 Qs × ₦450) + editor overhead | 2,000,000 |
 | Illustration and audio | 2,500,000 |
-| Infrastructure (dev + staging + prod ramp) | 3,000,000 |
+| Infrastructure (dev + staging + prod ramp, including the analytics store) | 3,800,000 |
 | Tools (Expo EAS, Sentry, Figma, Google Workspace, etc.) | 1,500,000 |
 | Legal (company, trademark, privacy, gaming/promo opinion), DPO, pen test | 6,000,000 |
-| Device lab (10 devices) + SIMs/data | 2,500,000 |
+| Device lab (10 devices) + SIMs/data + cloud browser testing | 3,000,000 |
 | Pre-launch and launch marketing (doc 12) | 19,000,000 |
-| Contingency (10%) | 7,400,000 |
-| **Total** | **≈ ₦81M (~US$61k)** |
+| Contingency (10%) | 8,300,000 |
+| **Total** | **≈ ₦91M (~US$68k)** |
 
-A leaner "founder + 2 engineers + freelance designer" version takes about 6–7 months and costs roughly ₦40–45M.
+The sixth salaried engineer (data & admin) is what keeps the launch dates with the web app and the full admin console in scope. Without that hire, add about 4–6 weeks to the MVP *(inferred)*.
+
+A leaner "founder + 2 engineers + freelance designer" version takes about 7–8 months and costs roughly ₦45–50M. It keeps the web app (same codebase) but builds fewer custom admin dashboards, using Metabase for analytics until v1.1.
 
 ## 5. Dependencies & critical path
 1. **Content volume** (3,000 approved Qs) is the critical path. Start writers in week 2, not after the app is built.
@@ -102,11 +109,14 @@ A leaner "founder + 2 engineers + freelance designer" version takes about 6–7 
 3. Google Play developer account (organisation, D-U-N-S number) and AdMob approval can take 2–4 weeks, so start in week 0.
 4. Termii sender ID registration and NCC approval: start in week 0.
 5. Music audio licensing (v1.1) has a long lead time; start conversations at launch.
+6. ClickHouse: decide between ClickHouse Cloud and self-hosting in S0 (region, DPA, cost).
+7. Paystack business account (CAC documents and compliance review) for v1.1 web purchases: apply at soft launch.
+8. Google's approval for web ads (H5 Games Ads) can take weeks: apply at soft launch.
 
 ## 6. Definition of Done (per story)
-- Acceptance criteria met and demoed on a low-end device.
+- Acceptance criteria met and demoed on a low-end Android device and in the web app (mobile browser and desktop).
 - Unit and integration tests written and passing in CI.
-- Analytics events implemented per the taxonomy.
+- Analytics events implemented per the tracking plan and visible, in order, on the test account's admin timeline.
 - Strings externalised (i18n), accessibility labels added.
 - Feature flag in place for risky features.
 - Docs/runbooks updated if needed.

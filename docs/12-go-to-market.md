@@ -1,21 +1,21 @@
 # 12 · Go-To-Market Plan
 
-**Version:** 1.0 · **Date:** 14 Oct 2026
+**Version:** 1.1 · **Date:** 15 Oct 2026
 **Positioning:** *Who Sabi? The trivia game that settles the argument.*
 **One-liner for the store:** "Prove say you sabi Naija pass your guys. Slang, Nollywood, music and food trivia you can play with friends."
 
 ---
 
 ## 1. Launch strategy in one paragraph
-Seed the game in **3–5 university campuses and 50 WhatsApp groups** during a closed beta. Make every match produce a **shareable artefact**: the duel link, the Daily emoji grid and the podium card. Use **TikTok creators** to turn "Who Sabi?" challenges into a format (street quizzes are already a popular Nigerian TikTok genre). Launch publicly on a **cultural moment** (AMVCA week, Detty December, or the Friday of a big Nollywood release; see §4), and sign a **first sponsor** for a Flash Pack before launch so revenue starts on day one.
+Seed the game in **3–5 university campuses and 50 WhatsApp groups** during a closed beta. Make every match produce a **shareable artefact**: the duel link, the Daily emoji grid and the podium card. Use **TikTok creators** to turn "Who Sabi?" challenges into a format (street quizzes are already a popular Nigerian TikTok genre). Launch publicly on a **cultural moment** (AMVCA week, Detty December, or the Friday of a big Nollywood release; see §4), and sign a **first sponsor** for a Flash Pack before launch so revenue starts on day one. Every link opens straight into play: in the app if it's installed, otherwise in the **web app**, so nobody has to install anything to answer a challenge.
 
 ## 2. Phased plan
 
 | Phase | Dates (relative) | Goal | Key actions | Exit criteria |
 |---|---|---|---|---|
 | **0. Pre-launch** | W-8 → W-3 | Build a waitlist and content | Landing page with the waitlist + a weekly "Sabi or Not?" quiz post on X and TikTok; recruit 30 campus ambassadors; sign 1 pilot sponsor | 10k waitlist, 3,000 approved Qs |
-| **1. Closed beta** | W-3 → W0 | Validate retention and the viral loop | 500–1,000 testers from 3 campuses (UNILAG, UI, UNN) + 50 WhatsApp groups; Play closed testing track; weekly feedback calls | D7 ≥ 15%, K ≥ 0.25, crash-free ≥ 99% |
-| **2. Soft launch** | W0 → W4 | Tune economy and ads | Open Play listing in Nigeria only; no paid UA; daily content cadence; first party nights with ambassadors | D7 ≥ 18%, ARPDAU ≥ ₦4 |
+| **1. Closed beta** | W-3 → W0 | Validate retention and the viral loop | 500–1,000 testers from 3 campuses (UNILAG, UI, UNN) + 50 WhatsApp groups; Play closed testing track and an invite-only web build; weekly feedback calls | D7 ≥ 15%, K ≥ 0.25, crash-free ≥ 99% |
+| **2. Soft launch** | W0 → W4 | Tune economy and ads | Open Play listing in Nigeria and the public web app at whosabi.ng; no paid UA; daily content cadence; first party nights with ambassadors | D7 ≥ 18%, ARPDAU ≥ ₦4 |
 | **3. Public launch** | W4+ (next cultural moment, §4) | Reach | Creator wave (10–20 creators), PR (TechCabal, Pulse, Zikoko, BellaNaija), "Who Sabi Live" party night with a celebrity host | 100k installs in the first 30 days |
 | **4. Scale** | M2 → M6 | Leagues, sponsorships | Group Leagues launch, Campus Clash season 1, 2+ sponsors a month, start the Ghana and diaspora packs | 250k MAU |
 
@@ -66,6 +66,12 @@ TikTok is now Nigeria's largest social platform, and 66% of urban 18–34s use i
 - Target CPI under ₦250 (*inferred*). Kill a channel if D7 for its users is below 12%.
 - A lookalike audience built from good players ("completed 5+ duels").
 
+### 3.8 The web app (no install needed)
+- **Links open straight into play.** Duel invites, the Daily grid and party links all work in the browser, so the friend who won't install can still answer, then gets asked to save progress and install later.
+- **Desktop players.** Office workers can play a quick duel on a work laptop at lunch (the Chidi persona).
+- **Search:** public, pre-rendered pages for packs ("Nollywood quiz", "Naija slang quiz", "Afrobeats quiz") and the Daily teaser.
+- **Measure it** in the admin console: web first visits, web → account, web → app installs, and D7 retention by platform. If web players retain far below app players, push install prompts harder after a player's first win.
+
 ## 4. Launch calendar options
 | Option | Why | Risk |
 |---|---|---|
@@ -90,6 +96,8 @@ TikTok is now Nigeria's largest social platform, and 66% of urban 18–34s use i
 | Daily share rate (of Daily finishers) | ≥ 15% |
 | Store rating | ≥ 4.4★ |
 | Sponsor deals signed | ≥ 1 |
+| Share of new players whose first match is in a browser | ≥ 25% |
+| Web → account conversion (web players who finish a match) | ≥ 30% *(inferred)* |
 
 ## 7. Budget (first 3 months, *inferred*)
 | Item | ₦ |

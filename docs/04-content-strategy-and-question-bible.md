@@ -1,6 +1,6 @@
 # 04 · Content Strategy & Question Bible
 
-**Version:** 1.0 · **Date:** 14 Oct 2026
+**Version:** 1.1 · **Date:** 15 Oct 2026
 **Why this doc matters:** in a trivia game the content *is* the product. HQ Trivia ran out of novelty and Trivia Crack grew by localising content. Our edge over global apps is content only Nigerians would get right.
 
 ---
@@ -75,6 +75,8 @@
 | Approve & schedule | Editor | – | Assign to packs; set `valid_until` |
 | Calibrate | Automatic | Nightly | Elo item difficulty (GDD §6.3) |
 | Review queue | Editor | 24 h for auto-suspended Qs | Report dashboard |
+
+The CMS is the Content module of the admin console ([doc 18](18-admin-console-and-analytics.md)). Each question shows its live performance next to the editor: plays, correct %, average answer time, option split and reports, by platform.
 
 ### Writer economics *(inferred, adjust to market)*
 - Pay ₦300–₦600 per **approved** question (higher for image questions and verified hard questions).

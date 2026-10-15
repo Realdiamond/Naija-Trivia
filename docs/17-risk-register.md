@@ -1,6 +1,6 @@
 # 17 · Risk Register
 
-**Version:** 1.0 · **Date:** 14 Oct 2026 · Scale: Likelihood (L) and Impact (I) from 1 (low) to 5 (high); Score = L × I
+**Version:** 1.1 · **Date:** 15 Oct 2026 · Scale: Likelihood (L) and Impact (I) from 1 (low) to 5 (high); Score = L × I
 
 | # | Risk | L | I | Score | Mitigation | Owner | Trigger to watch |
 |---|---|---|---|---|---|---|---|
@@ -22,6 +22,10 @@
 | R16 | **FX & cost inflation** (USD-billed infra, tools) | 3 | 3 | 9 | Lean infra, reserved instances once stable, Naira revenue lines, budget in USD with buffer | Founder | ₦/US$ moves > 10% |
 | R17 | **Key-person dependency** (one content lead) | 3 | 3 | 9 | Documented style guide + CMS workflow, 2nd editor by v1.1 | Founder | – |
 | R18 | **Minors' data mishandled** | 2 | 5 | 10 | Age gate, restricted mode, guardian OTP consent, no ads personalisation for 13–17, DPIA | DPO | Complaints; audit |
+| R19 | **Web players don't stick** (no push on iPhone, a browser tab is easy to forget) | 3 | 3 | 9 | Web push on Android, install prompts after wins, WhatsApp nudges, retention by platform in the admin console | Growth | Web D7 below 60% of app D7 |
+| R20 | **Admin and analytics scope creep delays launch** | 3 | 4 | 12 | Fixed MVP module list (doc 18 §4), Metabase for the long tail, a dedicated data & admin engineer | Tech lead | Admin work slipping past S6 |
+| R21 | **Staff misuse of player data** through the admin console | 2 | 5 | 10 | Least-privilege roles, PII masked by default, reveal with a reason, every view audited, quarterly access review, pseudonymous analytics | DPO | Unusual reveal or export volume |
+| R22 | **Web cheating** (searching in another tab, scripted desktop play) | 3 | 3 | 9 | Tab-hidden signal, timing clamp, accuracy z-scores by platform, phone verification for ranked and prize play | Tech lead | Web accuracy or speed well above app on hard questions |
 
 ## Top 5 to review every sprint
 R1 content freshness · R5 retention · R2 sensitive-content misstep · R6 virality · R7 revenue
@@ -31,8 +35,10 @@ R1 content freshness · R5 retention · R2 sensitive-content misstep · R6 viral
 |---|---|---|
 | A1 | Friends will play async duels several times a week | Beta: duels/user/week ≥ 5 |
 | A2 | WhatsApp link previews drive installs | Invite open → install ≥ 20% |
-| A3 | Web guests convert to installs after a party | Web guest → install ≥ 10% |
+| A3 | Web guests convert to an account or an install after a party | Web guest → account or install ≥ 10% |
 | A4 | Users accept rewarded ads for lifelines | Rewarded views/DAU ≥ 1.2 |
 | A5 | Brands will pay ₦1.5–3.5M for packs | 3 sponsor conversations → 1 signed pilot pre-launch |
 | A6 | 15 s timer is right for Nigerian networks and reading speed | Timeout rate per question < 12% |
 | A7 | Pidgin copy increases sharing | Experiment: Pidgin vs English share text |
+| A8 | Invitees who can play straight away in the browser accept more duels | Experiment 11 (doc 13): acceptance with web play ≥ 1.3× the landing-page variant |
+| A9 | Players on computers have no systematic edge | Accuracy and speed on the same questions within 5% across platforms |

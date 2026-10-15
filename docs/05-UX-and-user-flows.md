@@ -1,6 +1,6 @@
 # 05 · UX, User Flows & Screen Specs
 
-**Version:** 1.0 · **Date:** 14 Oct 2026
+**Version:** 1.1 · **Date:** 15 Oct 2026 · *1.1 adds the web app (§1, §2.6, §3.5) and the admin console (§8)*
 **Design principles:** thumb-first (one hand on a crowded bus) · big tap targets (≥ 48 dp) · 2 taps to play · readable in bright sun · data-light by default
 
 ---
@@ -23,7 +23,11 @@ App
     └── Settings → Data Saver · Language · Notifications · Family mode · Privacy · Delete account
 ```
 
-Web client (party guests): `whosabi.ng/r/{CODE}` → Nickname → Lobby → Game → Results → "Get the app" CTA.
+**Web app** (`whosabi.ng`): the same tree as the app. On phones it looks and works like the app; from 1024 px wide, the tab bar becomes a side navigation (§3.5).
+
+**Web party client** (`whosabi.ng/r/{CODE}`): Nickname (or your own account, if you're signed in on the web) → Lobby → Game → Results → "Keep playing in your browser" or "Get the app".
+
+**Admin console** (`admin.whosabi.ng`, staff only): see §8 and doc 18 §4.
 
 ---
 
@@ -85,6 +89,23 @@ Home banner "Daily #142 dey wait 🔥 Streak 12" → 7 questions (no lifelines) 
 ### 2.5 Report a question
 Long-press the question (or ⋯ on the review screen) → reason chips → optional note → "Thank you! We go check am." (+5 coins once a day for reports that are confirmed later).
 
+### 2.6 Play from a link in the browser (no app)
+```mermaid
+flowchart TD
+  A[Tap a duel link in WhatsApp] --> B{App installed?}
+  B -- Yes --> C[The app opens the challenge]
+  B -- No --> D["Web app: challenger card<br/>'Tolu don challenge you 🔥'"]
+  D --> E[Play the turn as a guest in the browser]
+  E --> F{"Save your progress?"}
+  F -- Phone OTP / Google --> G[Account: duels, coins and streak follow you to the app]
+  F -- Later --> H[Guest in this browser]
+  G --> I["Turn on notifications? (web push)<br/>'Get the app' banner"]
+  H --> I
+```
+- The age gate and username step are the same as in the app (§2.1).
+- On the first visit, a cookie and consent banner appears before any storage beyond what is strictly necessary.
+- `/daily/{n}` links open today's Daily the same way.
+
 ---
 
 ## 3. Screen specs (wireframe descriptions)
@@ -128,6 +149,14 @@ Long-press the question (or ⋯ on the review screen) → reason chips → optio
 
 ---
 
+### 3.5 Web layouts
+- **Phone browsers:** the same screens as the app.
+- **Tablets (600–1023 px):** content column up to 600 px wide; tab bar at the bottom.
+- **Desktop (≥ 1024 px):** side navigation on the left. Game screens stay in a centred 480 px column with the score panel beside them; leaderboards, profile and shop use two columns.
+- **Keyboard:** 1–4 or A–D to answer, Enter for next, Esc for the leave-match dialog. Desktop shows small key hints on the option buttons.
+- Hover states on desktop, but no action is hover-only.
+- **Install prompts:** "Install app" (PWA) after the second session; on mobile browsers a "Get the app" banner, at most once a week and never during a match.
+
 ## 4. Copy & microcopy guide
 | Situation | Copy (EN) | Copy (Pidgin) |
 |---|---|---|
@@ -154,6 +183,7 @@ Long-press the question (or ⋯ on the review screen) → reason chips → optio
 | Low RAM (< 3 GB) | Reduced animation, no blur effects, list virtualisation |
 | Storage | Cache cap 30 MB with LRU eviction. "Clear cache" in settings |
 | Offline | Practice packs (50 cached Qs) and queued duel submissions that sync when back online |
+| Web | A service worker caches the app shell, so repeat visits load from the phone. Data Saver turns on when the browser reports `saveData` or 2G/3G |
 
 ---
 
@@ -163,6 +193,7 @@ Long-press the question (or ⋯ on the review screen) → reason chips → optio
 - Colour contrast ≥ 4.5:1. Right/wrong states always use icons plus colour.
 - "Extended time" accessibility setting: +50% timer in casual modes (Practice, Party if the host allows). Not used in ranked or daily modes, so leaderboards stay fair.
 - Haptics can be turned off. Every sound is mutable.
+- Web: full keyboard navigation with visible focus, an ARIA live region that announces the time left every 5 s, and respect for `prefers-reduced-motion` and `prefers-color-scheme`.
 
 ---
 
@@ -180,3 +211,11 @@ Long-press the question (or ⋯ on the review screen) → reason chips → optio
 | Motion | 150–250 ms ease-out. Respect "reduce motion" |
 
 Dark mode is supported from v1, since many people play at night.
+
+## 8. Admin console UX (summary; full spec in doc 18)
+- Desktop-first, with dense tables and saved filters. The Overview and Live pages also work on a phone.
+- A global search box on every page: username, user ID, phone number, duel ID, room code, question ID.
+- WAT everywhere, with UTC on hover. Every number can be split by platform (Android / iOS / web).
+- Phone numbers and emails are masked, with an explicit **Reveal** button that asks for a reason.
+- High-impact actions (bans, coin grants above the limit, publishing config) show a confirmation with the exact effect and need a reason.
+- Light and dark themes, using the same design tokens as the app.

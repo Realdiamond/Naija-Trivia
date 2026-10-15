@@ -1,6 +1,6 @@
 # 03 · Game Design Document (GDD)
 
-**Version:** 1.0 · **Date:** 14 Oct 2026
+**Version:** 1.1 · **Date:** 15 Oct 2026
 **Design pillars:** 1) *Settle the argument* (fair, skill-based, bragging rights) · 2) *Play am anyhow* (async, offline-tolerant, low data) · 3) *E sweet* (fast, funny, full of Naija flavour)
 
 ---
@@ -30,6 +30,8 @@ Share result / challenge back / invite friend ──▶ Friend plays ──▶ P
 ---
 
 ## 2. Game modes
+
+Every mode plays the same in the Android and iOS apps and in the web app, with the same rules and scoring. Party links can also open in the light web party client.
 
 ### 2.1 Duel (async 1v1): the core mode
 | Rule | Value |
@@ -205,6 +207,7 @@ points     = (base + speed + streak) × wahala
 - A network drop during a duel turn pauses the timer for up to 10 s, then the question is voided and replaced, once per match.
 - Bad questions: if a question is later fixed or removed, **points are re-scored** and players get a "We corrected a question" note plus +20 coins.
 - Comeback mechanic: none in duels (keeps it fair). In party rooms, the "Wahala Round" ×2 keeps games open.
+- Players on a computer answer with the keyboard. Speed and accuracy are compared by platform after the beta; if computers show a systematic edge in ranked play, matchmaking can pair players by input type.
 
 ---
 
@@ -224,3 +227,5 @@ points     = (base + speed + streak) × wahala
 | `ads.interstitial_every_n_matches` | 3 |
 | `content.repeat_window_days` | 30 |
 | `difficulty.k_factor` | 8 |
+| `web.rewarded_daily_cap` | 5 |
+| `web.install_prompt_after_sessions` | 2 |

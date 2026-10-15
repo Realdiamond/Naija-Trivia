@@ -1,6 +1,6 @@
 # 14 · Testing & QA Plan
 
-**Version:** 1.0 · **Date:** 14 Oct 2026
+**Version:** 1.1 · **Date:** 15 Oct 2026 · *1.1 adds the web app, the admin console and the analytics pipeline*
 
 ---
 
@@ -23,7 +23,10 @@
 | **Contract** | Client ↔ API schemas (Zod/OpenAPI), realtime message shapes | Generated types + schemathesis fuzzing | 100% endpoints |
 | **Realtime** | Colyseus rooms: join, start, answer, reconnect, host migration, 50-player room | `@colyseus/testing` | All room phases |
 | **E2E mobile** | FTUE, sign-in, duel round, party join, daily, purchase (test SKUs), share | **Maestro** flows on emulators and real devices | Top 15 journeys |
-| **E2E web guest** | Join via link, play 10 Q, reconnect | Playwright (Chromium, WebKit) with mobile emulation | Top 3 journeys |
+| **E2E web app** | FTUE, sign-in (cookie session), duel turn from an invite link, party host and join, Daily, offline practice, keyboard play, PWA install | Playwright (Chromium, WebKit, Firefox) with mobile and desktop profiles | Top 15 journeys |
+| **E2E web party client** | Join via link, play 10 Q, reconnect, join as a signed-in web player | Playwright (Chromium, WebKit) with mobile emulation | Top 3 journeys |
+| **Admin console** | Permission matrix for every role, PII masking, an audit entry for every view and action, approvals, User 360 matching the database | Playwright + API tests | Every role × every module |
+| **Analytics pipeline** | Tracking-plan contract (events and properties), PII deny-list, sessions and time spent, dedupe on retries, consent filtering, KPI reconciliation with Postgres | Vitest + ClickHouse in Testcontainers | Every event in the plan; every KPI query |
 | **Visual** | Key screens in light/dark, font scale 100%/200% | Maestro screenshots + diff | Key screens |
 
 ## 3. Device & network matrix
@@ -35,6 +38,12 @@
 | Mid (4–6 GB) | Tecno Spark 20, Infinix Hot 40, Redmi 13C, Samsung A15 |
 | High | Samsung A55, Pixel 7a, iPhone 13 |
 | Old iOS | iPhone 8 / SE 2 (iOS 15–16) |
+
+### Browsers (web app and party client)
+| Tier | Browsers |
+|---|---|
+| Mobile | Chrome and Samsung Internet on the low and mid Android devices; Safari on iPhone 8 / SE 2 and iPhone 13; the WhatsApp, Instagram and TikTok in-app browsers; Opera (and the "Open in Chrome" page for Opera Mini) |
+| Desktop | Chrome, Edge and Firefox (latest 2) on Windows; Safari on macOS |
 
 ### Network conditions (Android emulator + Charles/`tc netem` + real SIM tests)
 | Profile | Bandwidth | Latency | Loss |
@@ -78,6 +87,24 @@
 - Contact discovery: the server logs show only 20-bit prefixes, never full numbers.
 - A 13–17 account: ads are non-personalised, prize events are hidden, and there's no discoverability.
 
+### 4.7 Web app
+- JavaScript can never read the refresh token, and a cross-site request to `/auth/refresh` is rejected (CSRF).
+- A duel invite link opens the turn in the browser; after signing in, the same duel shows in the app.
+- Web push arrives on Android Chrome; on iPhone, only after the web app is added to the Home Screen.
+- The service worker never switches versions mid-match, and practice works with the network off.
+- Hiding the tab for 6 s during a question records `tab_hidden_ms` and raises an integrity signal, with no automatic penalty.
+- The same account signed in on Android and the web at once keeps coins and streak consistent (ledger idempotency).
+
+### 4.8 Admin console & analytics
+- Each role sees only its modules; a direct API call outside the role returns 403 and is logged.
+- Support sees masked phone numbers. **Reveal** without a reason is refused; with a reason, it creates an audit entry.
+- A player's finished duel appears on their timeline within 2 minutes, and time spent is within ±5% of the device's foreground time, including a session across midnight WAT.
+- A resent event batch or a retried loader insert changes no count or time total.
+- A web guest merged into an existing account counts as one person in DAU and retention.
+- Overview DAU, new players and matches are within ±1% of a direct database count.
+- A player without analytics consent sends no detailed-behaviour events.
+- Erasing a player removes their ClickHouse rows, and their timeline no longer loads.
+
 ## 5. Performance & load testing (k6 + Colyseus load-test tool)
 | Scenario | Target |
 |---|---|
@@ -87,6 +114,9 @@
 | Daily at 00:00 WAT | 20k users start within 5 min |
 | Soak | 4 h at 60% of peak, no memory growth > 10% |
 | Chaos | Kill one realtime node mid-game → rooms recover within 10 s |
+| Event ingest | 5,000 events/s sustained with p95 acceptance < 100 ms; the loader keeps ingest lag under 2 min |
+| Web app | 2,000 concurrent web players in duels and the Daily alongside the app load |
+| Admin console | 20 staff using dashboards during a 5,000-player load test, with no change in gameplay latency |
 
 ## 6. Content QA
 - Two-person verification for every question (writer + fact-checker), and a sensitivity reviewer for flagged topics.
@@ -98,7 +128,8 @@
 2. Release candidate cut weekly → `staging` → Maestro E2E on the device farm → load test (for releases touching realtime or serving) → sign-off.
 3. **Android:** internal track → closed beta (500 users) → staged rollout 5% → 20% → 50% → 100%, with Play vitals and Sentry gates at each step.
 4. **OTA (EAS Update)** for JS-only fixes: staged by channel, with a rollback button. Native changes always go through the store.
-5. **Backend:** blue/green on ECS with automatic rollback when 5xx exceeds 2% for 5 min.
+5. **Backend:** blue/green on ECS with automatic rollback when 5xx exceeds 2% for 5 min. The admin console and ingest service ship the same way.
+6. **Web app:** each release goes to a versioned folder on S3, risky features sit behind flags, and rollback is instant (point CloudFront at the previous folder). The service worker picks up a new version at the next launch, never mid-match.
 
 ## 8. Bug severity & SLAs
 | Sev | Definition | Fix SLA |
