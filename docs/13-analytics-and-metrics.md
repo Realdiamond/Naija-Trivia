@@ -65,7 +65,7 @@ Common properties on every event: `event_id`, `ts`, `session_id`, `seq`, `screen
 | `experiment_exposed` | Client | `experiment`, `variant` | When a variant first changes what the player sees |
 | `consent_changed` | Server | `purpose`, `granted` | |
 | `data_saver_toggled` | Client | `on` | |
-| `connection_lost` / `reconnected` | Client | `mode`, `gap_ms` | Network resilience |
+| `connection_lost` / `connection_restored` | Client | `mode`, `gap_ms` | Network resilience |
 | `web_vitals` | Client | `lcp_ms`, `inp_ms`, `cls` | Web only, once per page load |
 
 **Privacy:** no PII in event properties (no phone, no names, no free text), and CI blocks property names on the deny-list. The client never sends its own user ID; ingest adds a pseudonymous `user_pid`. IP addresses are used to estimate the state and then dropped. Core usage (sessions, time spent) and service events run under legitimate interest, documented in the LIA; detailed behaviour (screens, taps, time per screen) needs analytics consent (doc 18 §2.3).
