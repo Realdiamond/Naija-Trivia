@@ -105,7 +105,7 @@ streak     = min(consecutive_correct − 1, 4) × 20      // 0–80 bonus
 wahala     = ×2 in Wahala Round (party only)
 points     = (base + speed + streak) × wahala
 ```
-- The maximum for a 9-question duel without lifelines is 9 × 280 = 2,520 (streak caps at +80).
+- A single answer is worth at most 280 points (100 + 100 + 80). The maximum for a 9-question duel without lifelines is **2,302**: 900 base, 882 speed (the fastest accepted answer, 300 ms, earns 98) and 520 streak (0 + 20 + 40 + 60 + 5 × 80). `maxScore` in `packages/game-rules` computes it.
 - `t_answer` is measured by the server (see TRD §5.3) and clamped to RTT-adjusted bounds.
 
 ### 4.2 Rating (matchmaking & bragging)
