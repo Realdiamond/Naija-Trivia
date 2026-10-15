@@ -87,7 +87,9 @@ erDiagram
 |---|---|---|---|
 | `otp:{e164}` | hash {code_hash, attempts} | 5 min | OTP verification |
 | `rl:{scope}:{id}` | string/counter | window | Rate limiting (token bucket) |
-| `served:{match}:{qid}:{user}` | string (ms timestamp) | 1 h | Timing anchor |
+| `served:{match}:{qid}:{user}` | string (ms timestamp) | 1 h | Timing anchor (SET NX: serving again never resets the timer) |
+| `round:{id}` | string (JSON) | 1 h | Solo round definition (taste test; practice and Daily next) |
+| `answer:{round}:{seq}` | string (JSON) | 1 h | Scored answer; SET NX makes retries and double taps idempotent |
 | `rtt:{session}` | list (last 5) | 1 h | RTT estimate |
 | `seen:{user}:{a|b}` | Bloom filter (RedisBloom) | 30 d rotating | No-repeat questions |
 | `mm:{bucket}` | sorted set (enqueue time) | – | Random matchmaking queue |
@@ -101,7 +103,7 @@ erDiagram
 | `cfg:*` | hash | 60 s | Cached remote config, flags and experiments |
 | `presence:{platform}` | sorted set (user id → last seen, ms) | trimmed to 10 min | "Online now" in the admin console |
 | `live:{metric}:{yyyymmdd}` | counter / HyperLogLog | 3 d | Today's tiles on the admin Overview (e.g. `live:dau:*` is a HyperLogLog of user ids) |
-| `ev:stream` | stream | trimmed to ~24 h | Analytics events waiting for the loader |
+| `ev:stream` | stream | length-capped (~300k entries, several hours) | Analytics events waiting for the loader |
 | `ev:batch:{batch_id}` | string | 48 h | Accept each client event batch once |
 | `adsess:{id}` | hash | 1 h | Web rewarded-ad session (v1.1) |
 

@@ -244,7 +244,7 @@ Screens call one interface; the bundler picks `adapter.native.ts` for Android an
 | CloudFront/S3 | No images | Text-only fallback (Data Saver path) |
 | Reloadly/VTpass (v2) | Prize delay | Queue and retry; manual payout SLA of 48 h |
 | Paystack (v1.1, web) | No web purchases | Purchases in the apps still work; the web shows "Payments are paused, try again soon"; webhook replay |
-| ClickHouse | Dashboards go stale | Events wait in the Redis stream (up to 24 h) and in the apps' queues; gameplay is unaffected |
+| ClickHouse | Dashboards go stale | Events wait in the Redis stream (several hours, up to a length cap) and in the apps' queues; gameplay is unaffected |
 | Google web ads (v1.1) | No web ad revenue | The web plays ad-free; rewarded lifelines fall back to coins |
 
 ## 9. Constraints & assumptions

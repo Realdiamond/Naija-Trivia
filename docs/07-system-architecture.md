@@ -218,7 +218,7 @@ A leaner option for pre-seed: a single region on Render/Railway/Fly with managed
 - **Realtime node crash:** the room state snapshot in Redis (after each question) lets a new node rehydrate the room. Clients auto-reconnect using the room ID plus a session token. Target: under 10 s disruption.
 - **API dependency failures:** circuit breakers (SMS, RevenueCat). Push sends are retried by the queue with exponential backoff.
 - **DB:** Multi-AZ failover under 2 min. Writes are idempotent so clients can retry safely.
-- **Analytics outage:** ingest or ClickHouse being down never touches gameplay. The apps keep events for up to 7 days, the Redis stream buffers 24 hours, and the loader catches up; the console shows a "data delayed" banner.
+- **Analytics outage:** ingest or ClickHouse being down never touches gameplay. The apps keep events for up to 7 days, the Redis stream buffers several hours (up to a length cap that protects Redis memory), and the loader catches up; the console shows a "data delayed" banner.
 - **Graceful degradation order:** analytics → ads → images → leaderboards → party → duels → login. Duels and login are protected the longest.
 - **Kill switches** via feature flags: ads, shop, Question Factory, party rooms, web purchases, web ads, each separately.
 - **Web app releases:** each release is a new versioned folder, so rollback is instant. The service worker checks for an update at launch and switches at the next navigation, never mid-match.

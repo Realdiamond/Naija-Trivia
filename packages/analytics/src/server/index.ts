@@ -161,8 +161,12 @@ export function serverEventRow<E extends ServerEventName>(
 
 /** The Redis stream the loader drains into ClickHouse (doc 08 §3). */
 export const EVENT_STREAM_KEY = 'ev:stream';
-/** Entries older than this are trimmed (the stream is a 24-hour buffer). */
-export const EVENT_STREAM_RETENTION_MS = 24 * 3_600_000;
+/**
+ * Length cap that keeps Redis memory safe if ClickHouse is down: several hours of events
+ * at launch volumes. Trimming by length (not time) is immune to clock differences between
+ * our servers and Redis. The loader also trims what it has loaded.
+ */
+export const EVENT_STREAM_MAX_ENTRIES = 300_000;
 const BATCH_SEEN_TTL_S = 48 * 3600;
 
 /** Minimal Redis client surface (ioredis satisfies it). */
@@ -173,7 +177,7 @@ export interface RedisCommander {
 // Accept a client batch once: remember its id and append it to the stream atomically.
 const APPEND_ONCE_SCRIPT = `
 if redis.call('SET', KEYS[1], '1', 'NX', 'EX', ARGV[1]) then
-  redis.call('XADD', KEYS[2], 'MINID', '~', ARGV[2], '*', 'rows', ARGV[3])
+  redis.call('XADD', KEYS[2], 'MAXLEN', '~', ARGV[2], '*', 'rows', ARGV[3])
   return 1
 end
 return 0`;
@@ -183,7 +187,6 @@ export async function appendBatchOnce(
   redis: RedisCommander,
   batchId: string,
   rows: AnalyticsRow[],
-  nowMs: number,
 ): Promise<boolean> {
   const result = await redis.call(
     'EVAL',
@@ -192,21 +195,21 @@ export async function appendBatchOnce(
     `ev:batch:${batchId}`,
     EVENT_STREAM_KEY,
     BATCH_SEEN_TTL_S,
-    nowMs - EVENT_STREAM_RETENTION_MS,
+    EVENT_STREAM_MAX_ENTRIES,
     JSON.stringify(rows),
   );
   return result === 1;
 }
 
 /** Append server events (each emitted exactly once by the API, so no batch check). */
-export async function appendRows(redis: RedisCommander, rows: AnalyticsRow[], nowMs: number): Promise<void> {
+export async function appendRows(redis: RedisCommander, rows: AnalyticsRow[]): Promise<void> {
   if (rows.length === 0) return;
   await redis.call(
     'XADD',
     EVENT_STREAM_KEY,
-    'MINID',
+    'MAXLEN',
     '~',
-    nowMs - EVENT_STREAM_RETENTION_MS,
+    EVENT_STREAM_MAX_ENTRIES,
     '*',
     'rows',
     JSON.stringify(rows),

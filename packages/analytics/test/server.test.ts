@@ -5,6 +5,7 @@ import {
   appendRows,
   clickhouseTime,
   EVENT_STREAM_KEY,
+  EVENT_STREAM_MAX_ENTRIES,
   pseudonymousId,
   rowsFromBatch,
   serverEventRow,
@@ -187,13 +188,18 @@ describe('stream writes', () => {
         return 1;
       },
     };
-    const now = Date.parse('2026-11-02T08:00:00Z');
-    expect(await appendBatchOnce(redis, 'b1', [], now)).toBe(true);
-    await appendRows(redis, [], now);
-    await appendRows(redis, [{ event: 'x' } as never], now);
+    expect(await appendBatchOnce(redis, 'b1', [])).toBe(true);
+    await appendRows(redis, []);
+    await appendRows(redis, [{ event: 'x' } as never]);
     expect(calls).toHaveLength(2);
     expect(calls[0]!.slice(0, 1)).toEqual(['EVAL']);
     expect(calls[0]!.slice(2, 5)).toEqual([2, 'ev:batch:b1', EVENT_STREAM_KEY]);
-    expect(calls[1]!.slice(0, 5)).toEqual(['XADD', EVENT_STREAM_KEY, 'MINID', '~', now - 86_400_000]);
+    expect(calls[1]!.slice(0, 5)).toEqual([
+      'XADD',
+      EVENT_STREAM_KEY,
+      'MAXLEN',
+      '~',
+      EVENT_STREAM_MAX_ENTRIES,
+    ]);
   });
 });

@@ -64,6 +64,9 @@
 | GET | `/packs` | Catalogue with access state |
 | GET | `/packs/{id}/practice` | 50 questions **with** answers (practice only, no rating), signed URLs for media |
 | POST | `/questions/{id}/reports` | `{reason, note?}` |
+| POST | `/rounds` | `{mode: "taste_test"}` → `{round_id, mode, total, categories}`. The first-run taste test: one easy, family-safe question each from Slang, Food and Music (PRD US-1). Practice and the Daily will use the same round flow |
+| POST | `/rounds/{id}/questions/{seq}/serve` · `/answer` | Same contract as duels (§2.5): one question at a time, served time recorded once, answers idempotent |
+| GET | `/rounds/{id}` | `{total, answered, correct_count, score, complete, answers[]}` |
 
 ### 2.5 Duels
 | Method | Path | Notes |
