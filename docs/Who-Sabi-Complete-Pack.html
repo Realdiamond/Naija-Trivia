@@ -294,6 +294,9 @@ Register</a></li>
 <li><a href="#18--admin-console--analytics-platform"
 id="toc-18--admin-console--analytics-platform">18 · Admin Console &amp;
 Analytics Platform</a></li>
+<li><a href="#19--build-plan--progress"
+id="toc-19--build-plan--progress">19 · Build Plan &amp;
+Progress</a></li>
 </ul>
 </nav>
 <h1 id="who-sabi-working-title-naija-trivia-with-friends">Who Sabi?
@@ -465,28 +468,36 @@ admin security, data pipeline</td>
 <td>Founder, ops, engineering</td>
 </tr>
 <tr class="even">
+<td>19</td>
+<td><a href="19-build-plan.md">Build Plan &amp; Progress</a></td>
+<td>The milestones from doc 15 split into build steps, what is already
+built, and what waits on the team. A living checklist, updated by every
+pull request</td>
+<td>Everyone building</td>
+</tr>
+<tr class="odd">
 <td>–</td>
 <td><a
 href="Who-Sabi-Complete-Pack.html"><code>Who-Sabi-Complete-Pack.html</code></a></td>
-<td>All 19 docs in one page with a table of contents and rendered
+<td>All 20 docs in one page with a table of contents and rendered
 diagrams. Open it in any browser</td>
 <td>Anyone who doesn't want to read Markdown</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>–</td>
 <td><a
 href="tools/build-pack.sh"><code>tools/build-pack.sh</code></a></td>
 <td>Rebuilds the HTML pack from the Markdown docs (needs pandoc)</td>
 <td>Anyone editing the docs</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>–</td>
 <td><a href="schema/schema.sql"><code>schema/schema.sql</code></a></td>
 <td>PostgreSQL 16 DDL, 51 tables (validated: loads cleanly with the seed
 questions)</td>
 <td>Backend</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>–</td>
 <td><a
 href="schema/analytics.clickhouse.sql"><code>schema/analytics.clickhouse.sql</code></a></td>
@@ -494,7 +505,7 @@ href="schema/analytics.clickhouse.sql"><code>schema/analytics.clickhouse.sql</co
 example queries (tested with sample events)</td>
 <td>Backend, data</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>–</td>
 <td><a
 href="content/seed-questions.csv"><code>content/seed-questions.csv</code></a></td>
@@ -502,7 +513,7 @@ href="content/seed-questions.csv"><code>content/seed-questions.csv</code></a></t
 going live)</td>
 <td>Content</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>–</td>
 <td><a
 href="content/csv_to_sql.py"><code>content/csv_to_sql.py</code></a></td>
@@ -2833,13 +2844,16 @@ scenes. Get counsel's view on fair dealing under the Copyright Act
 are rewritten, not translated literally.</p>
 <hr />
 <h2 id="7-seed-question-set">7. Seed question set</h2>
-<p>A starter set of <strong>104 draft questions</strong> across the five
+<p>A starter set of <strong>114 draft questions</strong> across the five
 categories is in <a
-href="content/seed-questions.csv"><code>content/seed-questions.csv</code></a>.
-In the seed file the correct answer is always <code>option_a</code> so
-it's easy to review. The server shuffles options for each player when it
-serves a question (TRD §5.4), and the importer stores options as an
-array with a <code>correct_index</code>.</p>
+href="content/seed-questions.csv"><code>content/seed-questions.csv</code></a>:
+104 multiple choice and 10 <code>closest_number</code> questions for
+duel tie-breaks. In the seed file the correct answer is always
+<code>option_a</code> so it's easy to review; a
+<code>closest_number</code> question leaves the options empty and puts
+the number in <code>correct_option</code>. The server shuffles options
+for each player when it serves a question (TRD §5.4), and the importer
+stores options as an array with a <code>correct_index</code>.</p>
 <blockquote>
 <p><strong>Every seed question has status <code>draft</code>. Each one
 must pass the fact-check and sensitivity steps above before it goes
@@ -4417,13 +4431,15 @@ client (for display only). There is one source of truth for scoring.</p>
   participant P as Postgres
   C-&gt;&gt;A: POST /duels/{id}/rounds/2/questions/1/serve
   A-&gt;&gt;P: verify turn, load question (no correct_index in response)
-  A-&gt;&gt;R: SET served:{duel}:{q}:{user} = now (TTL 1h)
+  A-&gt;&gt;P: INSERT duel_answers (served_at = now) ON CONFLICT DO NOTHING
   A--&gt;&gt;C: question + options (shuffled for this user)
-  C-&gt;&gt;A: POST .../answer {display_index, client_elapsed_ms, idempotency_key}
-  A-&gt;&gt;R: GET served_at, rtt_est
+  C-&gt;&gt;A: POST .../answer {display_index, client_elapsed_ms} + Idempotency-Key
+  A-&gt;&gt;P: lock the duel; read served_at
+  A-&gt;&gt;R: GET rtt:{session} (build step 1.2; a configured default until then)
   A-&gt;&gt;A: map index → canonical, compute accepted_elapsed, score (game-rules)
-  A-&gt;&gt;P: INSERT duel_answer (unique duel,round,seq,user)
-  A--&gt;&gt;C: {correct, correct_display_index, points, fact}</code></pre>
+  A-&gt;&gt;P: UPDATE duel_answers (first answer wins); next turn if the turn is done; COMMIT
+  A-&gt;&gt;R: after the commit: HINCRBY qstat:{q}, XADD ev:stream
+  A--&gt;&gt;C: {correct, correct_display_index, points, fact, next}</code></pre>
 <h3 id="42-party-question-cycle">4.2 Party question cycle</h3>
 <pre class="mermaid"><code>sequenceDiagram
   participant H as Host
@@ -4764,10 +4780,15 @@ filter per user (<code>seen:{user}</code>, about 1% false positives,
 <tr class="even">
 <td><code>duels</code> / <code>duel_rounds</code> /
 <code>duel_answers</code></td>
-<td>Answers keep every raw timing field for anti-cheat, plus the
-<code>platform</code> and, on the web, <code>tab_hidden_ms</code>. The
-PK <code>(duel, round, seq, user)</code> makes answer submission
-idempotent</td>
+<td>A <code>duel_answers</code> row is written when a question is served
+(<code>served_at</code>) and completed when it is answered, so the first
+serve starts the timer and the first answer counts. Answers keep every
+raw timing field for anti-cheat, plus the <code>platform</code> and, on
+the web, <code>tab_hidden_ms</code>. The PK
+<code>(duel, round, seq, user)</code> makes answer submission
+idempotent. Round 4 is the tie-break (<code>guess</code>).
+<code>rematch_of</code> is unique, so a finished duel has at most one
+rematch</td>
 </tr>
 <tr class="odd">
 <td><code>party_games</code> / <code>party_results</code></td>
@@ -4877,112 +4898,121 @@ to them (v1.1, four-eyes approval) and KPI alerts</td>
 <td><code>served:{match}:{qid}:{user}</code></td>
 <td>string (ms timestamp)</td>
 <td>1 h</td>
-<td>Timing anchor (SET NX: serving again never resets the timer)</td>
+<td>Timing anchor for solo rounds (SET NX: serving again never resets
+the timer). Duels keep it in <code>duel_answers.served_at</code>,
+because a turn can last 48 h</td>
 </tr>
 <tr class="even">
+<td><code>idem:{user}:{operation}:{key}</code></td>
+<td>string (JSON)</td>
+<td>24 h</td>
+<td><code>Idempotency-Key</code> results for mutations without a natural
+key (e.g. creating a duel), replayed to retries</td>
+</tr>
+<tr class="odd">
 <td><code>round:{id}</code></td>
 <td>string (JSON)</td>
 <td>1 h</td>
 <td>Solo round definition (taste test; practice and Daily next)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>answer:{round}:{seq}</code></td>
 <td>string (JSON)</td>
 <td>1 h</td>
 <td>Scored answer; SET NX makes retries and double taps idempotent</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>rtt:{session}</code></td>
 <td>list (last 5)</td>
 <td>1 h</td>
 <td>RTT estimate</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>`seen:{user}:{a</td>
 <td>b}`</td>
 <td>Bloom filter (RedisBloom)</td>
 <td>30 d rotating</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>mm:{bucket}</code></td>
 <td>sorted set (enqueue time)</td>
 <td>–</td>
 <td>Random matchmaking queue</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>lb:daily:{yyyymmdd}</code></td>
 <td>sorted set</td>
 <td>8 d</td>
 <td>Daily percentile/leaderboard</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>lb:daily:{yyyymmdd}:state:{st}</code></td>
 <td>sorted set</td>
 <td>8 d</td>
 <td>State board</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>lb:league:{id}:{isoweek}</code></td>
 <td>sorted set</td>
 <td>21 d</td>
 <td>League week</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>qstat:{qid}</code></td>
 <td>hash</td>
 <td>flushed every minute</td>
 <td>Hot counters</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>room:{roomId}:snap</code></td>
 <td>string (msgpack)</td>
 <td>30 min</td>
 <td>Party room crash recovery</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>code:{CODE}</code></td>
 <td>string → roomId</td>
 <td>room life + 10 min</td>
 <td>Room code reservation</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>bull:*</code></td>
 <td>BullMQ</td>
 <td>–</td>
 <td>Job queues</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>cfg:*</code></td>
 <td>hash</td>
 <td>60 s</td>
 <td>Cached remote config, flags and experiments</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>presence:{platform}</code></td>
 <td>sorted set (user id → last seen, ms)</td>
 <td>trimmed to 10 min</td>
 <td>"Online now" in the admin console</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>live:{metric}:{yyyymmdd}</code></td>
 <td>counter / HyperLogLog</td>
 <td>3 d</td>
 <td>Today's tiles on the admin Overview (e.g. <code>live:dau:*</code> is
 a HyperLogLog of user ids)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>ev:stream</code></td>
 <td>stream</td>
 <td>length-capped (~300k entries, several hours)</td>
 <td>Analytics events waiting for the loader</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>ev:batch:{batch_id}</code></td>
 <td>string</td>
 <td>48 h</td>
 <td>Accept each client event batch once</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>adsess:{id}</code></td>
 <td>hash</td>
 <td>1 h</td>
@@ -5487,24 +5517,27 @@ recorded once, answers idempotent</td>
 <tr class="even">
 <td>GET</td>
 <td>`/duels?state=active</td>
-<td>done`</td>
+<td>done&amp;limit&amp;cursor`</td>
 </tr>
 <tr class="odd">
 <td>GET</td>
 <td><code>/duels/{id}</code></td>
-<td>Full state (questions only for completed rounds)</td>
+<td>The duel from your side: scores, <code>next</code> action, rounds,
+tie-break. Questions, answers and the opponent's points only for rounds
+you have finished</td>
 </tr>
 <tr class="even">
 <td>POST</td>
 <td><code>/duels/{id}/rounds/{n}/category</code></td>
-<td><code>{category_id}</code> (must be one of
-<code>offered</code>)</td>
+<td><code>{category_id}</code>, one of the 3 offered. Picked by A
+(rounds 1 and 3) or B (round 2) during their turn → the duel</td>
 </tr>
 <tr class="odd">
 <td>POST</td>
 <td><code>/duels/{id}/rounds/{n}/questions/{seq}/serve</code></td>
-<td>→ one question (shuffled, no answer),
-<code>time_limit_ms</code></td>
+<td>→ one question (shuffled, no answer), <code>time_limit_ms</code>.
+Serving again returns the same <code>served_at</code>. Round 4 is the
+tie-break: one <code>closest_number</code> question with no options</td>
 </tr>
 <tr class="even">
 <td>POST</td>
@@ -5518,22 +5551,49 @@ recorded once, answers idempotent</td>
 </tr>
 <tr class="even">
 <td>POST</td>
-<td><code>/duels/{id}/decline</code> · <code>/cancel</code> ·
-<code>/rematch</code></td>
-<td></td>
+<td><code>/duels/{id}/decline</code> · <code>/cancel</code></td>
+<td>Decline (B) or cancel (A), only before B has been shown a question
+(<code>DUEL_ALREADY_STARTED</code>) → the duel</td>
 </tr>
 <tr class="odd">
-<td>GET</td>
-<td><code>/invites/{token}</code></td>
-<td>Public preview for the link page (challenger name, avatar)</td>
+<td>POST</td>
+<td><code>/duels/{id}/rematch</code></td>
+<td>After a finished duel. Both players asking at once start one
+rematch: <code>201</code> for the first, <code>200</code> with the same
+duel for the second</td>
 </tr>
 <tr class="even">
+<td>GET</td>
+<td><code>/invites/{token}</code></td>
+<td>Public preview for the link page: `{challenger: {id, username,
+level}, status: open</td>
+</tr>
+<tr class="odd">
 <td>POST</td>
 <td><code>/invites/{token}/accept</code></td>
-<td>Binds <code>player_b</code></td>
+<td>Binds <code>player_b</code>. If the challenger has played round 1,
+B's 48 h start now. Accepting again is fine; anyone else gets
+<code>INVITE_TAKEN</code></td>
 </tr>
 </tbody>
 </table>
+<p>The <code>next</code> action tells the app what to show:
+<code>{action: "pick_category", round, offered}</code>,
+<code>{action: "play", round, seq}</code>,
+<code>{action: "tiebreak"}</code> or <code>{action: "wait"}</code> (null
+once the duel is over). Duel errors: <code>TURN_NOT_YOURS</code>,
+<code>CATEGORY_NOT_OFFERED</code>, <code>CATEGORY_NOT_PICKED</code>,
+<code>QUESTION_NOT_SERVED</code>, <code>QUESTION_OUT_OF_ORDER</code>,
+<code>DUEL_FINISHED</code> (including a turn that just ran out),
+<code>DUEL_LIMIT_REACHED</code>, <code>OPPONENT_UNAVAILABLE</code>,
+<code>INVITE_TAKEN</code>, <code>ALREADY_ANSWERED</code>,
+<code>DUEL_ALREADY_STARTED</code>. Someone who is not in a duel gets
+<code>404</code>, as if it did not exist.</p>
+<p>An answer re-sent after a network drop counts if the device tapped
+within the time limit and it arrives within the limit + 10 s, scored
+with no speed bonus (TRD FR-DUEL-5). A tie-break goes to the closer
+guess, then the faster answer; if only one player answers before the
+deadline they win, and if neither does it is a draw.</p>
 <p><strong>Example: serve → answer</strong></p>
 <pre class="http"><code>POST /v1/duels/d_01J9/rounds/2/questions/1/serve
 Idempotency-Key: 7c1e…</code></pre>
@@ -5545,9 +5605,10 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb20-1"><a href=
 <pre class="http"><code>POST /v1/duels/d_01J9/rounds/2/questions/1/answer
 { &quot;display_index&quot;: 1, &quot;client_elapsed_ms&quot;: 4210 }</code></pre>
 <div class="sourceCode" id="cb22"><pre
-class="sourceCode json"><code class="sourceCode json"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span> <span class="dt">&quot;correct&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span> <span class="dt">&quot;correct_display_index&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span> <span class="dt">&quot;points&quot;</span><span class="fu">:</span> <span class="dv">172</span><span class="fu">,</span></span>
+class="sourceCode json"><code class="sourceCode json"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span> <span class="dt">&quot;correct&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span> <span class="dt">&quot;timed_out&quot;</span><span class="fu">:</span> <span class="kw">false</span><span class="fu">,</span> <span class="dt">&quot;correct_display_index&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span> <span class="dt">&quot;points&quot;</span><span class="fu">:</span> <span class="dv">172</span><span class="fu">,</span></span>
 <span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;breakdown&quot;</span><span class="fu">:</span> <span class="fu">{</span><span class="dt">&quot;base&quot;</span><span class="fu">:</span><span class="dv">100</span><span class="fu">,</span><span class="dt">&quot;speed&quot;</span><span class="fu">:</span><span class="dv">72</span><span class="fu">,</span><span class="dt">&quot;streak&quot;</span><span class="fu">:</span><span class="dv">0</span><span class="fu">},</span></span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;fact&quot;</span><span class="fu">:</span> <span class="st">&quot;Niyi Akinmolayan directed the 2017 sequel.&quot;</span><span class="fu">,</span> <span class="dt">&quot;running_score&quot;</span><span class="fu">:</span> <span class="dv">640</span> <span class="fu">}</span></span></code></pre></div>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;fact&quot;</span><span class="fu">:</span> <span class="st">&quot;Niyi Akinmolayan directed the 2017 sequel.&quot;</span><span class="fu">,</span> <span class="dt">&quot;running_score&quot;</span><span class="fu">:</span> <span class="dv">640</span><span class="fu">,</span> <span class="dt">&quot;streak&quot;</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;next&quot;</span><span class="fu">:</span> <span class="fu">{</span><span class="dt">&quot;action&quot;</span><span class="fu">:</span> <span class="st">&quot;play&quot;</span><span class="fu">,</span> <span class="dt">&quot;round&quot;</span><span class="fu">:</span> <span class="dv">2</span><span class="fu">,</span> <span class="dt">&quot;seq&quot;</span><span class="fu">:</span> <span class="dv">2</span><span class="fu">}</span> <span class="fu">}</span></span></code></pre></div>
 <h3 id="26-daily">2.6 Daily</h3>
 <table>
 <thead>
@@ -10013,5 +10074,337 @@ the 30-day DSAR window.</li>
 <li><strong>AD-9:</strong> A retried event upload never changes a count
 or a time total.</li>
 </ul>
+<h1 id="19--build-plan--progress">19 · Build Plan &amp; Progress</h1>
+<p><strong>Version:</strong> 1.1 · <strong>Date:</strong> 22 Oct 2026 ·
+<em>A living checklist: every pull request that finishes part of a step
+ticks it here</em> <strong>Related:</strong> <a
+href="15-roadmap-and-delivery-plan.md">15 Roadmap</a> (milestones,
+sprints, Definition of Done) · <a href="02-PRD.md">02 PRD</a> (stories
+and release criteria) · <a href="06-TRD.md">06 TRD</a> · <a
+href="09-API-and-realtime-protocol.md">09 API</a> · <a
+href="14-testing-and-QA-plan.md">14 Testing</a> · <a
+href="18-admin-console-and-analytics.md">18 Admin &amp;
+Analytics</a></p>
+<hr />
+<h2 id="1-how-this-plan-works">1. How this plan works</h2>
+<ul>
+<li>The milestones are the ones in <a
+href="15-roadmap-and-delivery-plan.md">doc 15 §1</a>: <strong>M1 "First
+duel"</strong>, <strong>M2 "Feature complete"</strong> and <strong>M3
+"Beta"</strong>. This file splits each one into build steps, in the
+order we build them.</li>
+<li><strong>One step = one pull request into <code>main</code></strong>,
+built to the doc sections it lists. A step is done when its boxes are
+ticked, CI is green (format, lint, typecheck, tests) and the Definition
+of Done in <a href="15-roadmap-and-delivery-plan.md">doc 15 §6</a> holds
+for the parts it touches.</li>
+<li>The next step is broken into detailed boxes; later steps stay at
+headline level and are detailed when they start, so this file never
+promises more than we have designed.</li>
+<li><strong>Third-party services never block a step.</strong> SMS,
+Google sign-in, push, ads and payments sit behind an interface with a
+development stand-in; the real provider is plugged in when its account
+and keys exist (§6).</li>
+</ul>
+<p>Status: ✅ done · 🔨 in progress · ⬜ not started</p>
+<h2 id="2-already-built">2. Already built</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Area</th>
+<th>What exists</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Monorepo and CI</td>
+<td>pnpm workspaces, Turborepo, TypeScript, ESLint (with the rule that
+keeps native-only modules out of shared app code, TRD FR-WEB-2),
+Prettier, Vitest; GitHub Actions runs format, lint, typecheck and tests
+against real Postgres 16 and Redis 7; <code>docker compose</code> for
+local Postgres, Redis and ClickHouse</td>
+<td>repo root, <code>.github/workflows/ci.yml</code></td>
+</tr>
+<tr class="even">
+<td>Game rules</td>
+<td>Scoring, answer timing clamp, xxHash64 and per-player option
+shuffle, Glicko-2 and tiers, levels and XP, difficulty calibration,
+content review thresholds, WAT dates and streaks, room codes, the duel
+state machine and tie-break (73 tests)</td>
+<td><code>packages/game-rules</code></td>
+</tr>
+<tr class="odd">
+<td>API contracts</td>
+<td>problem+json errors, guest auth, categories, solo rounds (Zod)</td>
+<td><code>packages/shared-types</code></td>
+</tr>
+<tr class="even">
+<td>Analytics</td>
+<td>The tracking plan as code (doc 13), the PII guard, the client
+tracker (sessions, foreground time, time per screen, consent, offline
+queue), server helpers (pseudonymous ids, clock skew, accept-once stream
+writes)</td>
+<td><code>packages/analytics</code></td>
+</tr>
+<tr class="odd">
+<td>API, first slice</td>
+<td>Migrations (schema v1.1) and the seed importer; guest sign-in; ES256
+access tokens and rotating refresh tokens with reuse detection, HttpOnly
+cookie on the web; JWKS; <code>/v1/me</code>;
+<code>/v1/categories</code>; the first-run taste test
+(<code>/v1/rounds</code>: one question at a time, server timing,
+idempotent answers); server analytics events</td>
+<td><code>apps/api</code></td>
+</tr>
+<tr class="even">
+<td>Ingest</td>
+<td><code>POST /v1/events</code>: token check against the API's JWKS,
+gzip, tracking-plan and consent checks, quarantine, accept-once batches
+into the Redis stream</td>
+<td><code>apps/ingest</code></td>
+</tr>
+</tbody>
+</table>
+<p>Doc 15 sprint mapping: S0 is done except the Expo skeleton, OTP,
+Terraform and the web build in CI; S1 is done except the admin console
+shell, the content module and the ClickHouse loader. Those items are
+scheduled in the steps below.</p>
+<h2 id="3-milestone-m1-first-duel-doc-15-week-8">3. Milestone M1: "First
+duel" (doc 15, week 8)</h2>
+<p><strong>Done when:</strong> two internal users complete a duel
+against staging, one on an Android phone and one in the web app, and the
+duel shows on both players' admin timelines.</p>
+<h3 id="step-11--duel-api-">Step 1.1 · Duel API ✅</h3>
+<p>Docs: <a href="03-game-design-document.md">GDD §2.1, §3.2, §9</a> ·
+<a href="06-TRD.md">TRD §4.3, §5.1–5.4</a> · <a
+href="09-API-and-realtime-protocol.md">API §2.5</a> · <a
+href="08-data-model.md">Data model: <code>duels</code>,
+<code>duel_rounds</code>, <code>duel_answers</code></a> · <a
+href="14-testing-and-QA-plan.md">Testing §4.1–4.2</a> · <a
+href="13-analytics-and-metrics.md">Analytics: duel events</a> · <a
+href="02-PRD.md">PRD US-3, US-4</a></p>
+<ul>
+<li>✅ Contracts for every duel endpoint in
+<code>packages/shared-types</code></li>
+<li>✅ <code>POST /v1/duels</code> against a friend
+(<code>user_id</code>) or an invite link, with
+<code>Idempotency-Key</code>; at most 20 active duels per player (PRD
+US-3 AC4)</li>
+<li>✅ <code>GET /v1/invites/{token}</code> (public preview) and
+<code>POST /v1/invites/{token}/accept</code> (binds player B)</li>
+<li>✅ <code>GET /v1/duels?state=active|done</code> with "your turn"
+first, sorted by deadline; <code>GET /v1/duels/{id}</code> (questions
+only for rounds you finished)</li>
+<li>✅ <code>POST /v1/duels/{id}/rounds/{n}/category</code>: 3
+categories offered, picked by A, B, A (GDD §2.1)</li>
+<li>✅ Round questions: both players get the same 3 (1 easy, 1 medium, 1
+by combined rating, GDD §3.2), none the players have seen in the last 30
+days where the pool allows</li>
+<li>✅ Serve and answer one question at a time, same contract as the
+taste test: per-player option order, timing clamp, raw timing kept in
+<code>duel_answers</code>, answers idempotent per
+<code>(duel, round, seq, player)</code></li>
+<li>✅ Turns through the <code>game-rules</code> state machine, 48 h
+turn deadline, running scores</li>
+<li>✅ Tie-break: one closest-number question; closest guess wins, then
+the faster answer; a draw if both match or nobody answers</li>
+<li>✅ Decline, cancel and rematch</li>
+<li>✅ Expiry as a function the workers call in step 1.3
+(<code>DuelService.expireDue</code>), and on any request that touches an
+overdue duel</li>
+<li>✅ Glicko-2 rating update on completion, stored as
+<code>rating_delta_a/b</code>; gains between the same pair halved for
+each game past 3 in 24 h (doc 10 §2)</li>
+<li>✅ Offline tolerance (TRD FR-DUEL-5): an answer re-sent within time
+limit + 10 s counts, timed at the limit</li>
+<li>✅ Analytics: <code>duel_created</code>,
+<code>question_served</code> and <code>question_answered</code> (mode
+<code>duel</code>), <code>duel_round_played</code>,
+<code>duel_completed</code> (one per player)</li>
+<li>✅ Integration tests: every transition including expiry in each
+state, forfeit winner, the tie-break path; both players answering at
+once; replayed answers (doc 14 §4.2)</li>
+</ul>
+<p>Content: 10 draft <code>closest_number</code> questions were added to
+the seed file for tie-breaks (SEED-0105 to SEED-0114). Like every seed
+question, they need the fact-check before going live.</p>
+<p>Left for later steps, on purpose: friend challenges currently accept
+any guest or active player's id, and step 1.2 limits them to friends and
+past opponents; the timing clamp uses a configured RTT until step 1.2
+measures it per session; "your turn" pushes come with step 2.5 and
+reminders with step 1.3; coins, XP and lifelines with step 2.4; category
+ratings with step 2.1; the void-and-replace of a question after a
+network drop (GDD §9) with the app in step 1.4; the per-player Redis
+seen-filters replace the <code>user_question_seen</code> table lookup
+during M3 hardening.</p>
+<h3 id="step-12--accounts--friends--next">Step 1.2 · Accounts &amp;
+friends ⬜ (next)</h3>
+<p>Phone OTP (Termii, Africa's Talking fallback; dev stand-in), Google
+sign-in, guest-to-account merge, sign out everywhere, username and
+avatar, add a friend by username or from a past match, friend duels
+limited to friends and past opponents, per-session RTT sampling for the
+timing clamp. Docs: <a href="02-PRD.md">PRD US-2</a>, <a
+href="06-TRD.md">TRD §4.1, §4.6</a>, <a
+href="09-API-and-realtime-protocol.md">API §2.1–2.3</a>.</p>
+<h3 id="step-13--workers--analytics-loader-">Step 1.3 · Workers &amp;
+analytics loader ⬜</h3>
+<p><code>apps/workers</code> (BullMQ): duel expiry at the deadline
+(calling <code>DuelService.expireDue</code>) and reminders at 24 h and 4
+h left (push stand-in until step 2.5); flushing <code>qstat:*</code>
+counters to <code>question_stats</code>; the event loader from the Redis
+stream into ClickHouse with
+<code>schema/analytics.clickhouse.sql</code>. Docs: <a
+href="07-system-architecture.md">07 §4.3</a>, <a
+href="08-data-model.md">08 §6</a>, <a
+href="18-admin-console-and-analytics.md">18 §15</a>.</p>
+<h3 id="step-14--the-app-android-and-web-">Step 1.4 · The app: Android
+and web ⬜</h3>
+<p><code>apps/app</code> (Expo, Expo Router): design tokens and core
+components, platform adapters (TRD §5.6), the taste test, sign-in, home
+with "Your turn" cards, the duel screens, an invite link that opens
+straight into the turn in the browser, the analytics tracker wired in,
+web build in CI. Docs: <a href="05-UX-and-user-flows.md">05 UX</a>, <a
+href="06-TRD.md">TRD §4.10, §5.6</a>, <a href="02-PRD.md">PRD US-1,
+US-3, US-4, US-11</a>.</p>
+<h3 id="step-15--admin-console-v0-">Step 1.5 · Admin console v0 ⬜</h3>
+<p><code>apps/admin</code> (Next.js): Google Workspace SSO, roles, the
+audit log, player search and User 360 with the activity timeline. Docs:
+<a href="18-admin-console-and-analytics.md">18 §3, §7, §16</a>, <a
+href="02-PRD.md">PRD US-12</a>.</p>
+<h3 id="step-16--staging-">Step 1.6 · Staging ⬜</h3>
+<p><code>infra/terraform</code> base and deploys for the API, ingest,
+workers, the web app and the admin console. Docs: <a
+href="07-system-architecture.md">07 §5</a>, <a href="06-TRD.md">TRD
+§7</a>. Needs the AWS account and the ClickHouse hosting decision
+(§6).</p>
+<h2 id="4-milestone-m2-feature-complete-doc-15-week-12">4. Milestone M2:
+"Feature complete" (doc 15, week 12)</h2>
+<p><strong>Done when:</strong> every P0 story works on Android, iOS and
+web; the admin console's MVP modules are live (doc 18 §4); 2,000+
+approved questions.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>Scope</th>
+<th>Main docs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>2.1 Daily &amp; leaderboards ⬜</td>
+<td>Daily Sabi Challenge, share grid, streaks and freezes,
+global/state/friends leaderboards, nightly snapshots</td>
+<td>PRD US-8, TRD §4.5, §5.5, API §2.6</td>
+</tr>
+<tr class="even">
+<td>2.2 Party rooms ⬜</td>
+<td><code>apps/realtime</code> (Colyseus), party REST side,
+<code>apps/web-guest</code> (Preact party client), host screen mode,
+Wahala Round</td>
+<td>GDD §2.2, TRD §4.4, API §3</td>
+</tr>
+<tr class="odd">
+<td>2.3 Random opponents ⬜</td>
+<td>Rating-bucket matchmaking and the labelled Sabi Bot</td>
+<td>TRD FR-DUEL-6</td>
+</tr>
+<tr class="even">
+<td>2.4 Economy &amp; monetisation ⬜</td>
+<td>Ledger and coins, lifelines, rewarded ads with SSV, interstitial
+caps, RevenueCat</td>
+<td>GDD §5, TRD §4.7, API §2.8, doc 11</td>
+</tr>
+<tr class="odd">
+<td>2.5 Sharing, links &amp; push ⬜</td>
+<td>Share cards, link service (OG previews, deep links), FCM and web
+push</td>
+<td>TRD §4.8, API §4–5, UX §3.3</td>
+</tr>
+<tr class="even">
+<td>2.6 Content tools ⬜</td>
+<td>CMS (CRUD, CSV import with validation), reports and auto-suspend,
+re-scoring, difficulty recalibration, <code>valid_until</code>
+expiry</td>
+<td>TRD §4.2, GDD §6, doc 04, PRD US-9</td>
+</tr>
+<tr class="odd">
+<td>2.7 Admin MVP modules ⬜</td>
+<td>Overview, Live, dashboards, Explore and segments, LiveOps (Daily
+scheduler, config, flags, kill switches), moderation and integrity,
+support, commerce, compliance, alerts</td>
+<td>doc 18 §4–§14, PRD US-13, US-14</td>
+</tr>
+<tr class="even">
+<td>2.8 Platform &amp; compliance ⬜</td>
+<td>Data Saver, Sentry, account deletion and DSAR, iOS build, practice
+packs offline, PWA</td>
+<td>PRD F15, doc 10, TRD §4.10</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-milestone-m3-beta-doc-15-week-14">5. Milestone M3: "Beta" (doc
+15, week 14)</h2>
+<p>Load tests (doc 14 §5), pen-test fixes, the device and browser matrix
+including the WhatsApp in-app browser, performance budgets (PRD §8), KPI
+reconciliation (admin numbers within ±1% of the database), closed track
+and invite-only web build. Detailed when M2 is close.</p>
+<h2 id="6-outside-the-code">6. Outside the code</h2>
+<p>These are for the team, not pull requests, and some steps wait on
+them.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Item</th>
+<th>Needed by</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>3,000 approved questions</strong> (≥ 600 per category + 600
+mixed)</td>
+<td>M2 (2,000), launch (3,000)</td>
+<td>The critical path (doc 15 §5). Today: 114 drafts (104 multiple
+choice, 10 closest-number for tie-breaks), none fact-checked</td>
+</tr>
+<tr class="even">
+<td>Termii sender ID (and Africa's Talking)</td>
+<td>1.2 going live</td>
+<td>Registration and NCC approval take weeks</td>
+</tr>
+<tr class="odd">
+<td>Google OAuth client IDs (app and web)</td>
+<td>1.2 going live</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>AWS account; ClickHouse Cloud vs self-hosted</td>
+<td>1.6</td>
+<td>Doc 15 §5 item 6</td>
+</tr>
+<tr class="odd">
+<td>Google Workspace for staff SSO</td>
+<td>1.5</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Firebase project (FCM, web push)</td>
+<td>2.5</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Google Play organisation account, AdMob, RevenueCat</td>
+<td>2.4, M4</td>
+<td>Play and AdMob approval take 2–4 weeks</td>
+</tr>
+<tr class="even">
+<td>Legal review (NDPA, prizes, ARCON), DPO, DPIA</td>
+<td>Before beta</td>
+<td>Doc 10</td>
+</tr>
+</tbody>
+</table>
 </body>
 </html>

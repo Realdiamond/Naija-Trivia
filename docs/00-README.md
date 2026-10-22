@@ -30,7 +30,7 @@ Read **01 → 03** to understand *why* and *what*. Engineers start at **06 → 0
 | 17 | [Risk Register](17-risk-register.md) | 22 scored risks + assumptions to validate | Founder |
 | 18 | [Admin Console & Analytics](18-admin-console-and-analytics.md) | What we track (and never track), roles, User 360 with full timeline and time spent, live monitor, dashboards, metric definitions, LiveOps, admin security, data pipeline | Founder, ops, engineering |
 | 19 | [Build Plan & Progress](19-build-plan.md) | The milestones from doc 15 split into build steps, what is already built, and what waits on the team. A living checklist, updated by every pull request | Everyone building |
-| – | [`Who-Sabi-Complete-Pack.html`](Who-Sabi-Complete-Pack.html) | All 19 docs in one page with a table of contents and rendered diagrams. Open it in any browser | Anyone who doesn't want to read Markdown |
+| – | [`Who-Sabi-Complete-Pack.html`](Who-Sabi-Complete-Pack.html) | All 20 docs in one page with a table of contents and rendered diagrams. Open it in any browser | Anyone who doesn't want to read Markdown |
 | – | [`tools/build-pack.sh`](tools/build-pack.sh) | Rebuilds the HTML pack from the Markdown docs (needs pandoc) | Anyone editing the docs |
 | – | [`schema/schema.sql`](schema/schema.sql) | PostgreSQL 16 DDL, 51 tables (validated: loads cleanly with the seed questions) | Backend |
 | – | [`schema/analytics.clickhouse.sql`](schema/analytics.clickhouse.sql) | ClickHouse DDL for events, sessions, time spent and rollups, with example queries (tested with sample events) | Backend, data |

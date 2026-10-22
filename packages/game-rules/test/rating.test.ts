@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { NEW_PLAYER_RATING, seasonSoftReset, tierForRating, updateRating } from '../src/rating';
+import {
+  dampenPairGain,
+  NEW_PLAYER_RATING,
+  seasonSoftReset,
+  tierForRating,
+  updateRating,
+} from '../src/rating';
+
+describe('dampenPairGain (anti win-trading)', () => {
+  it('leaves the first 3 games between a pair alone, then halves gains game by game', () => {
+    expect([0, 1, 2].map((before) => dampenPairGain(16, before))).toEqual([16, 16, 16]);
+    expect([3, 4, 5].map((before) => dampenPairGain(16, before))).toEqual([8, 4, 2]);
+  });
+
+  it('never softens a loss', () => {
+    expect(dampenPairGain(-12, 7)).toBe(-12);
+    expect(dampenPairGain(0, 7)).toBe(0);
+  });
+});
 
 describe('updateRating (Glicko-2)', () => {
   it("reproduces the worked example from Glickman's paper", () => {

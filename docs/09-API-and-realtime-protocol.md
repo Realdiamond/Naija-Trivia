@@ -71,16 +71,21 @@
 ### 2.5 Duels
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/duels` | `{opponent: {user_id} | {random: true} | {link: true}}` → `{duel, invite_url?}` |
-| GET | `/duels?state=active|done` | List for home screen |
-| GET | `/duels/{id}` | Full state (questions only for completed rounds) |
-| POST | `/duels/{id}/rounds/{n}/category` | `{category_id}` (must be one of `offered`) |
-| POST | `/duels/{id}/rounds/{n}/questions/{seq}/serve` | → one question (shuffled, no answer), `time_limit_ms` |
-| POST | `/duels/{id}/rounds/{n}/questions/{seq}/answer` | `{display_index | null, client_elapsed_ms, lifeline?}` → `{correct, correct_display_index, points, fact, running_score}` |
-| POST | `/duels/{id}/lifelines` | `{type: "fifty"|"ask_naija"|"skip"|"time", round, seq}` → effect payload; debits coins |
-| POST | `/duels/{id}/decline` · `/cancel` · `/rematch` | |
-| GET | `/invites/{token}` | Public preview for the link page (challenger name, avatar) |
-| POST | `/invites/{token}/accept` | Binds `player_b` |
+| POST | `/duels` | `{opponent: {user_id} | {random: true} | {link: true}}` → `201 {duel, invite_url}`. Takes `Idempotency-Key`. At most 20 duels going per player (`DUEL_LIMIT_REACHED`). `random` arrives with build step 2.3 |
+| GET | `/duels?state=active|done&limit&cursor` | List for the home screen: active ones with "your turn" first, soonest deadline first; finished ones newest first, paged by `cursor` |
+| GET | `/duels/{id}` | The duel from your side: scores, `next` action, rounds, tie-break. Questions, answers and the opponent's points only for rounds you have finished |
+| POST | `/duels/{id}/rounds/{n}/category` | `{category_id}`, one of the 3 offered. Picked by A (rounds 1 and 3) or B (round 2) during their turn → the duel |
+| POST | `/duels/{id}/rounds/{n}/questions/{seq}/serve` | → one question (shuffled, no answer), `time_limit_ms`. Serving again returns the same `served_at`. Round 4 is the tie-break: one `closest_number` question with no options |
+| POST | `/duels/{id}/rounds/{n}/questions/{seq}/answer` | `{display_index | null, client_elapsed_ms, tab_hidden_ms?}` → `{correct, timed_out, correct_display_index, points, breakdown, fact, running_score, streak, next}`. Round 4 takes `{guess | null, client_elapsed_ms}` → `{guess, timed_out, answer, fact, decided, result}`. A retry gets the first answer back; a different `Idempotency-Key` for an answered question is `409 ALREADY_ANSWERED` |
+| POST | `/duels/{id}/lifelines` | `{type: "fifty"|"ask_naija"|"skip"|"time", round, seq}` → effect payload; debits coins (build step 2.4) |
+| POST | `/duels/{id}/decline` · `/cancel` | Decline (B) or cancel (A), only before B has been shown a question (`DUEL_ALREADY_STARTED`) → the duel |
+| POST | `/duels/{id}/rematch` | After a finished duel. Both players asking at once start one rematch: `201` for the first, `200` with the same duel for the second |
+| GET | `/invites/{token}` | Public preview for the link page: `{challenger: {id, username, level}, status: open|taken|closed, expires_at}` |
+| POST | `/invites/{token}/accept` | Binds `player_b`. If the challenger has played round 1, B's 48 h start now. Accepting again is fine; anyone else gets `INVITE_TAKEN` |
+
+The `next` action tells the app what to show: `{action: "pick_category", round, offered}`, `{action: "play", round, seq}`, `{action: "tiebreak"}` or `{action: "wait"}` (null once the duel is over). Duel errors: `TURN_NOT_YOURS`, `CATEGORY_NOT_OFFERED`, `CATEGORY_NOT_PICKED`, `QUESTION_NOT_SERVED`, `QUESTION_OUT_OF_ORDER`, `DUEL_FINISHED` (including a turn that just ran out), `DUEL_LIMIT_REACHED`, `OPPONENT_UNAVAILABLE`, `INVITE_TAKEN`, `ALREADY_ANSWERED`, `DUEL_ALREADY_STARTED`. Someone who is not in a duel gets `404`, as if it did not exist.
+
+An answer re-sent after a network drop counts if the device tapped within the time limit and it arrives within the limit + 10 s, scored with no speed bonus (TRD FR-DUEL-5). A tie-break goes to the closer guess, then the faster answer; if only one player answers before the deadline they win, and if neither does it is a draw.
 
 **Example: serve → answer**
 ```http
@@ -98,9 +103,10 @@ POST /v1/duels/d_01J9/rounds/2/questions/1/answer
 { "display_index": 1, "client_elapsed_ms": 4210 }
 ```
 ```json
-{ "correct": true, "correct_display_index": 1, "points": 172,
+{ "correct": true, "timed_out": false, "correct_display_index": 1, "points": 172,
   "breakdown": {"base":100,"speed":72,"streak":0},
-  "fact": "Niyi Akinmolayan directed the 2017 sequel.", "running_score": 640 }
+  "fact": "Niyi Akinmolayan directed the 2017 sequel.", "running_score": 640, "streak": 1,
+  "next": {"action": "play", "round": 2, "seq": 2} }
 ```
 
 ### 2.6 Daily

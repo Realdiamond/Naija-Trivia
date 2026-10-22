@@ -121,8 +121,8 @@ CREATE TABLE questions (
   type            question_type NOT NULL DEFAULT 'mcq4',
   text            text NOT NULL CHECK (char_length(text) <= 160),
   options         jsonb NOT NULL,                      -- ["..","..",..] canonical order
-  correct_index   smallint NOT NULL,
-  numeric_answer  numeric,                             -- closest_number only
+  correct_index   smallint,                            -- null for closest_number
+  numeric_answer  numeric,                             -- closest_number only (options = [])
   fact            text CHECK (char_length(fact) <= 200),
   media_id        text REFERENCES media_assets(id),
   difficulty      smallint NOT NULL CHECK (difficulty BETWEEN 1 AND 5),
@@ -140,7 +140,12 @@ CREATE TABLE questions (
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now(),
   CHECK (jsonb_typeof(options) = 'array'),
-  CHECK (correct_index >= 0 AND correct_index < jsonb_array_length(options))
+  CONSTRAINT questions_answer_check CHECK (
+    CASE WHEN type = 'closest_number'
+      THEN numeric_answer IS NOT NULL AND correct_index IS NULL AND jsonb_array_length(options) = 0
+      ELSE correct_index IS NOT NULL AND correct_index >= 0 AND correct_index < jsonb_array_length(options)
+    END
+  )
 );
 CREATE INDEX questions_serve_idx ON questions (category_id, status, difficulty) WHERE status = 'live';
 CREATE INDEX questions_text_trgm ON questions USING gin (text gin_trgm_ops);
@@ -225,12 +230,14 @@ CREATE TABLE duels (
   winner_id       text,
   rating_delta_a  real,
   rating_delta_b  real,
+  rematch_of      text UNIQUE REFERENCES duels(id),    -- one rematch per finished duel
   created_at      timestamptz NOT NULL DEFAULT now(),
-  completed_at    timestamptz
+  completed_at    timestamptz,
+  CONSTRAINT duels_players_check CHECK (player_b IS NULL OR player_b <> player_a)
 );
 CREATE INDEX duels_player_a_idx ON duels (player_a, state);
 CREATE INDEX duels_player_b_idx ON duels (player_b, state);
-CREATE INDEX duels_deadline_idx ON duels (turn_deadline) WHERE state IN ('created','wait_b_r1r2','wait_a_r2r3','wait_b_r3');
+CREATE INDEX duels_deadline_idx ON duels (turn_deadline) WHERE state IN ('created','wait_b_r1r2','wait_a_r2r3','wait_b_r3','tiebreak');
 
 CREATE TABLE duel_rounds (
   duel_id         text NOT NULL REFERENCES duels(id) ON DELETE CASCADE,
@@ -246,8 +253,8 @@ CREATE TABLE duel_answers (
   duel_id           text NOT NULL REFERENCES duels(id) ON DELETE CASCADE,
   round_no          smallint NOT NULL,
   seq               smallint NOT NULL,
-  user_id           text NOT NULL,
-  question_id       text NOT NULL,
+  user_id           text NOT NULL REFERENCES users(id),
+  question_id       text NOT NULL REFERENCES questions(id),
   served_at         timestamptz NOT NULL,
   received_at       timestamptz,
   client_elapsed_ms int,
@@ -260,6 +267,8 @@ CREATE TABLE duel_answers (
   lifeline          text,
   platform          text CHECK (platform IN ('android','ios','web')),
   tab_hidden_ms     int,                               -- web only: time the tab was hidden during the question (integrity signal)
+  guess             numeric,                           -- tie-break (round 4) only
+  idempotency_key   text,                              -- of the request that answered; a retry with another key gets 409
   PRIMARY KEY (duel_id, round_no, seq, user_id)
 );
 

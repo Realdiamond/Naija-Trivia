@@ -21,12 +21,18 @@ export type DuelState =
 export type DuelSide = 'a' | 'b';
 export type DuelRound = 1 | 2 | 3;
 
+export const DUEL_ROUNDS: readonly DuelRound[] = [1, 2, 3];
+export const QUESTIONS_PER_ROUND = 3;
+/** The tie-break is stored as a fourth round with one closest-number question. */
+export const TIEBREAK_ROUND = 4;
+
 export interface DuelSnapshot {
   state: DuelState;
   scoreA: number;
   scoreB: number;
   /** False until the invite link is accepted. */
   opponentJoined: boolean;
+  /** Null while the duel runs, and for a draw. */
   winner: DuelSide | null;
 }
 
@@ -34,9 +40,10 @@ export type DuelEvent =
   /** The side whose turn it is finished every round of the turn; scores are the running totals. */
   | { type: 'turn_completed'; side: DuelSide; scoreA: number; scoreB: number }
   | { type: 'opponent_joined' }
-  | { type: 'tiebreak_resolved'; winner: DuelSide }
-  /** The turn deadline (48 h) passed. */
-  | { type: 'expired' }
+  /** Both answered the tie-break; null is a draw (same guess, same time, or no question to ask). */
+  | { type: 'tiebreak_resolved'; winner: DuelSide | null }
+  /** The turn deadline (48 h) passed. In a tie-break, `tiebreakAnswered` says who did answer. */
+  | { type: 'expired'; tiebreakAnswered?: DuelSide | null }
   | { type: 'declined' }
   | { type: 'cancelled' };
 
@@ -103,6 +110,12 @@ export function applyDuelEvent(duel: DuelSnapshot, event: DuelEvent): DuelSnapsh
       return { ...duel, state: 'complete', winner: event.winner };
 
     case 'expired': {
+      if (duel.state === 'tiebreak') {
+        // Whoever answered wins; if neither did, the equal scores stand as a draw.
+        const answered = event.tiebreakAnswered ?? null;
+        if (answered === null) return { ...duel, state: 'complete', winner: null };
+        return { ...duel, state: 'forfeit', winner: answered };
+      }
       if (!turn) throw new DuelTransitionError(duel.state, event.type);
       // Nobody to award the win to if the challenger never played or the invite was never accepted.
       if (duel.state === 'created' || !duel.opponentJoined) return { ...duel, state: 'cancelled' };

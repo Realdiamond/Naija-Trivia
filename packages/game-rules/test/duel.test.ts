@@ -50,6 +50,27 @@ describe('duel flow', () => {
     });
   });
 
+  it('ends a tie-break as a draw, or for whoever answered when time runs out', () => {
+    const tied = run([
+      { type: 'turn_completed', side: 'a', scoreA: 300, scoreB: 0 },
+      { type: 'turn_completed', side: 'b', scoreA: 300, scoreB: 600 },
+      { type: 'turn_completed', side: 'a', scoreA: 900, scoreB: 600 },
+      { type: 'turn_completed', side: 'b', scoreA: 900, scoreB: 900 },
+    ]);
+    expect(applyDuelEvent(tied, { type: 'tiebreak_resolved', winner: null })).toMatchObject({
+      state: 'complete',
+      winner: null,
+    });
+    expect(applyDuelEvent(tied, { type: 'expired', tiebreakAnswered: 'b' })).toMatchObject({
+      state: 'forfeit',
+      winner: 'b',
+    });
+    expect(applyDuelEvent(tied, { type: 'expired', tiebreakAnswered: null })).toMatchObject({
+      state: 'complete',
+      winner: null,
+    });
+  });
+
   it('awards a forfeit to the waiting player when a turn expires', () => {
     const waitingOnB = run([{ type: 'turn_completed', side: 'a', scoreA: 400, scoreB: 0 }]);
     expect(applyDuelEvent(waitingOnB, { type: 'expired' })).toMatchObject({ state: 'forfeit', winner: 'a' });
@@ -94,6 +115,8 @@ describe('duel flow', () => {
         { type: 'declined' },
         { type: 'cancelled' },
         { type: 'tiebreak_resolved', winner: 'a' },
+        { type: 'tiebreak_resolved', winner: null },
+        { type: 'expired', tiebreakAnswered: 'b' },
       ),
     );
     fc.assert(
@@ -113,7 +136,9 @@ describe('duel flow', () => {
             expect(index).toBeGreaterThanOrEqual(lastActive);
             lastActive = index;
           }
-          if (duel.state === 'complete' || duel.state === 'forfeit') expect(duel.winner).not.toBeNull();
+          if (duel.state === 'forfeit') expect(duel.winner).not.toBeNull();
+          // A draw only ever comes from level scores.
+          if (duel.state === 'complete' && duel.winner === null) expect(duel.scoreA).toBe(duel.scoreB);
         }
       }),
     );

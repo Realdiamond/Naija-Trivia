@@ -2,7 +2,7 @@
  * Solo rounds (the first-run taste test for now). One question at a time, server-side
  * timing, per-player option order, scoring from packages/game-rules (TRD §5.1–5.4).
  */
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import {
   acceptElapsed,
@@ -28,7 +28,8 @@ import type { AppDeps } from '../app';
 import { requireAuth } from '../auth/context';
 import { loadQuestion, pickTasteTestQuestions, type QuestionRow } from '../content/questions';
 import { ApiError, conflict, notFound, parse } from '../errors';
-import type { EventContext } from '../events';
+import { requestEventContext } from '../events';
+import { recordQuestionStats } from '../content/stats';
 import { newId } from '../ids';
 import { RoundStore, type RoundDef, type StoredAnswer } from './store';
 
@@ -38,13 +39,6 @@ const QuestionParams = RoundParams.extend({ seq: z.coerce.number().int().min(1).
 export function roundRoutes(app: FastifyInstance, deps: AppDeps): void {
   const { pool, clock, config, events } = deps;
   const store = new RoundStore(deps.redis);
-
-  const eventContext = (request: FastifyRequest, userId: string): EventContext => ({
-    userId,
-    platform: request.auth!.platform,
-    sessionId: headerValue(request, 'x-session-id'),
-    appVersion: headerValue(request, 'x-app-version') ?? undefined,
-  });
 
   async function ownedRound(roundId: string, userId: string): Promise<RoundDef> {
     const round = await store.get(roundId);
@@ -108,7 +102,7 @@ export function roundRoutes(app: FastifyInstance, deps: AppDeps): void {
       await events.emit(
         'question_served',
         { qid: question.id, mode: round.mode, seq },
-        eventContext(request, auth.userId),
+        requestEventContext(request),
       );
     }
     const perm = optionPermutation(question.options.length, shuffleSeed(round.id, auth.userId, question.id));
@@ -190,7 +184,7 @@ export function roundRoutes(app: FastifyInstance, deps: AppDeps): void {
     });
 
     if (first) {
-      await recordQuestionStats(deps, question.id, answer);
+      await recordQuestionStats(deps.redis, deps.log, question.id, answer);
       await events.emit(
         'question_answered',
         {
@@ -205,7 +199,7 @@ export function roundRoutes(app: FastifyInstance, deps: AppDeps): void {
           lifeline: null,
           ...(answer.tabHiddenMs !== null ? { tab_hidden_ms: answer.tabHiddenMs } : {}),
         },
-        eventContext(request, auth.userId),
+        requestEventContext(request),
       );
     }
     return toResponse(answer, previous, question);
@@ -246,25 +240,4 @@ function toResponse(
     running_score: previous.reduce((sum, a) => sum + (a?.points ?? 0), 0) + answer.points,
     streak: answer.streakAfter,
   };
-}
-
-/** Hot per-question counters (doc 08 §3 `qstat:{qid}`); a worker flushes them to question_stats. */
-async function recordQuestionStats(deps: AppDeps, qid: string, answer: StoredAnswer): Promise<void> {
-  try {
-    const key = `qstat:${qid}`;
-    const multi = deps.redis
-      .multi()
-      .hincrby(key, 'plays', 1)
-      .hincrby(key, 'elapsed_ms_sum', answer.acceptedMs);
-    if (answer.correct) multi.hincrby(key, 'correct', 1);
-    if (answer.canonicalIndex !== null) multi.hincrby(key, `option_${answer.canonicalIndex}`, 1);
-    await multi.exec();
-  } catch (err) {
-    deps.log.warn({ err, qid }, 'question stats not recorded');
-  }
-}
-
-function headerValue(request: FastifyRequest, name: string): string | null {
-  const value = request.headers[name];
-  return typeof value === 'string' && value.length > 0 && value.length <= 64 ? value : null;
 }

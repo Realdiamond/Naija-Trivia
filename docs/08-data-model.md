@@ -65,7 +65,7 @@ erDiagram
 | `questions` | Options stored as a JSONB array in canonical order, plus `correct_index`. Shuffling happens at serve time. `d_rating` is the calibrated difficulty. `version` increments on edit, and answers record the question at play time (via `question_id` plus nightly re-score jobs) |
 | `question_stats` | Write-heavy counters. Increment in Redis (`HINCRBY`) and flush to Postgres every minute to avoid row-lock contention on hot questions |
 | `user_question_seen` | The fallback for no-repeat. The primary store is a Redis bloom filter per user (`seen:{user}`, about 1% false positives, 30-day rolling via two rotating filters). Partition monthly by `seen_at` and drop partitions older than 60 days |
-| `duels` / `duel_rounds` / `duel_answers` | Answers keep every raw timing field for anti-cheat, plus the `platform` and, on the web, `tab_hidden_ms`. The PK `(duel, round, seq, user)` makes answer submission idempotent |
+| `duels` / `duel_rounds` / `duel_answers` | A `duel_answers` row is written when a question is served (`served_at`) and completed when it is answered, so the first serve starts the timer and the first answer counts. Answers keep every raw timing field for anti-cheat, plus the `platform` and, on the web, `tab_hidden_ms`. The PK `(duel, round, seq, user)` makes answer submission idempotent. Round 4 is the tie-break (`guess`). `rematch_of` is unique, so a finished duel has at most one rematch |
 | `party_games` / `party_results` | Only results are persisted, not per-answer rows (high volume, low value). Per-answer data goes to analytics events |
 | `daily_*` | `daily_results` PK prevents replays. `grid` stores the emoji pattern for re-sharing |
 | Ledger | Double entry: every `ledger_transaction` has at least two `ledger_entries` that sum to 0 per currency. User accounts can't go negative (CHECK). A nightly job recomputes balances from entries and alerts on any drift |
@@ -87,7 +87,8 @@ erDiagram
 |---|---|---|---|
 | `otp:{e164}` | hash {code_hash, attempts} | 5 min | OTP verification |
 | `rl:{scope}:{id}` | string/counter | window | Rate limiting (token bucket) |
-| `served:{match}:{qid}:{user}` | string (ms timestamp) | 1 h | Timing anchor (SET NX: serving again never resets the timer) |
+| `served:{match}:{qid}:{user}` | string (ms timestamp) | 1 h | Timing anchor for solo rounds (SET NX: serving again never resets the timer). Duels keep it in `duel_answers.served_at`, because a turn can last 48 h |
+| `idem:{user}:{operation}:{key}` | string (JSON) | 24 h | `Idempotency-Key` results for mutations without a natural key (e.g. creating a duel), replayed to retries |
 | `round:{id}` | string (JSON) | 1 h | Solo round definition (taste test; practice and Daily next) |
 | `answer:{round}:{seq}` | string (JSON) | 1 h | Scored answer; SET NX makes retries and double taps idempotent |
 | `rtt:{session}` | list (last 5) | 1 h | RTT estimate |

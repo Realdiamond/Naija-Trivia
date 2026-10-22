@@ -2,6 +2,9 @@
  * Import questions from the seed CSV (format: docs/content/seed-questions.csv), mirroring
  * docs/content/csv_to_sql.py. New questions are drafts; they go live through the CMS
  * review workflow. `live: true` is for local development and tests only.
+ *
+ * Closest-number questions (duel tie-breaks) leave the options empty and put the number
+ * in `correct_option`.
  */
 import { parse as parseCsv } from 'csv-parse/sync';
 import type { Pool } from './db';
@@ -40,9 +43,19 @@ export async function seedQuestions(
   let inserted = 0;
   for (const row of rows) {
     const opts = LETTERS.map((l) => row[`option_${l}`]).filter((o): o is string => Boolean(o));
-    const correctIndex = LETTERS.indexOf(row.correct_option.trim().toLowerCase() as (typeof LETTERS)[number]);
-    if (correctIndex < 0 || correctIndex >= opts.length)
-      throw new Error(`${row.id}: correct_option out of range`);
+    let correctIndex: number | null = null;
+    let numericAnswer: number | null = null;
+    if (row.type === 'closest_number') {
+      numericAnswer = Number(row.correct_option.trim());
+      if (opts.length > 0 || row.correct_option.trim() === '' || !Number.isFinite(numericAnswer))
+        throw new Error(
+          `${row.id}: a closest_number question needs no options and a number as correct_option`,
+        );
+    } else {
+      correctIndex = LETTERS.indexOf(row.correct_option.trim().toLowerCase() as (typeof LETTERS)[number]);
+      if (correctIndex < 0 || correctIndex >= opts.length)
+        throw new Error(`${row.id}: correct_option out of range`);
+    }
     if (row.question.length > 160) throw new Error(`${row.id}: question longer than 160 characters`);
     const difficulty = Number(row.difficulty);
     if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 5)
@@ -50,8 +63,8 @@ export async function seedQuestions(
 
     const result = await pool.query(
       `INSERT INTO questions (id, external_ref, category_id, subcategory, type, text, options, correct_index, fact,
-         difficulty, d_rating, family_safe, region_tag, valid_until, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $13, $14, $15)
+         difficulty, d_rating, family_safe, region_tag, valid_until, status, numeric_answer)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12, $13, $14, $15, $16)
        ON CONFLICT (external_ref) DO NOTHING`,
       [
         `q_${row.id.toLowerCase()}`,
@@ -69,6 +82,7 @@ export async function seedQuestions(
         row.region_tag || null,
         row.valid_until || null,
         options.live ? 'live' : 'draft',
+        numericAnswer,
       ],
     );
     inserted += result.rowCount ?? 0;

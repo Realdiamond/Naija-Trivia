@@ -17,6 +17,8 @@ const Env = z.object({
   /** Round-trip estimate used for answer timing until per-session RTT sampling lands. */
   DEFAULT_RTT_MS: z.coerce.number().int().min(0).max(5000).default(400),
   GUEST_SIGNUPS_PER_IP_PER_HOUR: z.coerce.number().int().min(1).default(30),
+  /** The web app; duel invite links are {PUBLIC_WEB_URL}/d/{token} (doc 09 §5). */
+  PUBLIC_WEB_URL: z.url().default('https://whosabi.ng'),
 });
 
 export interface Config {
@@ -33,6 +35,7 @@ export interface Config {
   cookieSecure: boolean;
   defaultRttMs: number;
   guestSignupsPerIpPerHour: number;
+  publicWebUrl: string;
 }
 
 // Stable outside production so analytics ids don't change on every restart.
@@ -60,5 +63,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     cookieSecure: e.COOKIE_SECURE === 'true',
     defaultRttMs: e.DEFAULT_RTT_MS,
     guestSignupsPerIpPerHour: e.GUEST_SIGNUPS_PER_IP_PER_HOUR,
+    publicWebUrl: e.PUBLIC_WEB_URL.replace(/\/+$/, ''),
   };
 }

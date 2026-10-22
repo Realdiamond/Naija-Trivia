@@ -96,6 +96,20 @@ export function updateRating(
   return { rating: newMu * SCALE + 1500, rd: Math.min(newPhi * SCALE, MAX_RD), volatility: newSigma };
 }
 
+/** Games the same two players can finish in this window before rating gains shrink (doc 10 §2). */
+export const PAIR_FREE_GAMES = 3;
+export const PAIR_WINDOW_MS = 24 * 3600 * 1000;
+
+/**
+ * Anti win-trading (doc 10 §2): once a pair has finished PAIR_FREE_GAMES duels in 24 h, each
+ * further game halves the rating either player can gain from it. Losses still count in full.
+ * `pairGamesBefore` counts the pair's finished games in the window, not including this one.
+ */
+export function dampenPairGain(delta: number, pairGamesBefore: number): number {
+  if (delta <= 0 || pairGamesBefore < PAIR_FREE_GAMES) return delta;
+  return delta * 0.5 ** (pairGamesBefore - PAIR_FREE_GAMES + 1);
+}
+
 export const TIERS = [
   { id: 'jjc', name: 'JJC (Johnny Just Come)', badge: '🐣', minRating: Number.NEGATIVE_INFINITY },
   { id: 'learner', name: 'Learner', badge: '📘', minRating: 1300 },

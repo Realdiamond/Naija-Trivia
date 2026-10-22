@@ -1,6 +1,11 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { acceptElapsed, CLIENT_CLAMP_SLACK_MS, MIN_HUMAN_ELAPSED_MS } from '../src/timing';
+import {
+  acceptElapsed,
+  CLIENT_CLAMP_SLACK_MS,
+  MIN_HUMAN_ELAPSED_MS,
+  OFFLINE_RESEND_GRACE_MS,
+} from '../src/timing';
 
 const LIMIT = 15_000;
 
@@ -50,6 +55,31 @@ describe('acceptElapsed', () => {
       timeLimitMs: LIMIT,
     });
     expect(r).toEqual({ acceptedMs: LIMIT, timedOut: false });
+  });
+
+  it('FR-DUEL-5: a re-sent duel answer within limit + 10 s counts, timed at the limit', () => {
+    const resent = (clientElapsedMs: number | null, serverElapsedMs: number) =>
+      acceptElapsed({
+        clientElapsedMs,
+        serverElapsedMs,
+        rttEstMs: 400,
+        timeLimitMs: LIMIT,
+        offlineGraceMs: OFFLINE_RESEND_GRACE_MS,
+      });
+    expect(resent(9000, LIMIT + 9000)).toEqual({ acceptedMs: LIMIT, timedOut: false });
+    // Arrived after the grace window, or the device itself says the tap came too late.
+    expect(resent(9000, LIMIT + 10_001).timedOut).toBe(true);
+    expect(resent(15_001, LIMIT + 9000).timedOut).toBe(true);
+    expect(resent(null, LIMIT + 9000).timedOut).toBe(true);
+    // Without the duel grace, the same answer is a timeout (TC-T2).
+    expect(
+      acceptElapsed({
+        clientElapsedMs: 9000,
+        serverElapsedMs: LIMIT + 9000,
+        rttEstMs: 400,
+        timeLimitMs: LIMIT,
+      }).timedOut,
+    ).toBe(true);
   });
 
   it('floors at the human minimum', () => {
