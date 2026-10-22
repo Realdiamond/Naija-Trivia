@@ -1,0 +1,18 @@
+{
+  "name": "@whosabi/analytics",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The tracking plan as code, the client event tracker (sessions, screens, time spent) and server helpers for the analytics pipeline (doc 13, doc 18 §15).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.client.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
+}

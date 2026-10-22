@@ -1,0 +1,19 @@
+node_modules/
+dist/
+coverage/
+.turbo/
+*.tsbuildinfo
+*.log
+.DS_Store
+
+# Local environment files (commit .env.example only)
+.env
+.env.*
+!.env.example
+
+# Expo
+.expo/
+web-build/
+apps/app/android/
+apps/app/ios/
+expo-env.d.ts

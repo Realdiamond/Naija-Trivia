@@ -1,0 +1,8 @@
+{
+  "//": "The client entry point must compile without Node types: it runs in Hermes and browsers.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["src/index.ts"]
+}

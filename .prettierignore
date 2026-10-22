@@ -1,0 +1,10 @@
+docs/
+pnpm-lock.yaml
+*.zip
+**/dist/
+**/coverage/
+**/.expo/
+**/.turbo/
+apps/app/web-build/
+apps/app/android/
+apps/app/ios/

@@ -1,0 +1,97 @@
+# 19 · Build Plan & Progress
+
+**Version:** 1.0 · **Date:** 22 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
+**Related:** [15 Roadmap](15-roadmap-and-delivery-plan.md) (milestones, sprints, Definition of Done) · [02 PRD](02-PRD.md) (stories and release criteria) · [06 TRD](06-TRD.md) · [09 API](09-API-and-realtime-protocol.md) · [14 Testing](14-testing-and-QA-plan.md) · [18 Admin & Analytics](18-admin-console-and-analytics.md)
+
+---
+
+## 1. How this plan works
+- The milestones are the ones in [doc 15 §1](15-roadmap-and-delivery-plan.md): **M1 "First duel"**, **M2 "Feature complete"** and **M3 "Beta"**. This file splits each one into build steps, in the order we build them.
+- **One step = one pull request into `main`**, built to the doc sections it lists. A step is done when its boxes are ticked, CI is green (format, lint, typecheck, tests) and the Definition of Done in [doc 15 §6](15-roadmap-and-delivery-plan.md) holds for the parts it touches.
+- The next step is broken into detailed boxes; later steps stay at headline level and are detailed when they start, so this file never promises more than we have designed.
+- **Third-party services never block a step.** SMS, Google sign-in, push, ads and payments sit behind an interface with a development stand-in; the real provider is plugged in when its account and keys exist (§6).
+
+Status: ✅ done · 🔨 in progress · ⬜ not started
+
+## 2. Already built
+
+| Area | What exists | Where |
+|---|---|---|
+| Monorepo and CI | pnpm workspaces, Turborepo, TypeScript, ESLint (with the rule that keeps native-only modules out of shared app code, TRD FR-WEB-2), Prettier, Vitest; GitHub Actions runs format, lint, typecheck and tests against real Postgres 16 and Redis 7; `docker compose` for local Postgres, Redis and ClickHouse | repo root, `.github/workflows/ci.yml` |
+| Game rules | Scoring, answer timing clamp, xxHash64 and per-player option shuffle, Glicko-2 and tiers, levels and XP, difficulty calibration, content review thresholds, WAT dates and streaks, room codes, the duel state machine and tie-break (73 tests) | `packages/game-rules` |
+| API contracts | problem+json errors, guest auth, categories, solo rounds (Zod) | `packages/shared-types` |
+| Analytics | The tracking plan as code (doc 13), the PII guard, the client tracker (sessions, foreground time, time per screen, consent, offline queue), server helpers (pseudonymous ids, clock skew, accept-once stream writes) | `packages/analytics` |
+| API, first slice | Migrations (schema v1.1) and the seed importer; guest sign-in; ES256 access tokens and rotating refresh tokens with reuse detection, HttpOnly cookie on the web; JWKS; `/v1/me`; `/v1/categories`; the first-run taste test (`/v1/rounds`: one question at a time, server timing, idempotent answers); server analytics events | `apps/api` |
+| Ingest | `POST /v1/events`: token check against the API's JWKS, gzip, tracking-plan and consent checks, quarantine, accept-once batches into the Redis stream | `apps/ingest` |
+
+Doc 15 sprint mapping: S0 is done except the Expo skeleton, OTP, Terraform and the web build in CI; S1 is done except the admin console shell, the content module and the ClickHouse loader. Those items are scheduled in the steps below.
+
+## 3. Milestone M1: "First duel" (doc 15, week 8)
+**Done when:** two internal users complete a duel against staging, one on an Android phone and one in the web app, and the duel shows on both players' admin timelines.
+
+### Step 1.1 · Duel API ⬜ (next)
+Docs: [GDD §2.1, §3.2, §9](03-game-design-document.md) · [TRD §4.3, §5.1–5.4](06-TRD.md) · [API §2.5](09-API-and-realtime-protocol.md) · [Data model: `duels`, `duel_rounds`, `duel_answers`](08-data-model.md) · [Testing §4.1–4.2](14-testing-and-QA-plan.md) · [Analytics: duel events](13-analytics-and-metrics.md) · [PRD US-3, US-4](02-PRD.md)
+
+- ⬜ Contracts for every duel endpoint in `packages/shared-types`
+- ⬜ `POST /v1/duels` against a friend (`user_id`) or an invite link; at most 20 active duels per player (PRD US-3 AC4)
+- ⬜ `GET /v1/invites/{token}` (public preview) and `POST /v1/invites/{token}/accept` (binds player B)
+- ⬜ `GET /v1/duels?state=active|done` with "your turn" first, sorted by deadline; `GET /v1/duels/{id}` (questions only for finished rounds)
+- ⬜ `POST /v1/duels/{id}/rounds/{n}/category`: 3 categories offered, picked by A, B, A (GDD §2.1)
+- ⬜ Round questions: both players get the same 3 (1 easy, 1 medium, 1 by combined rating, GDD §3.2), none the players have seen in the last 30 days where the pool allows
+- ⬜ Serve and answer one question at a time, same contract as the taste test: per-player option order, timing clamp, raw timing kept in `duel_answers`, answers idempotent per `(duel, round, seq, player)`
+- ⬜ Turns through the `game-rules` state machine, 48 h turn deadline, running scores
+- ⬜ Tie-break: one closest-number question; closest guess wins, then the faster answer
+- ⬜ Decline, cancel and rematch
+- ⬜ Expiry as a function the workers call in step 1.3 (forfeit or cancel per TRD §5.2)
+- ⬜ Glicko-2 rating update on completion, stored as `rating_delta_a/b`; gains between the same pair dampened after 3 games in 24 h (doc 10 §2)
+- ⬜ Offline tolerance (TRD FR-DUEL-5): an answer re-sent within time limit + 10 s counts, timed at the limit
+- ⬜ Analytics: `duel_created`, `question_served` and `question_answered` (mode `duel`), `duel_round_played`, `duel_completed` (one per player)
+- ⬜ Integration tests: every transition including expiry in each state, forfeit winner, the tie-break path; both players answering at once; replayed answers (doc 14 §4.2)
+
+Content note: the seed questions have no `closest_number` questions yet, and tie-breaks need them.
+
+### Step 1.2 · Accounts & friends ⬜
+Phone OTP (Termii, Africa's Talking fallback; dev stand-in), Google sign-in, guest-to-account merge, sign out everywhere, username and avatar, add a friend by username or from a past match, per-session RTT sampling for the timing clamp. Docs: [PRD US-2](02-PRD.md), [TRD §4.1, §4.6](06-TRD.md), [API §2.1–2.3](09-API-and-realtime-protocol.md).
+
+### Step 1.3 · Workers & analytics loader ⬜
+`apps/workers` (BullMQ): duel expiry at the deadline and reminders at 24 h and 4 h left (push stand-in until step 2.4); flushing `qstat:*` counters to `question_stats`; the event loader from the Redis stream into ClickHouse with `schema/analytics.clickhouse.sql`. Docs: [07 §4.3](07-system-architecture.md), [08 §6](08-data-model.md), [18 §15](18-admin-console-and-analytics.md).
+
+### Step 1.4 · The app: Android and web ⬜
+`apps/app` (Expo, Expo Router): design tokens and core components, platform adapters (TRD §5.6), the taste test, sign-in, home with "Your turn" cards, the duel screens, an invite link that opens straight into the turn in the browser, the analytics tracker wired in, web build in CI. Docs: [05 UX](05-UX-and-user-flows.md), [TRD §4.10, §5.6](06-TRD.md), [PRD US-1, US-3, US-4, US-11](02-PRD.md).
+
+### Step 1.5 · Admin console v0 ⬜
+`apps/admin` (Next.js): Google Workspace SSO, roles, the audit log, player search and User 360 with the activity timeline. Docs: [18 §3, §7, §16](18-admin-console-and-analytics.md), [PRD US-12](02-PRD.md).
+
+### Step 1.6 · Staging ⬜
+`infra/terraform` base and deploys for the API, ingest, workers, the web app and the admin console. Docs: [07 §5](07-system-architecture.md), [TRD §7](06-TRD.md). Needs the AWS account and the ClickHouse hosting decision (§6).
+
+## 4. Milestone M2: "Feature complete" (doc 15, week 12)
+**Done when:** every P0 story works on Android, iOS and web; the admin console's MVP modules are live (doc 18 §4); 2,000+ approved questions.
+
+| Step | Scope | Main docs |
+|---|---|---|
+| 2.1 Daily & leaderboards ⬜ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
+| 2.2 Party rooms ⬜ | `apps/realtime` (Colyseus), party REST side, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
+| 2.3 Random opponents ⬜ | Rating-bucket matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
+| 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
+| 2.5 Sharing, links & push ⬜ | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
+| 2.6 Content tools ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
+| 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, iOS build, practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
+
+## 5. Milestone M3: "Beta" (doc 15, week 14)
+Load tests (doc 14 §5), pen-test fixes, the device and browser matrix including the WhatsApp in-app browser, performance budgets (PRD §8), KPI reconciliation (admin numbers within ±1% of the database), closed track and invite-only web build. Detailed when M2 is close.
+
+## 6. Outside the code
+These are for the team, not pull requests, and some steps wait on them.
+
+| Item | Needed by | Notes |
+|---|---|---|
+| **3,000 approved questions** (≥ 600 per category + 600 mixed) | M2 (2,000), launch (3,000) | The critical path (doc 15 §5). Today: 104 drafts, none fact-checked, no `closest_number` questions |
+| Termii sender ID (and Africa's Talking) | 1.2 going live | Registration and NCC approval take weeks |
+| Google OAuth client IDs (app and web) | 1.2 going live | |
+| AWS account; ClickHouse Cloud vs self-hosted | 1.6 | Doc 15 §5 item 6 |
+| Google Workspace for staff SSO | 1.5 | |
+| Firebase project (FCM, web push) | 2.5 | |
+| Google Play organisation account, AdMob, RevenueCat | 2.4, M4 | Play and AdMob approval take 2–4 weeks |
+| Legal review (NDPA, prizes, ARCON), DPO, DPIA | Before beta | Doc 10 |

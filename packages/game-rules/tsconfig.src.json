@@ -1,0 +1,8 @@
+{
+  "//": "Proves the rules compile with no Node or DOM types, so they run anywhere (Hermes, browsers, Node).",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@whosabi/game-rules",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pure game rules shared by the API, realtime server and apps: scoring, timing, option shuffling, ratings, streaks and the duel flow.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.src.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "fast-check": "^4.10.2"
+  }
+}
