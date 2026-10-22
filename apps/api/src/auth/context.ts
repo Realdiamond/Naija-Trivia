@@ -33,3 +33,23 @@ export function requireAuth(request: FastifyRequest): AccessClaims {
   if (!request.auth) throw unauthorized();
   return request.auth;
 }
+
+/**
+ * For routes under /v1/auth, which skip the check above: the caller's session, if they sent
+ * one. A token that is sent but invalid or expired is a 401, so the client refreshes and
+ * retries rather than silently losing the guest it meant to keep.
+ */
+export async function sessionFromHeader(
+  request: FastifyRequest,
+  tokens: TokenService,
+): Promise<AccessClaims | null> {
+  const header = request.headers.authorization;
+  if (!header) return null;
+  const match = /^Bearer\s+(.+)$/i.exec(header);
+  if (!match) throw unauthorized('Expected a Bearer token.');
+  try {
+    return await tokens.verifyAccess(match[1]!);
+  } catch {
+    throw unauthorized('Your session has expired. Refresh and try again.');
+  }
+}

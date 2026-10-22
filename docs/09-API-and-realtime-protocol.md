@@ -26,13 +26,19 @@
 | Method | Path | Body → Response |
 |---|---|---|
 | POST | `/auth/guest` | `{device_id, platform}` → `{access, refresh, user}` |
-| POST | `/auth/otp/send` | `{phone, platform, turnstile_token?}` → `{request_id, resend_after_s}`. `platform` picks the SMS template (TRD FR-AUTH-2); the web needs a Turnstile token |
-| POST | `/auth/otp/verify` | `{request_id, code, merge_guest: true}` → `{access, refresh, user, is_new}` |
-| POST | `/auth/google` | `{id_token}` → tokens |
-| POST | `/auth/apple` | `{identity_token, nonce}` → tokens |
+| POST | `/auth/otp/send` | `{phone, platform, turnstile_token?}` → `{request_id, resend_after_s: 30}`. Nigerian mobile numbers only, in any common format (normalised to +234…). `platform` picks the SMS format (TRD FR-AUTH-2). A Turnstile token is needed on the web, and in the apps from a number's third code of the day (`CAPTCHA_REQUIRED`, `CAPTCHA_FAILED`). Limits: 30 s between codes to a number (`429` with `Retry-After`), 5 codes per number and 10 per device a day (`OTP_LIMIT_REACHED`), and a per-IP hourly cap. A code the SMS providers could not send is not counted (`503 PROVIDER_UNAVAILABLE`) |
+| POST | `/auth/otp/verify` | `{request_id, code, merge_guest?: true}` → `{access, refresh, user, is_new, merged_guest}`. A code lasts 5 minutes, allows 5 tries (`OTP_INVALID` says how many are left, then `OTP_TOO_MANY_ATTEMPTS`), works once, and is retired when a newer code is sent (`OTP_EXPIRED`) |
+| POST | `/auth/google` | `{id_token, platform, merge_guest?: true}` → same as verify. The server checks the token's signature, issuer, audience (our client ids) and expiry (`ID_TOKEN_INVALID`); `503 PROVIDER_UNAVAILABLE` when Google sign-in is not set up |
+| POST | `/auth/apple` | `{identity_token, nonce, platform, merge_guest?: true}` → same as verify. `nonce` is the raw value; the token must carry its SHA-256 |
 | POST | `/auth/refresh` | App: `{refresh}` → rotated tokens. Web: no body; the cookie is read and rotated, and `X-Requested-With` plus an allowed `Origin` are required. Reuse → 401 and the whole family revoked |
 | POST | `/auth/logout` | – → 204 |
-| POST | `/auth/logout-all` | Revokes every session on every platform ("Sign out everywhere") → 204 |
+| POST | `/auth/logout-all` | Needs the access token. Revokes every session on every platform ("Sign out everywhere") → 204 |
+
+**Keeping a guest's progress (TRD FR-AUTH-4, FR-AUTH-8).** Send the current session's access token (`Authorization: Bearer`) with a sign-in request and `merge_guest` (default true):
+- a guest signing up for the first time becomes the account: same id, nothing moves (`is_new: true, merged_guest: true`);
+- a guest signing in to an existing account has their duels, answers, ratings, seen questions, consents, devices and XP moved into it, and the guest is retired (`is_new: false, merged_guest: true`). An unfinished duel between the guest and that same account is cancelled;
+- an account signing in with a new method has it linked (e.g. Google added to a phone account).
+A token that is sent but expired is a `401` before the code is used, so the app refreshes and retries rather than losing the guest. `merge_guest: false` signs in without touching the current session.
 
 ### 2.2 Me & profile
 | Method | Path | Notes |

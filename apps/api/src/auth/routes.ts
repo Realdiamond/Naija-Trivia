@@ -1,23 +1,41 @@
 /**
- * Guest sign-in and sessions (TRD FR-AUTH-1, FR-AUTH-7, doc 09 §2.1).
- * Apps get the refresh token in the body; the web gets it as an HttpOnly cookie that
- * JavaScript can never read.
+ * Sign-in and sessions (TRD FR-AUTH-1 to FR-AUTH-8, doc 09 §2.1): guests, phone codes,
+ * Google and Apple. Apps get the refresh token in the body; the web gets it as an HttpOnly
+ * cookie that JavaScript can never read.
  */
+import { createHash } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import {
+  AppleAuthRequest,
   AuthResponse,
   ErrorCode,
+  GoogleAuthRequest,
   GuestAuthRequest,
+  normalizeNigerianPhone,
+  OtpSendRequest,
+  OtpVerifyRequest,
   PublicUser,
   RefreshRequest,
+  type OtpSendResponse,
   type Platform,
+  type SignInResponse,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
 import { withTransaction, type PoolClient } from '../db';
 import { ApiError, conflict, parse, unauthorized } from '../errors';
+import { eventContextFor } from '../events';
 import { newId } from '../ids';
-import { requireAuth } from './context';
-import { ACCESS_TTL_SECONDS, hashRefreshToken, newRefreshToken, REFRESH_TTL_SECONDS } from './tokens';
+import { signInWithIdentity, type IdentityProvider } from './accounts';
+import { requireAuth, sessionFromHeader } from './context';
+import { OtpService, RESEND_AFTER_SECONDS } from './otp';
+import type { IdTokenVerifier, VerifiedIdToken } from './providers';
+import {
+  ACCESS_TTL_SECONDS,
+  hashRefreshToken,
+  newRefreshToken,
+  REFRESH_TTL_SECONDS,
+  type AccessClaims,
+} from './tokens';
 
 export const REFRESH_COOKIE = 'ws_rt';
 const REFRESH_COOKIE_PATH = '/v1/auth';
@@ -64,11 +82,13 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
     session: { access: string; refresh: string },
     user: UserRow,
     status = 200,
+    signIn?: { is_new: boolean; merged_guest: boolean },
   ) {
-    const body: AuthResponse = {
+    const body: AuthResponse | SignInResponse = {
       access: session.access,
       access_expires_in: ACCESS_TTL_SECONDS,
       user: toPublicUser(user),
+      ...signIn,
     };
     if (platform === 'web') {
       void reply.setCookie(REFRESH_COOKIE, session.refresh, {
@@ -205,6 +225,169 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
     return reply.code(204).send();
   });
 
+  const otp = new OtpService({
+    redis: deps.redis,
+    sms: deps.auth.sms,
+    captcha: deps.auth.captcha,
+    secret: config.otpSecret,
+    now: clock.now,
+    webOtpDomain: new URL(config.publicWebUrl).hostname,
+    smsRetrieverAppHash: config.smsRetrieverAppHash,
+  });
+
+  /**
+   * One path for every sign-in method: find or create the account (keeping a guest's
+   * progress or linking to the current account, see accounts.ts) and start a session.
+   */
+  async function signIn(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    identity: { provider: IdentityProvider; subject: string; phoneHash?: Buffer },
+    platform: Platform,
+    current: AccessClaims | null,
+  ) {
+    const result = await withTransaction(pool, async (client) => {
+      const signedIn = await signInWithIdentity(client, { ...identity, platform, current, now: clock.now() });
+      if (signedIn.deviceId) {
+        // One live session per device: the guest session on this device ends here.
+        await client.query(
+          'UPDATE refresh_tokens SET revoked_at = now() WHERE device_id = $1 AND revoked_at IS NULL',
+          [signedIn.deviceId],
+        );
+      }
+      const session = await startSession(client, signedIn.user, platform, signedIn.deviceId);
+      return { ...signedIn, session };
+    });
+    if (result.isNew) {
+      await deps.events.emit(
+        'signup_completed',
+        { method: identity.provider, merged_guest: result.mergedGuest },
+        eventContextFor(request, result.user.id, platform),
+      );
+    }
+    return {
+      userId: result.user.id,
+      reply: sendSession(reply, platform, result.session, result.user, result.isNew ? 201 : 200, {
+        is_new: result.isNew,
+        merged_guest: result.mergedGuest,
+      }),
+    };
+  }
+
+  app.post(
+    '/v1/auth/otp/send',
+    { config: { rateLimit: { max: config.otpSendsPerIpPerHour, timeWindow: '1 hour' } } },
+    async (request): Promise<OtpSendResponse> => {
+      const body = parse(OtpSendRequest, request.body);
+      const phone = normalizeNigerianPhone(body.phone);
+      if (!phone) {
+        throw new ApiError(
+          400,
+          ErrorCode.validation,
+          'The request is not valid',
+          'phone: enter a Nigerian mobile number, like 0803 123 4567.',
+        );
+      }
+      const current = await sessionFromHeader(request, tokens);
+      const sent = await otp.send({
+        phone,
+        platform: body.platform,
+        captchaToken: body.turnstile_token,
+        ip: request.ip,
+        deviceId: current ? await deviceOf(current.userId) : null,
+      });
+      if (current) {
+        await deps.events.emit(
+          'otp_sent',
+          { provider: sent.provider },
+          eventContextFor(request, current.userId, current.platform),
+        );
+      }
+      return { request_id: sent.requestId, resend_after_s: RESEND_AFTER_SECONDS };
+    },
+  );
+
+  app.post('/v1/auth/otp/verify', async (request, reply) => {
+    const body = parse(OtpVerifyRequest, request.body);
+    // Checked before the code is used up, so a guest is never dropped by an expired token.
+    const current = await sessionFromHeader(request, tokens);
+    const checked = await otp.verify(body.request_id, body.code);
+    if (!checked.ok) {
+      if (current) {
+        await deps.events.emit(
+          'otp_failed',
+          { provider: checked.provider, reason: checked.error.code.toLowerCase() },
+          eventContextFor(request, current.userId, current.platform),
+        );
+      }
+      throw checked.error;
+    }
+    const { phone, platform, provider } = checked.code;
+    const signedIn = await signIn(
+      request,
+      reply,
+      { provider: 'phone', subject: phone, phoneHash: createHash('sha256').update(phone).digest() },
+      platform,
+      body.merge_guest ? current : null,
+    );
+    await deps.events.emit('otp_verified', { provider }, eventContextFor(request, signedIn.userId, platform));
+    return signedIn.reply;
+  });
+
+  app.post('/v1/auth/google', async (request, reply) => {
+    const body = parse(GoogleAuthRequest, request.body);
+    const current = await sessionFromHeader(request, tokens);
+    const identity = await checkIdToken(deps.auth.google, 'Google', body.id_token);
+    return (
+      await signIn(
+        request,
+        reply,
+        { provider: 'google', subject: identity.subject },
+        body.platform,
+        body.merge_guest ? current : null,
+      )
+    ).reply;
+  });
+
+  app.post('/v1/auth/apple', async (request, reply) => {
+    const body = parse(AppleAuthRequest, request.body);
+    const current = await sessionFromHeader(request, tokens);
+    const identity = await checkIdToken(deps.auth.apple, 'Apple', body.identity_token);
+    // Apple signs the SHA-256 of the nonce the app generated; the app sends us the original.
+    if (identity.nonce !== createHash('sha256').update(body.nonce).digest('hex')) {
+      throw new ApiError(401, ErrorCode.idTokenInvalid, 'Sign-in could not be confirmed', 'nonce mismatch');
+    }
+    return (
+      await signIn(
+        request,
+        reply,
+        { provider: 'apple', subject: identity.subject },
+        body.platform,
+        body.merge_guest ? current : null,
+      )
+    ).reply;
+  });
+
+  /** "Sign out everywhere" (FR-AUTH-8): every session on every platform. */
+  app.post('/v1/auth/logout-all', async (request, reply) => {
+    const current = await sessionFromHeader(request, tokens);
+    if (!current) throw unauthorized();
+    await pool.query('UPDATE refresh_tokens SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL', [
+      current.userId,
+      new Date(clock.now()),
+    ]);
+    void reply.clearCookie(REFRESH_COOKIE, { path: REFRESH_COOKIE_PATH });
+    return reply.code(204).send();
+  });
+
+  async function deviceOf(userId: string): Promise<string | null> {
+    const result = await pool.query<{ subject: string }>(
+      "SELECT subject FROM auth_identities WHERE user_id = $1 AND provider = 'guest_device' ORDER BY created_at LIMIT 1",
+      [userId],
+    );
+    return result.rows[0]?.subject ?? null;
+  }
+
   app.get('/v1/me', async (request) => {
     const auth = requireAuth(request);
     const user = (
@@ -236,4 +419,24 @@ function assertSameSiteRequest(request: FastifyRequest, allowedOrigins: string[]
 function platformFromHeader(request: FastifyRequest): Platform {
   const value = request.headers['x-platform'];
   return value === 'ios' ? 'ios' : value === 'web' ? 'web' : 'android';
+}
+
+async function checkIdToken(
+  verifier: IdTokenVerifier | null,
+  name: string,
+  token: string,
+): Promise<VerifiedIdToken> {
+  if (!verifier) {
+    throw new ApiError(
+      503,
+      ErrorCode.providerUnavailable,
+      `${name} sign-in is not available`,
+      'Use your phone number.',
+    );
+  }
+  try {
+    return await verifier.verify(token);
+  } catch {
+    throw new ApiError(401, ErrorCode.idTokenInvalid, 'Sign-in could not be confirmed', 'Try again.');
+  }
 }

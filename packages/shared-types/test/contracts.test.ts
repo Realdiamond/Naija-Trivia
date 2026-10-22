@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { AnswerRequest, AnswerResponse, GuestAuthRequest, routes, ServedQuestion } from '../src';
+import {
+  AnswerRequest,
+  AnswerResponse,
+  GuestAuthRequest,
+  maskPhone,
+  normalizeNigerianPhone,
+  routes,
+  ServedQuestion,
+} from '../src';
 
 describe('contracts', () => {
   it('accepts the serve example from the API doc', () => {
@@ -47,5 +55,40 @@ describe('contracts', () => {
   it('builds escaped paths', () => {
     expect(routes.serve('r_1', 2)).toBe('/v1/rounds/r_1/questions/2/serve');
     expect(routes.round('a/b')).toBe('/v1/rounds/a%2Fb');
+  });
+});
+
+describe('Nigerian phone numbers', () => {
+  it('normalises the usual ways people type them to E.164', () => {
+    for (const typed of [
+      '0803 123 4567',
+      '08031234567',
+      '+234 803 123 4567',
+      '+234 (0) 803-123-4567',
+      '2348031234567',
+      '002348031234567',
+      '8031234567',
+    ]) {
+      expect(normalizeNigerianPhone(typed), typed).toBe('+2348031234567');
+    }
+    expect(normalizeNigerianPhone('0912 345 6789')).toBe('+2349123456789');
+    expect(normalizeNigerianPhone('0701 234 5678')).toBe('+2347012345678');
+  });
+
+  it('rejects landlines, short numbers and other countries', () => {
+    for (const typed of [
+      '+44 7700 900123',
+      '01 234 5678',
+      '0803 123 456',
+      '0803123456789',
+      '0603 123 4567',
+      'abc',
+    ]) {
+      expect(normalizeNigerianPhone(typed), typed).toBeNull();
+    }
+  });
+
+  it('masks numbers for logs', () => {
+    expect(maskPhone('+2348031234567')).toBe('+234803****567');
   });
 });

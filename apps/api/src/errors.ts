@@ -9,6 +9,8 @@ export class ApiError extends Error {
     readonly code: ErrorCode,
     readonly title: string,
     readonly detail?: string,
+    /** Sent as Retry-After (seconds) when the client should wait before trying again. */
+    readonly retryAfterSeconds?: number,
   ) {
     super(title);
     this.name = 'ApiError';
@@ -55,6 +57,8 @@ export function registerErrorHandlers(app: FastifyInstance): void {
     let problem: Problem;
     if (error instanceof ApiError) {
       problem = problemFor(error.status, error.code, error.title, request.id, error.detail);
+      if (error.retryAfterSeconds !== undefined)
+        void reply.header('retry-after', String(error.retryAfterSeconds));
     } else if (error.statusCode === 429) {
       problem = problemFor(429, ErrorCode.rateLimited, 'Too many requests', request.id, 'Try again shortly.');
     } else if (error.statusCode && error.statusCode >= 400 && error.statusCode < 500) {

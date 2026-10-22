@@ -62,6 +62,7 @@ erDiagram
 |---|---|
 | `users` | One row for guests and registered users. `status` drives restrictions. `age_band` is set at signup, and `13_17` forces `restricted` behaviour in the app layer. `home_state` uses 2-letter Nigerian state codes for state leaderboards. `signup_platform`, `last_platform`, `last_seen_at` and `acquisition_source` feed the admin console; `last_seen_at` is written at most every 5 minutes per user |
 | `auth_identities` | Several login methods per user. `phone_hash` (SHA-256 of E.164) is indexed on its 3-byte prefix for k-anonymity contact discovery (TRD FR-SOC-2) |
+| `user_merges` | One row per guest merged into an existing account (FR-AUTH-4): the guest is retired (`status = 'deleted'`) and its progress moved. The dimension sync copies these to `analytics.user_aliases`, so a person keeps one timeline |
 | `questions` | Options stored as a JSONB array in canonical order, plus `correct_index`. Shuffling happens at serve time. `d_rating` is the calibrated difficulty. `version` increments on edit, and answers record the question at play time (via `question_id` plus nightly re-score jobs) |
 | `question_stats` | Write-heavy counters. Increment in Redis (`HINCRBY`) and flush to Postgres every minute to avoid row-lock contention on hot questions |
 | `user_question_seen` | The fallback for no-repeat. The primary store is a Redis bloom filter per user (`seen:{user}`, about 1% false positives, 30-day rolling via two rotating filters). Partition monthly by `seen_at` and drop partitions older than 60 days |
@@ -85,7 +86,10 @@ erDiagram
 
 | Key | Type | TTL | Purpose |
 |---|---|---|---|
-| `otp:{e164}` | hash {code_hash, attempts} | 5 min | OTP verification |
+| `otp:{request_id}` | hash {phone, code_hmac, attempts, platform, provider, expires_at} | 5 min | A sign-in code, stored only as an HMAC; deleted when used |
+| `otp:active:{e164}` | string (request_id) | 5 min | The newest code for a number; sending a new code retires the old one |
+| `otp:cool:{e164}` | string (ms) | 30 s | When the last code went out (30 s between sends) |
+| `otp:n:{e164}:{date}` / `otp:d:{device}:{date}` | counter | 26 h | Codes sent today (WAT) to a number (max 5) and from a device (max 10) |
 | `rl:{scope}:{id}` | string/counter | window | Rate limiting (token bucket) |
 | `served:{match}:{qid}:{user}` | string (ms timestamp) | 1 h | Timing anchor for solo rounds (SET NX: serving again never resets the timer). Duels keep it in `duel_answers.served_at`, because a turn can last 48 h |
 | `idem:{user}:{operation}:{key}` | string (JSON) | 24 h | `Idempotency-Key` results for mutations without a natural key (e.g. creating a duel), replayed to retries |

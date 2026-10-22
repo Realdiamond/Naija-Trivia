@@ -37,6 +37,15 @@ export const ErrorCode = {
   categoryNotOffered: 'CATEGORY_NOT_OFFERED',
   categoryNotPicked: 'CATEGORY_NOT_PICKED',
   alreadyAnswered: 'ALREADY_ANSWERED',
+  otpInvalid: 'OTP_INVALID',
+  otpExpired: 'OTP_EXPIRED',
+  otpTooManyAttempts: 'OTP_TOO_MANY_ATTEMPTS',
+  otpLimitReached: 'OTP_LIMIT_REACHED',
+  captchaRequired: 'CAPTCHA_REQUIRED',
+  captchaFailed: 'CAPTCHA_FAILED',
+  idTokenInvalid: 'ID_TOKEN_INVALID',
+  providerUnavailable: 'PROVIDER_UNAVAILABLE',
+  accountUnavailable: 'ACCOUNT_UNAVAILABLE',
   internal: 'INTERNAL',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

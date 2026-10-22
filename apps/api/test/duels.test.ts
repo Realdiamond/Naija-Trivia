@@ -424,6 +424,7 @@ describe('expiry', () => {
       clock: t.clock,
       events: new ServerEvents(t.redis, t.config.analyticsKey, t.clock, t.app.log),
       log: t.app.log,
+      auth: t.auth,
     });
     t.clock.advance(TURN + 1000);
     expect(await sweeper.expireDue(1000)).toBeGreaterThanOrEqual(1);

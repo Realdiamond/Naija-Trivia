@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import type { Redis } from 'ioredis';
+import { createAuthProviders, type AuthProviders } from './auth/providers';
 import { authRoutes } from './auth/routes';
 import { registerAuth } from './auth/context';
 import type { TokenService } from './auth/tokens';
@@ -24,6 +25,7 @@ export interface AppDeps {
   clock: Clock;
   events: ServerEvents;
   log: FastifyBaseLogger;
+  auth: AuthProviders;
 }
 
 export interface BuildOptions {
@@ -32,6 +34,8 @@ export interface BuildOptions {
   redis: Redis;
   tokens: TokenService;
   clock: Clock;
+  /** Stand-ins for SMS, Turnstile and Google/Apple sign-in (tests); real ones come from config. */
+  auth?: Partial<AuthProviders>;
 }
 
 export async function buildApp(options: BuildOptions): Promise<FastifyInstance> {
@@ -46,6 +50,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
     ...options,
     events: new ServerEvents(options.redis, options.config.analyticsKey, options.clock, app.log),
     log: app.log,
+    auth: { ...createAuthProviders(options.config, app.log, options.clock.now), ...options.auth },
   };
 
   registerErrorHandlers(app);
