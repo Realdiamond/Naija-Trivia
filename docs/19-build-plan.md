@@ -1,6 +1,6 @@
 # 19 · Build Plan & Progress
 
-**Version:** 1.2 · **Date:** 22 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
+**Version:** 1.3 · **Date:** 22 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
 **Related:** [15 Roadmap](15-roadmap-and-delivery-plan.md) (milestones, sprints, Definition of Done) · [02 PRD](02-PRD.md) (stories and release criteria) · [06 TRD](06-TRD.md) · [09 API](09-API-and-realtime-protocol.md) · [14 Testing](14-testing-and-QA-plan.md) · [18 Admin & Analytics](18-admin-console-and-analytics.md)
 
 ---
@@ -67,10 +67,20 @@ Split into two pull requests to keep each reviewable. Docs: [PRD US-2](02-PRD.md
 
 Not in this step: the WhatsApp OTP fallback (PRD US-2, v1.1), contact discovery and age bands (step 1.2b), and the OTP send-to-verify ratio alert (doc 10 §1; the events are in place, the alert comes with the admin alerts in step 2.7).
 
-#### Step 1.2b · Profile & friends ⬜ (next)
-Username (with the profanity filter) and avatar, `PATCH /me`, the age band (under 13 blocked, 13–17 restricted, FR-AUTH-6), friend requests by username or from a past match, blocks, contact discovery by hash prefix (FR-SOC-2), friend duels limited to friends and past opponents, per-session RTT sampling for the timing clamp.
+#### Step 1.2b · Profile & friends ✅
+- ✅ `GET`/`PATCH /me`: profile, settings, level progress, rating and tier; usernames chosen once, unique ignoring case, with a starter filter for offensive and official-looking names (EN, Pidgin, Yoruba, Hausa) for moderators to extend
+- ✅ The age gate (FR-AUTH-6, doc 10 §3.3): under 13 refused; 13–17 restricted (family mode on, never discoverable), including a guest who answers before signing up
+- ✅ Public profile cards (`/users/{username}`)
+- ✅ Friends: requests by username or id, accept, decline, unfriend; asking each other at once makes you friends; recent opponents suggested; `friend_added` events
+- ✅ Blocks: stop requests, challenges and invite links both ways, without saying who blocked
+- ✅ Contact discovery by 20-bit hash prefix (FR-SOC-2): app only, discoverable 18+ accounts only, 500 prefixes a request and 3,000 a day
+- ✅ Direct duel challenges limited to friends and past opponents; restricted accounts can be challenged
+- ✅ Round-trip sampling (TRD §5.3): server-timed pings, median of the last 5, capped at 1.5 s, used by duel and taste-test timing
+- ✅ Tests for each rule, against real Postgres and Redis
 
-### Step 1.3 · Workers & analytics loader ⬜
+Not in this step: guardian consent for 13–17s by guardian phone code (doc 10 §3.3; with the compliance work in step 2.8), reporting players and the moderators' forced rename (with moderation in step 2.7), QR friend codes (with the app in step 1.4).
+
+### Step 1.3 · Workers & analytics loader ⬜ (next)
 `apps/workers` (BullMQ): duel expiry at the deadline (calling `DuelService.expireDue`) and reminders at 24 h and 4 h left (push stand-in until step 2.5); flushing `qstat:*` counters to `question_stats`; the event loader from the Redis stream into ClickHouse with `schema/analytics.clickhouse.sql`. Docs: [07 §4.3](07-system-architecture.md), [08 §6](08-data-model.md), [18 §15](18-admin-console-and-analytics.md).
 
 ### Step 1.4 · The app: Android and web ⬜
@@ -94,7 +104,7 @@ Username (with the profanity filter) and avatar, `PATCH /me`, the age band (unde
 | 2.5 Sharing, links & push ⬜ | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
-| 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, iOS build, practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
+| 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build, practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 
 ## 5. Milestone M3: "Beta" (doc 15, week 14)
 Load tests (doc 14 §5), pen-test fixes, the device and browser matrix including the WhatsApp in-app browser, performance budgets (PRD §8), KPI reconciliation (admin numbers within ±1% of the database), closed track and invite-only web build. Detailed when M2 is close.

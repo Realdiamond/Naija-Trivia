@@ -62,6 +62,7 @@ erDiagram
 |---|---|
 | `users` | One row for guests and registered users. `status` drives restrictions. `age_band` is set at signup, and `13_17` forces `restricted` behaviour in the app layer. `home_state` uses 2-letter Nigerian state codes for state leaderboards. `signup_platform`, `last_platform`, `last_seen_at` and `acquisition_source` feed the admin console; `last_seen_at` is written at most every 5 minutes per user |
 | `auth_identities` | Several login methods per user. `phone_hash` (SHA-256 of E.164) is indexed on its 3-byte prefix for k-anonymity contact discovery (TRD FR-SOC-2) |
+| `friendships` | One row per pair (`user_a < user_b`): `pending`, `accepted` or `blocked`; `requested_by` is the asker or the blocker, `source` how the request started (for `friend_added`). Friends and blocks need an account |
 | `user_merges` | One row per guest merged into an existing account (FR-AUTH-4): the guest is retired (`status = 'deleted'`) and its progress moved. The dimension sync copies these to `analytics.user_aliases`, so a person keeps one timeline |
 | `questions` | Options stored as a JSONB array in canonical order, plus `correct_index`. Shuffling happens at serve time. `d_rating` is the calibrated difficulty. `version` increments on edit, and answers record the question at play time (via `question_id` plus nightly re-score jobs) |
 | `question_stats` | Write-heavy counters. Increment in Redis (`HINCRBY`) and flush to Postgres every minute to avoid row-lock contention on hot questions |
@@ -95,7 +96,9 @@ erDiagram
 | `idem:{user}:{operation}:{key}` | string (JSON) | 24 h | `Idempotency-Key` results for mutations without a natural key (e.g. creating a duel), replayed to retries |
 | `round:{id}` | string (JSON) | 1 h | Solo round definition (taste test; practice and Daily next) |
 | `answer:{round}:{seq}` | string (JSON) | 1 h | Scored answer; SET NX makes retries and double taps idempotent |
-| `rtt:{session}` | list (last 5) | 1 h | RTT estimate |
+| `rtt:{user}:{session}` | list (last 5) | 1 h | Round-trip samples; answer timing uses the median, capped at 1.5 s |
+| `ping:{id}` | string (JSON) | 30 s | A ping waiting for its answer; each counts once |
+| `disc:{user}:{date}` | counter | 26 h | Contact-discovery prefixes asked today (max 3,000) |
 | `seen:{user}:{a|b}` | Bloom filter (RedisBloom) | 30 d rotating | No-repeat questions |
 | `mm:{bucket}` | sorted set (enqueue time) | – | Random matchmaking queue |
 | `lb:daily:{yyyymmdd}` | sorted set | 8 d | Daily percentile/leaderboard |

@@ -46,6 +46,14 @@ export const ErrorCode = {
   idTokenInvalid: 'ID_TOKEN_INVALID',
   providerUnavailable: 'PROVIDER_UNAVAILABLE',
   accountUnavailable: 'ACCOUNT_UNAVAILABLE',
+  accountRequired: 'ACCOUNT_REQUIRED',
+  usernameTaken: 'USERNAME_TAKEN',
+  usernameNotAllowed: 'USERNAME_NOT_ALLOWED',
+  usernameLocked: 'USERNAME_LOCKED',
+  ageNotAllowed: 'AGE_NOT_ALLOWED',
+  ageAlreadySet: 'AGE_ALREADY_SET',
+  userUnavailable: 'USER_UNAVAILABLE',
+  friendsOnly: 'FRIENDS_ONLY',
   internal: 'INTERNAL',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

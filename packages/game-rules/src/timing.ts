@@ -64,3 +64,24 @@ function assertNonNegative(name: string, value: number): void {
   if (!Number.isFinite(value) || value < 0)
     throw new RangeError(`${name} must be a non-negative number, got ${value}`);
 }
+
+/** Round-trip samples kept per session (TRD §5.3: the median of the last 5 pings). */
+export const RTT_SAMPLES = 5;
+/**
+ * The highest round-trip estimate the clamp will use. A slower estimate would widen the window
+ * a client may claim answers inside, so a deliberately slow ping must not buy faster scores
+ * (doc 10 §2). 1.5 s covers slow 3G in Nigeria *(inferred; check against beta data)*.
+ */
+export const MAX_RTT_ESTIMATE_MS = 1500;
+
+/** The session's round-trip estimate: the median of the latest samples, capped. Null without samples. */
+export function estimateRtt(samples: readonly number[]): number | null {
+  const valid = samples
+    .slice(0, RTT_SAMPLES)
+    .filter((s) => Number.isFinite(s) && s >= 0)
+    .sort((x, y) => x - y);
+  if (valid.length === 0) return null;
+  const mid = Math.floor(valid.length / 2);
+  const median = valid.length % 2 === 1 ? valid[mid]! : (valid[mid - 1]! + valid[mid]!) / 2;
+  return Math.min(Math.round(median), MAX_RTT_ESTIMATE_MS);
+}

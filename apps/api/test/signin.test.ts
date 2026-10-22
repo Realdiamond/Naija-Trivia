@@ -2,7 +2,7 @@ import { createHash, randomInt } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { pseudonymousId } from '@whosabi/analytics/server';
 import type { CreateDuelResponse, ListDuelsResponse, Platform, SignInResponse } from '@whosabi/shared-types';
-import { bearer, createTestApp, signInGuest, TEST_GOOGLE_CLIENT } from './helpers';
+import { befriend, bearer, createTestApp, signInGuest, TEST_GOOGLE_CLIENT } from './helpers';
 
 const APP_HASH = 'FA+9qCX9VSu';
 const DAY = 86_400_000;
@@ -233,13 +233,15 @@ describe("keeping a guest's progress (FR-AUTH-4)", () => {
     const friend = await signInGuest(t.app);
     const guest = await signInGuest(t.app, 'web');
     await t.pool.query('UPDATE users SET xp = 120 WHERE id = $1', [guest.user.id]);
-    const challenge = (opponent: string) =>
-      t.app.inject({
+    const challenge = async (opponent: string) => {
+      await befriend(t.pool, guest.user.id, opponent);
+      return t.app.inject({
         method: 'POST',
         url: '/v1/duels',
         headers: bearer(guest.access),
         payload: { opponent: { user_id: opponent } },
       });
+    };
     const withFriend = (await challenge(friend.user.id)).json() as CreateDuelResponse;
     const withSelf = (await challenge(account.user.id)).json() as CreateDuelResponse;
 

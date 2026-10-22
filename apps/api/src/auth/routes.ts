@@ -26,7 +26,7 @@ import { ApiError, conflict, parse, unauthorized } from '../errors';
 import { eventContextFor } from '../events';
 import { newId } from '../ids';
 import { signInWithIdentity, type IdentityProvider } from './accounts';
-import { requireAuth, sessionFromHeader } from './context';
+import { sessionFromHeader } from './context';
 import { OtpService, RESEND_AFTER_SECONDS } from './otp';
 import type { IdTokenVerifier, VerifiedIdToken } from './providers';
 import {
@@ -387,17 +387,6 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
     );
     return result.rows[0]?.subject ?? null;
   }
-
-  app.get('/v1/me', async (request) => {
-    const auth = requireAuth(request);
-    const user = (
-      await pool.query<UserRow>('SELECT id, username, status, level, xp FROM users WHERE id = $1', [
-        auth.userId,
-      ])
-    ).rows[0];
-    if (!user) throw unauthorized('Account unavailable.');
-    return toPublicUser(user);
-  });
 }
 
 /**

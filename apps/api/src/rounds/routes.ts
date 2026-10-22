@@ -29,6 +29,7 @@ import { requireAuth } from '../auth/context';
 import { loadQuestion, pickTasteTestQuestions, type QuestionRow } from '../content/questions';
 import { ApiError, conflict, notFound, parse } from '../errors';
 import { requestEventContext } from '../events';
+import { rttFor } from '../rtt';
 import { recordQuestionStats } from '../content/stats';
 import { newId } from '../ids';
 import { RoundStore, type RoundDef, type StoredAnswer } from './store';
@@ -138,10 +139,16 @@ export function roundRoutes(app: FastifyInstance, deps: AppDeps): void {
       throw conflict(ErrorCode.questionNotServed, 'This question has not been shown yet');
 
     const now = clock.now();
+    const rtt = await rttFor(
+      deps.redis,
+      auth.userId,
+      requestEventContext(request).sessionId,
+      config.defaultRttMs,
+    );
     const timing = acceptElapsed({
       clientElapsedMs: body.client_elapsed_ms,
       serverElapsedMs: Math.max(0, now - servedAtMs),
-      rttEstMs: config.defaultRttMs,
+      rttEstMs: rtt,
       timeLimitMs: round.timeLimitMs,
     });
     const perm = optionPermutation(question.options.length, shuffleSeed(round.id, auth.userId, question.id));
@@ -175,7 +182,7 @@ export function roundRoutes(app: FastifyInstance, deps: AppDeps): void {
       acceptedMs: timing.acceptedMs,
       serverElapsedMs: now - servedAtMs,
       clientElapsedMs: body.client_elapsed_ms,
-      rttEstMs: config.defaultRttMs,
+      rttEstMs: rtt,
       displayIndex: body.display_index,
       canonicalIndex,
       correctDisplayIndex: toDisplayIndex(perm, question.correct_index),
