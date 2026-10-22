@@ -47,9 +47,14 @@ export class ServerEvents {
 export function requestEventContext(request: FastifyRequest): EventContext {
   const auth = request.auth;
   if (!auth) throw new Error('requestEventContext needs a signed-in request');
+  return eventContextFor(request, auth.userId, auth.platform);
+}
+
+/** The same context for a player the request is not signed in as yet (sign-in itself). */
+export function eventContextFor(request: FastifyRequest, userId: string, platform: Platform): EventContext {
   return {
-    userId: auth.userId,
-    platform: auth.platform,
+    userId,
+    platform,
     sessionId: headerValue(request, 'x-session-id'),
     appVersion: headerValue(request, 'x-app-version') ?? undefined,
   };

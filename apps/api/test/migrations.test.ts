@@ -12,7 +12,7 @@ afterAll(() => t.close());
 describe('database', () => {
   it('is migrated once and re-running is a no-op', async () => {
     const versions = (await t.pool.query('SELECT version FROM schema_migrations')).rows.map((r) => r.version);
-    expect(versions).toEqual(['0001_initial.sql', '0002_duels.sql']);
+    expect(versions).toEqual(['0001_initial.sql', '0002_duels.sql', '0003_user_merges.sql']);
     expect(await migrate(t.pool, fileURLToPath(new URL('../migrations', import.meta.url)))).toEqual([]);
   });
 

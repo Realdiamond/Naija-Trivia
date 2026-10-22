@@ -68,6 +68,16 @@ CREATE TABLE devices (
   last_seen_at    timestamptz NOT NULL DEFAULT now()
 );
 
+-- Guest-to-account merges (TRD FR-AUTH-4): the guest's progress moved into the account; the
+-- dimension sync copies these links to analytics.user_aliases (one timeline per person).
+CREATE TABLE user_merges (
+  guest_id        text PRIMARY KEY REFERENCES users(id),
+  into_user_id    text NOT NULL REFERENCES users(id),
+  merged_at       timestamptz NOT NULL,
+  CHECK (guest_id <> into_user_id)
+);
+CREATE INDEX user_merges_into_idx ON user_merges (into_user_id);
+
 CREATE TABLE consent_records (
   id              bigserial PRIMARY KEY,
   user_id         text NOT NULL REFERENCES users(id) ON DELETE CASCADE,

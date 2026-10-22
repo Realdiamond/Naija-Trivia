@@ -1,6 +1,6 @@
 # 19 · Build Plan & Progress
 
-**Version:** 1.1 · **Date:** 22 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
+**Version:** 1.2 · **Date:** 22 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
 **Related:** [15 Roadmap](15-roadmap-and-delivery-plan.md) (milestones, sprints, Definition of Done) · [02 PRD](02-PRD.md) (stories and release criteria) · [06 TRD](06-TRD.md) · [09 API](09-API-and-realtime-protocol.md) · [14 Testing](14-testing-and-QA-plan.md) · [18 Admin & Analytics](18-admin-console-and-analytics.md)
 
 ---
@@ -52,8 +52,23 @@ Content: 10 draft `closest_number` questions were added to the seed file for tie
 
 Left for later steps, on purpose: friend challenges currently accept any guest or active player's id, and step 1.2 limits them to friends and past opponents; the timing clamp uses a configured RTT until step 1.2 measures it per session; "your turn" pushes come with step 2.5 and reminders with step 1.3; coins, XP and lifelines with step 2.4; category ratings with step 2.1; the void-and-replace of a question after a network drop (GDD §9) with the app in step 1.4; the per-player Redis seen-filters replace the `user_question_seen` table lookup during M3 hardening.
 
-### Step 1.2 · Accounts & friends ⬜ (next)
-Phone OTP (Termii, Africa's Talking fallback; dev stand-in), Google sign-in, guest-to-account merge, sign out everywhere, username and avatar, add a friend by username or from a past match, friend duels limited to friends and past opponents, per-session RTT sampling for the timing clamp. Docs: [PRD US-2](02-PRD.md), [TRD §4.1, §4.6](06-TRD.md), [API §2.1–2.3](09-API-and-realtime-protocol.md).
+### Step 1.2 · Accounts & friends
+Split into two pull requests to keep each reviewable. Docs: [PRD US-2](02-PRD.md), [TRD §4.1, §4.6](06-TRD.md), [API §2.1–2.3](09-API-and-realtime-protocol.md), [doc 10 §1](10-security-anti-cheat-privacy-compliance.md).
+
+#### Step 1.2a · Sign-in ✅
+- ✅ Phone codes: Nigerian numbers normalised to E.164 (shared with the apps), 6 digits, 5 minutes, single use, kept only as an HMAC; 5 tries per code, 30 s between sends, 5 a day per number and 10 per device, a per-IP cap
+- ✅ SMS: Termii first, Africa's Talking as the fallback, a development stand-in that logs the message; the Android SMS Retriever hash and the web's WebOTP line in the text; a code that could not be sent is not counted
+- ✅ Turnstile on web sends, and in the apps from a number's third code of the day (doc 10 §1)
+- ✅ Google and Apple sign-in: signature, issuer, audience and expiry checked on the server; Apple's nonce; each method off until its ids are set
+- ✅ Guest progress kept (FR-AUTH-4): a guest who signs up becomes the account; a guest who signs in to an existing account has duels, ratings, seen questions, devices and XP moved in, and the link recorded in `user_merges` for analytics
+- ✅ A new sign-in method links to the signed-in account (FR-AUTH-8); "Sign out everywhere"
+- ✅ Events: `otp_sent`, `otp_verified`, `otp_failed`, `signup_completed`
+- ✅ Tests: every rule above against real Postgres and Redis; the SMS adapters' requests and failover
+
+Not in this step: the WhatsApp OTP fallback (PRD US-2, v1.1), contact discovery and age bands (step 1.2b), and the OTP send-to-verify ratio alert (doc 10 §1; the events are in place, the alert comes with the admin alerts in step 2.7).
+
+#### Step 1.2b · Profile & friends ⬜ (next)
+Username (with the profanity filter) and avatar, `PATCH /me`, the age band (under 13 blocked, 13–17 restricted, FR-AUTH-6), friend requests by username or from a past match, blocks, contact discovery by hash prefix (FR-SOC-2), friend duels limited to friends and past opponents, per-session RTT sampling for the timing clamp.
 
 ### Step 1.3 · Workers & analytics loader ⬜
 `apps/workers` (BullMQ): duel expiry at the deadline (calling `DuelService.expireDue`) and reminders at 24 h and 4 h left (push stand-in until step 2.5); flushing `qstat:*` counters to `question_stats`; the event loader from the Redis stream into ClickHouse with `schema/analytics.clickhouse.sql`. Docs: [07 §4.3](07-system-architecture.md), [08 §6](08-data-model.md), [18 §15](18-admin-console-and-analytics.md).
@@ -90,8 +105,9 @@ These are for the team, not pull requests, and some steps wait on them.
 | Item | Needed by | Notes |
 |---|---|---|
 | **3,000 approved questions** (≥ 600 per category + 600 mixed) | M2 (2,000), launch (3,000) | The critical path (doc 15 §5). Today: 114 drafts (104 multiple choice, 10 closest-number for tie-breaks), none fact-checked |
-| Termii sender ID (and Africa's Talking) | 1.2 going live | Registration and NCC approval take weeks |
-| Google OAuth client IDs (app and web) | 1.2 going live | |
+| Termii sender ID (and Africa's Talking) | 1.2a going live | Registration and NCC approval take weeks. Then set `TERMII_API_KEY`, `TERMII_SENDER_ID` (and `AT_USERNAME`, `AT_API_KEY`) |
+| Cloudflare Turnstile site key and secret | 1.2a going live | `TURNSTILE_SECRET` on the API; the site key goes in the apps |
+| Google OAuth client IDs (Android, iOS, web) and Apple sign-in ids | 1.2a going live | `GOOGLE_CLIENT_IDS`, `APPLE_AUDIENCES`; the Android SMS Retriever hash comes from the signed app (`SMS_RETRIEVER_APP_HASH`) |
 | AWS account; ClickHouse Cloud vs self-hosted | 1.6 | Doc 15 §5 item 6 |
 | Google Workspace for staff SSO | 1.5 | |
 | Firebase project (FCM, web push) | 2.5 | |
