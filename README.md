@@ -4,17 +4,17 @@ One repository for the game: the Expo app (Android, iOS and web), the backend se
 
 ## Layout
 
-| Path                                         | What it is                                                                                                                                                                               | Status           |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| [`packages/game-rules`](packages/game-rules) | Pure rules shared by every app and service: scoring, answer timing, option shuffling, Glicko-2 ratings, levels, difficulty calibration, WAT dates and streaks, room codes, the duel flow | Built and tested |
-| `packages/shared-types`                      | API contracts (Zod)                                                                                                                                                                      | Next             |
-| `packages/analytics`                         | Tracking plan and the client event tracker                                                                                                                                               | Next             |
-| `apps/api`                                   | Fastify API                                                                                                                                                                              | Next             |
-| `apps/ingest`                                | Analytics event intake                                                                                                                                                                   | Next             |
-| `apps/app`                                   | Expo app for Android, iOS and the web                                                                                                                                                    | Next             |
-| [`docs/`](docs/00-README.md)                 | Product, design and technical docs, schemas and seed questions                                                                                                                           | v1.1             |
+| Path                                             | What it is                                                                                                                                                                               | Status                                     |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| [`packages/game-rules`](packages/game-rules)     | Pure rules shared by every app and service: scoring, answer timing, option shuffling, Glicko-2 ratings, levels, difficulty calibration, WAT dates and streaks, room codes, the duel flow | Built and tested                           |
+| [`packages/shared-types`](packages/shared-types) | API contracts (Zod)                                                                                                                                                                      | Built and tested; grows with each API step |
+| [`packages/analytics`](packages/analytics)       | Tracking plan, the client event tracker and server helpers                                                                                                                               | Built and tested                           |
+| [`apps/api`](apps/api)                           | Fastify API: guest sign-in, sessions and the first-run taste test so far                                                                                                                 | First slice built; duels next              |
+| [`apps/ingest`](apps/ingest)                     | Analytics event intake                                                                                                                                                                   | Built and tested                           |
+| `apps/app`                                       | Expo app for Android, iOS and the web                                                                                                                                                    | Planned (step 1.4)                         |
+| [`docs/`](docs/00-README.md)                     | Product, design and technical docs, schemas and seed questions                                                                                                                           | v1.1                                       |
 
-The full target layout is in [docs/07 §3](docs/07-system-architecture.md).
+The full target layout is in [docs/07 §3](docs/07-system-architecture.md). What is built, what comes next and in which order is tracked in the [build plan](docs/19-build-plan.md).
 
 ## Getting started
 
