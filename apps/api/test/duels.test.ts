@@ -13,7 +13,7 @@ import type {
 } from '@whosabi/shared-types';
 import { DuelService } from '../src/duels/service';
 import { ServerEvents } from '../src/events';
-import { bearer, createTestApp, signInGuest } from './helpers';
+import { befriend, bearer, createTestApp, signInGuest } from './helpers';
 
 const HOUR = 3_600_000;
 const TURN = 48 * HOUR;
@@ -57,6 +57,8 @@ function req(
 }
 
 async function createDuel(p: Player, opponent: object, headers: Record<string, string> = {}) {
+  // Direct challenges go to friends and past opponents; these tests are about the duel itself.
+  if ('user_id' in opponent) await befriend(t.pool, p.id, opponent.user_id as string);
   const res = await req(p, 'POST', '/v1/duels', { opponent }, headers);
   expect(res.statusCode, res.body).toBe(201);
   return res.json() as CreateDuelResponse;
@@ -558,6 +560,7 @@ describe('limits and lists', () => {
     const over = await req(a, 'POST', '/v1/duels', { opponent: { link: true } });
     expect([over.statusCode, over.json().code]).toEqual([409, 'DUEL_LIMIT_REACHED']);
     const friend = await player();
+    await befriend(t.pool, friend.id, a.id);
     const toFull = await req(friend, 'POST', '/v1/duels', { opponent: { user_id: a.id } });
     expect([toFull.statusCode, toFull.json().title]).toEqual([409, 'Your opponent has too many duels going']);
   });

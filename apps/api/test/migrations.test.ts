@@ -1,3 +1,4 @@
+import { readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { migrate } from '../src/migrate';
@@ -12,7 +13,11 @@ afterAll(() => t.close());
 describe('database', () => {
   it('is migrated once and re-running is a no-op', async () => {
     const versions = (await t.pool.query('SELECT version FROM schema_migrations')).rows.map((r) => r.version);
-    expect(versions).toEqual(['0001_initial.sql', '0002_duels.sql', '0003_user_merges.sql']);
+    const files = (await readdir(fileURLToPath(new URL('../migrations', import.meta.url))))
+      .filter((f) => f.endsWith('.sql'))
+      .sort();
+    expect(files[0]).toBe('0001_initial.sql');
+    expect(versions).toEqual(files);
     expect(await migrate(t.pool, fileURLToPath(new URL('../migrations', import.meta.url)))).toEqual([]);
   });
 

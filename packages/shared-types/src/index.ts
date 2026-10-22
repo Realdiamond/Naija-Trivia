@@ -3,5 +3,7 @@ export * from './common';
 export * from './content';
 export * from './duels';
 export * from './phone';
+export * from './profile';
 export * from './rounds';
 export * from './routes';
+export * from './social';

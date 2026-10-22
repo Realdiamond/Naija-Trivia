@@ -3,9 +3,24 @@ import { describe, expect, it } from 'vitest';
 import {
   acceptElapsed,
   CLIENT_CLAMP_SLACK_MS,
+  estimateRtt,
+  MAX_RTT_ESTIMATE_MS,
   MIN_HUMAN_ELAPSED_MS,
   OFFLINE_RESEND_GRACE_MS,
 } from '../src/timing';
+
+describe('estimateRtt', () => {
+  it('takes the median of the latest 5 samples, so one slow ping does not count', () => {
+    expect(estimateRtt([180, 200, 2400, 190, 210])).toBe(200);
+    expect(estimateRtt([300, 100])).toBe(200);
+    expect(estimateRtt([120, 130, 140, 150, 160, 9999])).toBe(140);
+    expect(estimateRtt([])).toBeNull();
+  });
+
+  it('caps the estimate, so a deliberately slow connection cannot widen the timing window', () => {
+    expect(estimateRtt([5000, 5000, 5000])).toBe(MAX_RTT_ESTIMATE_MS);
+  });
+});
 
 const LIMIT = 15_000;
 

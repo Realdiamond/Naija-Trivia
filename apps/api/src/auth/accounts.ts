@@ -88,7 +88,7 @@ export async function signInWithIdentity(client: PoolClient, input: SignInInput)
     user = owner;
   } else {
     if (current?.status === 'guest') {
-      user = await setStatus(client, current.id, 'active', now);
+      user = await becomeAccount(client, current.id, now);
       isNew = true;
       mergedGuest = true;
     } else if (current && (current.status === 'active' || current.status === 'restricted')) {
@@ -220,16 +220,14 @@ export async function mergeGuestInto(
   ]);
 }
 
-async function setStatus(
-  client: PoolClient,
-  userId: string,
-  status: 'active',
-  now: number,
-): Promise<AccountRow> {
+/** A guest becomes an account; one who said they are 13–17 gets a restricted one (doc 10 §3.3). */
+async function becomeAccount(client: PoolClient, userId: string, now: number): Promise<AccountRow> {
   return (
     await client.query<AccountRow>(
-      `UPDATE users SET status = $2, updated_at = $3 WHERE id = $1 RETURNING ${ACCOUNT_COLUMNS}`,
-      [userId, status, new Date(now)],
+      `UPDATE users SET status = CASE WHEN age_band = '13_17' THEN 'restricted'::user_status ELSE 'active' END,
+              updated_at = $2
+        WHERE id = $1 RETURNING ${ACCOUNT_COLUMNS}`,
+      [userId, new Date(now)],
     )
   ).rows[0]!;
 }

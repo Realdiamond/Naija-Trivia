@@ -93,11 +93,14 @@ CREATE TABLE friendships (
   user_a          text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   user_b          text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   status          text NOT NULL CHECK (status IN ('pending','accepted','blocked')),
-  requested_by    text NOT NULL,
+  requested_by    text NOT NULL,                       -- for 'blocked': who blocked
+  source          text CHECK (source IN ('contacts','username','opponent','link','qr')),
   created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz,                         -- when accepted or blocked
   PRIMARY KEY (user_a, user_b),
   CHECK (user_a < user_b)                              -- canonical ordering, one row per pair
 );
+CREATE INDEX friendships_user_b_idx ON friendships (user_b);
 
 -- ===================== CONTENT =====================
 CREATE TYPE question_status AS ENUM ('draft','in_review','approved','live','suspended','retired');

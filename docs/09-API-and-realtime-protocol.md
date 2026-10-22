@@ -43,25 +43,28 @@ A token that is sent but expired is a `401` before the code is used, so the app 
 ### 2.2 Me & profile
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/me` | Profile, level, tier, balances, entitlements, settings, flags |
-| PATCH | `/me` | `{username?, avatar_id?, home_state?, language?, data_saver?, family_mode?, discoverable?}` |
-| POST | `/me/age` | `{age_band}`. One-time; changes go through support |
+| GET | `/me` | Profile, settings, age band, level with XP progress, rating and tier. Balances, entitlements and flags join with their steps |
+| PATCH | `/me` | `{username?, avatar_id?, home_state?, language?, data_saver?, family_mode?, discoverable?}`, all optional. The username needs an account and is chosen once (`USERNAME_LOCKED`; support changes it): 3–20 letters, digits or `_`, unique ignoring case (`USERNAME_TAKEN`), and filtered for offensive and official-looking names (`USERNAME_NOT_ALLOWED`). Restricted (13–17) accounts can't turn family mode off or become discoverable |
+| POST | `/me/age` | `{age_band: under_13 | 13_17 | 18_plus}`. One-time (`AGE_ALREADY_SET`; changes go through support). `under_13` is refused (`AGE_NOT_ALLOWED`). `13_17` makes the account restricted (doc 10 §3.3): family mode on, not discoverable; a guest who answers 13–17 becomes a restricted account when they sign up |
 | POST | `/me/consents` | `[{purpose, granted, policy_version}]` |
 | POST | `/me/devices` | `{device_id, platform, push_token, model, ram_mb, app_version, browser?}` (web push tokens come from the Firebase JS SDK) |
 | GET | `/me/stats` | Per-category accuracy, best streak, duel W/L |
 | POST | `/me/delete` | Starts erasure (30-day SLA); returns a `dsar_id` |
 | POST | `/me/export` | DSAR access export (emailed / in-app download link) |
-| GET | `/users/{username}` | Public profile card |
+| GET | `/users/{username}` | Public profile card `{id, username, avatar_id, level, tier}`. `404` for unknown players and when either side has blocked the other |
+| POST | `/ping` · `/ping/{ping_id}` | Round-trip sampling (TRD §5.3): ask for a ping and answer it at once; the server times both ends and keeps the session's last 5 samples (`X-Session-Id`). Answer timing uses their median, capped at 1.5 s, or the default before any sample |
 
 ### 2.3 Social
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/friends` | Accepted plus pending |
-| POST | `/friends/requests` | `{user_id}` or `{username}` |
-| POST | `/friends/requests/{id}/accept` · `/decline` | |
-| DELETE | `/friends/{user_id}` | |
-| POST | `/discovery/prefixes` | `{prefixes: ["a1b2c", …]}` (20-bit hex) → `{matches: [{hash, user_id, username, avatar}]}`. App only; the web has no contacts access |
-| POST | `/blocks` | `{user_id}` |
+| GET | `/friends` | `{friends, incoming, outgoing, suggested}`: accepted friends, requests both ways, and recent opponents who aren't friends yet (FR-SOC-1) |
+| POST | `/friends/requests` | `{user_id}` or `{username}`, with an optional `source` (for analytics) → `201 {status: "pending", user}`. If they had already asked you, you become friends at once (`status: "accepted"`). Asking again is harmless |
+| POST | `/friends/requests/{user_id}/accept` · `/decline` | `{user_id}` is the player who asked |
+| DELETE | `/friends/{user_id}` | Unfriend, or cancel a request you sent → 204 |
+| POST | `/discovery/prefixes` | `{prefixes: ["a1b2c", …]}` (20-bit hex, up to 500 per request and 3,000 a day) → `{matches: [{hash, user_id, username, avatar_id}]}` with the full hashes; the app matches its contacts locally. Only discoverable 18+ accounts are returned. App only (`403` from the web) |
+| POST | `/blocks` · DELETE `/blocks/{user_id}` | Block: ends a friendship or request, and stops friend requests, duel challenges and invite links both ways (`USER_UNAVAILABLE`, `OPPONENT_UNAVAILABLE`), without saying who blocked. Only the player who blocked can unblock |
+
+Everything in §2.3 needs an account (`ACCOUNT_REQUIRED`): guests play through invite links. A direct duel challenge (`POST /duels` with `user_id`) goes to friends and past opponents only (`FRIENDS_ONLY`); anyone else gets an invite link.
 
 ### 2.4 Content
 | Method | Path | Notes |

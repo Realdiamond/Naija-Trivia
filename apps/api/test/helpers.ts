@@ -127,3 +127,20 @@ export async function signInGuest(
 }
 
 export const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
+
+/**
+ * Make two players friends straight in the database. Direct duel challenges need friends or
+ * past opponents (step 1.2b); tests about something else use this rather than the friends API.
+ */
+export async function befriend(
+  pool: { query: (sql: string, params: unknown[]) => Promise<unknown> },
+  a: string,
+  b: string,
+) {
+  await pool.query(
+    `INSERT INTO friendships (user_a, user_b, status, requested_by, source, created_at, updated_at)
+     VALUES (LEAST($1::text, $2::text), GREATEST($1::text, $2::text), 'accepted', $1, 'username', now(), now())
+     ON CONFLICT (user_a, user_b) DO UPDATE SET status = 'accepted'`,
+    [a, b],
+  );
+}

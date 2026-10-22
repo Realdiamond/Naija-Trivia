@@ -58,6 +58,8 @@ import {
   pickTiebreakQuestion,
   type DuelQuestion,
 } from './questions';
+import { rttFor } from '../rtt';
+import { canChallenge, isBlocked } from '../social/graph';
 import { applyDuelRatings } from './ratings';
 import {
   ACTIVE_STATES,
@@ -230,6 +232,9 @@ export class DuelService {
         return { kind: 'expired' } as const;
       }
       if (isFinished(duel.state)) throw duelFinished();
+      if (await isBlocked(client, duel.player_a, viewer)) {
+        throw conflict(ErrorCode.opponentUnavailable, "You can't take this challenge");
+      }
       await lockPlayers(client, [viewer]);
       await this.assertCanStart(client, viewer, null);
       applyDuelEvent(snapshotOf(duel), { type: 'opponent_joined' });
@@ -418,10 +423,12 @@ export class DuelService {
       if (!row) throw conflict(ErrorCode.questionNotServed, 'This question has not been shown yet');
 
       const q = (await loadQuestions(client, [row.question_id])).get(row.question_id)!;
+      // The session's measured round trip (TRD §5.3), or the default before any ping.
+      const rtt = await rttFor(this.deps.redis, viewer, ctx.sessionId, this.deps.config.defaultRttMs);
       const timing = acceptElapsed({
         clientElapsedMs: body.client_elapsed_ms,
         serverElapsedMs: Math.max(0, now - row.served_at.getTime()),
-        rttEstMs: this.deps.config.defaultRttMs,
+        rttEstMs: rtt,
         timeLimitMs: TIME_LIMIT_MS,
         offlineGraceMs: OFFLINE_RESEND_GRACE_MS,
       });
@@ -458,7 +465,7 @@ export class DuelService {
           new Date(now),
           body.client_elapsed_ms,
           timing.acceptedMs,
-          this.deps.config.defaultRttMs,
+          rtt,
           body.display_index,
           chosen,
           correct,
@@ -518,10 +525,12 @@ export class DuelService {
       if (!row) throw conflict(ErrorCode.questionNotServed, 'This question has not been shown yet');
 
       const q = (await loadQuestions(client, [row.question_id])).get(row.question_id)!;
+      // The session's measured round trip (TRD §5.3), or the default before any ping.
+      const rtt = await rttFor(this.deps.redis, viewer, ctx.sessionId, this.deps.config.defaultRttMs);
       const timing = acceptElapsed({
         clientElapsedMs: body.client_elapsed_ms,
         serverElapsedMs: Math.max(0, now - row.served_at.getTime()),
-        rttEstMs: this.deps.config.defaultRttMs,
+        rttEstMs: rtt,
         timeLimitMs: TIME_LIMIT_MS,
         offlineGraceMs: OFFLINE_RESEND_GRACE_MS,
       });
@@ -537,7 +546,7 @@ export class DuelService {
           new Date(now),
           body.client_elapsed_ms,
           timing.acceptedMs,
-          this.deps.config.defaultRttMs,
+          rtt,
           guess,
           correct,
           idempotencyKey ?? null,
@@ -838,8 +847,21 @@ export class DuelService {
     }
     if (!opponentId) return;
     const opponent = (await getPlayers(client, [opponentId])).get(opponentId);
-    if (!opponent || (opponent.status !== 'guest' && opponent.status !== 'active')) {
+    if (!opponent || !['guest', 'active', 'restricted'].includes(opponent.status)) {
       throw conflict(ErrorCode.opponentUnavailable, "This player can't be challenged right now");
+    }
+    // A direct challenge goes to friends and past opponents; anyone else gets an invite link.
+    const check = await canChallenge(client, viewer, opponentId);
+    if (check === 'blocked') {
+      throw conflict(ErrorCode.opponentUnavailable, "This player can't be challenged right now");
+    }
+    if (check === 'not_connected') {
+      throw new ApiError(
+        403,
+        ErrorCode.friendsOnly,
+        'You can challenge friends and past opponents',
+        'Send an invite link instead.',
+      );
     }
     if ((await activeDuelCount(client, opponentId)) >= MAX_ACTIVE_DUELS) {
       throw conflict(

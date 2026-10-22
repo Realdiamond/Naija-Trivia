@@ -4757,13 +4757,21 @@ E.164) is indexed on its 3-byte prefix for k-anonymity contact discovery
 (TRD FR-SOC-2)</td>
 </tr>
 <tr class="odd">
+<td><code>friendships</code></td>
+<td>One row per pair (<code>user_a &lt; user_b</code>):
+<code>pending</code>, <code>accepted</code> or <code>blocked</code>;
+<code>requested_by</code> is the asker or the blocker,
+<code>source</code> how the request started (for
+<code>friend_added</code>). Friends and blocks need an account</td>
+</tr>
+<tr class="even">
 <td><code>user_merges</code></td>
 <td>One row per guest merged into an existing account (FR-AUTH-4): the
 guest is retired (<code>status = 'deleted'</code>) and its progress
 moved. The dimension sync copies these to
 <code>analytics.user_aliases</code>, so a person keeps one timeline</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>questions</code></td>
 <td>Options stored as a JSONB array in canonical order, plus
 <code>correct_index</code>. Shuffling happens at serve time.
@@ -4771,20 +4779,20 @@ moved. The dimension sync copies these to
 increments on edit, and answers record the question at play time (via
 <code>question_id</code> plus nightly re-score jobs)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>question_stats</code></td>
 <td>Write-heavy counters. Increment in Redis (<code>HINCRBY</code>) and
 flush to Postgres every minute to avoid row-lock contention on hot
 questions</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>user_question_seen</code></td>
 <td>The fallback for no-repeat. The primary store is a Redis bloom
 filter per user (<code>seen:{user}</code>, about 1% false positives,
 30-day rolling via two rotating filters). Partition monthly by
 <code>seen_at</code> and drop partitions older than 60 days</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>duels</code> / <code>duel_rounds</code> /
 <code>duel_answers</code></td>
 <td>A <code>duel_answers</code> row is written when a question is served
@@ -4797,80 +4805,80 @@ idempotent. Round 4 is the tie-break (<code>guess</code>).
 <code>rematch_of</code> is unique, so a finished duel has at most one
 rematch</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>party_games</code> / <code>party_results</code></td>
 <td>Only results are persisted, not per-answer rows (high volume, low
 value). Per-answer data goes to analytics events</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>daily_*</code></td>
 <td><code>daily_results</code> PK prevents replays. <code>grid</code>
 stores the emoji pattern for re-sharing</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Ledger</td>
 <td>Double entry: every <code>ledger_transaction</code> has at least two
 <code>ledger_entries</code> that sum to 0 per currency. User accounts
 can't go negative (CHECK). A nightly job recomputes balances from
 entries and alerts on any drift</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>ad_rewards</code></td>
 <td>The PK <code>reward_ref</code> is the AdMob SSV
 <code>transaction_id</code> or, for web ads (v1.1), the server-issued ad
 session id, so duplicate callbacks are ignored</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>purchases</code> / <code>entitlements</code></td>
 <td><code>store</code> is <code>play</code>, <code>app_store</code> or
 <code>paystack</code> (web, v1.1). Entitlements from every source land
 in one table, so a pass bought anywhere works everywhere</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>prize_events</code></td>
 <td><code>purchase_independent</code> has a CHECK that it is TRUE, so a
 non-compliant event can't be created. <code>rules_url</code> is
 mandatory and <code>states_excluded</code> supports per-state legal
 carve-outs</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>consent_records</code></td>
 <td>An append-only consent history (NDPA accountability)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>dsar_requests</code></td>
 <td>Tracks the 30-day statutory clock</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>admin_users</code> / <code>admin_role_grants</code></td>
 <td>Staff identities from Google Workspace SSO (no passwords).
 Privileged roles need a second approver, and a CHECK stops anyone
 approving their own grant. <code>expires_at</code> time-boxes
 contractors</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>admin_audit_log</code></td>
 <td>Every admin action <strong>and every view of a player</strong>.
 Append-only (the app role can only INSERT and SELECT).
 <code>reason</code> is required for PII reveals, exports and grants</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>user_notes</code></td>
 <td>Internal notes on a player for support and moderation; never shown
 to the player</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>integrity_flags</code></td>
 <td>Anti-cheat and abuse signals with a 0–1 risk score and evidence,
 waiting for a human decision</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>feature_flags</code> / <code>experiments</code> /
 <code>config_history</code></td>
 <td>In-house flags and A/B tests (replacing PostHog flags). Every config
 change is kept, so any value can be rolled back</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>segments</code> / <code>push_campaigns</code> /
 <code>alert_rules</code></td>
 <td>Saved player segments (compiled to ClickHouse SQL), push campaigns
@@ -4951,10 +4959,23 @@ key (e.g. creating a duel), replayed to retries</td>
 <td>Scored answer; SET NX makes retries and double taps idempotent</td>
 </tr>
 <tr class="even">
-<td><code>rtt:{session}</code></td>
+<td><code>rtt:{user}:{session}</code></td>
 <td>list (last 5)</td>
 <td>1 h</td>
-<td>RTT estimate</td>
+<td>Round-trip samples; answer timing uses the median, capped at 1.5
+s</td>
+</tr>
+<tr class="odd">
+<td><code>ping:{id}</code></td>
+<td>string (JSON)</td>
+<td>30 s</td>
+<td>A ping waiting for its answer; each counts once</td>
+</tr>
+<tr class="even">
+<td><code>disc:{user}:{date}</code></td>
+<td>counter</td>
+<td>26 h</td>
+<td>Contact-discovery prefixes asked today (max 3,000)</td>
 </tr>
 <tr class="odd">
 <td>`seen:{user}:{a</td>
@@ -5420,17 +5441,24 @@ signs in without touching the current session.</li>
 <tr class="odd">
 <td>GET</td>
 <td><code>/me</code></td>
-<td>Profile, level, tier, balances, entitlements, settings, flags</td>
+<td>Profile, settings, age band, level with XP progress, rating and
+tier. Balances, entitlements and flags join with their steps</td>
 </tr>
 <tr class="even">
 <td>PATCH</td>
 <td><code>/me</code></td>
-<td><code>{username?, avatar_id?, home_state?, language?, data_saver?, family_mode?, discoverable?}</code></td>
+<td><code>{username?, avatar_id?, home_state?, language?, data_saver?, family_mode?, discoverable?}</code>,
+all optional. The username needs an account and is chosen once
+(<code>USERNAME_LOCKED</code>; support changes it): 3–20 letters, digits
+or <code>_</code>, unique ignoring case (<code>USERNAME_TAKEN</code>),
+and filtered for offensive and official-looking names
+(<code>USERNAME_NOT_ALLOWED</code>). Restricted (13–17) accounts can't
+turn family mode off or become discoverable</td>
 </tr>
 <tr class="odd">
 <td>POST</td>
 <td><code>/me/age</code></td>
-<td><code>{age_band}</code>. One-time; changes go through support</td>
+<td>`{age_band: under_13</td>
 </tr>
 <tr class="even">
 <td>POST</td>
@@ -5461,7 +5489,17 @@ signs in without touching the current session.</li>
 <tr class="odd">
 <td>GET</td>
 <td><code>/users/{username}</code></td>
-<td>Public profile card</td>
+<td>Public profile card
+<code>{id, username, avatar_id, level, tier}</code>. <code>404</code>
+for unknown players and when either side has blocked the other</td>
+</tr>
+<tr class="even">
+<td>POST</td>
+<td><code>/ping</code> · <code>/ping/{ping_id}</code></td>
+<td>Round-trip sampling (TRD §5.3): ask for a ping and answer it at
+once; the server times both ends and keeps the session's last 5 samples
+(<code>X-Session-Id</code>). Answer timing uses their median, capped at
+1.5 s, or the default before any sample</td>
 </tr>
 </tbody>
 </table>
@@ -5478,38 +5516,54 @@ signs in without touching the current session.</li>
 <tr class="odd">
 <td>GET</td>
 <td><code>/friends</code></td>
-<td>Accepted plus pending</td>
+<td><code>{friends, incoming, outgoing, suggested}</code>: accepted
+friends, requests both ways, and recent opponents who aren't friends yet
+(FR-SOC-1)</td>
 </tr>
 <tr class="even">
 <td>POST</td>
 <td><code>/friends/requests</code></td>
-<td><code>{user_id}</code> or <code>{username}</code></td>
+<td><code>{user_id}</code> or <code>{username}</code>, with an optional
+<code>source</code> (for analytics) →
+<code>201 {status: "pending", user}</code>. If they had already asked
+you, you become friends at once (<code>status: "accepted"</code>).
+Asking again is harmless</td>
 </tr>
 <tr class="odd">
 <td>POST</td>
-<td><code>/friends/requests/{id}/accept</code> ·
+<td><code>/friends/requests/{user_id}/accept</code> ·
 <code>/decline</code></td>
-<td></td>
+<td><code>{user_id}</code> is the player who asked</td>
 </tr>
 <tr class="even">
 <td>DELETE</td>
 <td><code>/friends/{user_id}</code></td>
-<td></td>
+<td>Unfriend, or cancel a request you sent → 204</td>
 </tr>
 <tr class="odd">
 <td>POST</td>
 <td><code>/discovery/prefixes</code></td>
-<td><code>{prefixes: ["a1b2c", …]}</code> (20-bit hex) →
-<code>{matches: [{hash, user_id, username, avatar}]}</code>. App only;
-the web has no contacts access</td>
+<td><code>{prefixes: ["a1b2c", …]}</code> (20-bit hex, up to 500 per
+request and 3,000 a day) →
+<code>{matches: [{hash, user_id, username, avatar_id}]}</code> with the
+full hashes; the app matches its contacts locally. Only discoverable 18+
+accounts are returned. App only (<code>403</code> from the web)</td>
 </tr>
 <tr class="even">
 <td>POST</td>
-<td><code>/blocks</code></td>
-<td><code>{user_id}</code></td>
+<td><code>/blocks</code> · DELETE <code>/blocks/{user_id}</code></td>
+<td>Block: ends a friendship or request, and stops friend requests, duel
+challenges and invite links both ways (<code>USER_UNAVAILABLE</code>,
+<code>OPPONENT_UNAVAILABLE</code>), without saying who blocked. Only the
+player who blocked can unblock</td>
 </tr>
 </tbody>
 </table>
+<p>Everything in §2.3 needs an account (<code>ACCOUNT_REQUIRED</code>):
+guests play through invite links. A direct duel challenge
+(<code>POST /duels</code> with <code>user_id</code>) goes to friends and
+past opponents only (<code>FRIENDS_ONLY</code>); anyone else gets an
+invite link.</p>
 <h3 id="24-content">2.4 Content</h3>
 <table>
 <thead>
@@ -10139,7 +10193,7 @@ the 30-day DSAR window.</li>
 or a time total.</li>
 </ul>
 <h1 id="19--build-plan--progress">19 · Build Plan &amp; Progress</h1>
-<p><strong>Version:</strong> 1.2 · <strong>Date:</strong> 22 Oct 2026 ·
+<p><strong>Version:</strong> 1.3 · <strong>Date:</strong> 22 Oct 2026 ·
 <em>A living checklist: every pull request that finishes part of a step
 ticks it here</em> <strong>Related:</strong> <a
 href="15-roadmap-and-delivery-plan.md">15 Roadmap</a> (milestones,
@@ -10338,16 +10392,37 @@ adapters' requests and failover</li>
 discovery and age bands (step 1.2b), and the OTP send-to-verify ratio
 alert (doc 10 §1; the events are in place, the alert comes with the
 admin alerts in step 2.7).</p>
-<h4 id="step-12b--profile--friends--next">Step 1.2b · Profile &amp;
-friends ⬜ (next)</h4>
-<p>Username (with the profanity filter) and avatar,
-<code>PATCH /me</code>, the age band (under 13 blocked, 13–17
-restricted, FR-AUTH-6), friend requests by username or from a past
-match, blocks, contact discovery by hash prefix (FR-SOC-2), friend duels
-limited to friends and past opponents, per-session RTT sampling for the
-timing clamp.</p>
-<h3 id="step-13--workers--analytics-loader-">Step 1.3 · Workers &amp;
-analytics loader ⬜</h3>
+<h4 id="step-12b--profile--friends-">Step 1.2b · Profile &amp; friends
+✅</h4>
+<ul>
+<li>✅ <code>GET</code>/<code>PATCH /me</code>: profile, settings, level
+progress, rating and tier; usernames chosen once, unique ignoring case,
+with a starter filter for offensive and official-looking names (EN,
+Pidgin, Yoruba, Hausa) for moderators to extend</li>
+<li>✅ The age gate (FR-AUTH-6, doc 10 §3.3): under 13 refused; 13–17
+restricted (family mode on, never discoverable), including a guest who
+answers before signing up</li>
+<li>✅ Public profile cards (<code>/users/{username}</code>)</li>
+<li>✅ Friends: requests by username or id, accept, decline, unfriend;
+asking each other at once makes you friends; recent opponents suggested;
+<code>friend_added</code> events</li>
+<li>✅ Blocks: stop requests, challenges and invite links both ways,
+without saying who blocked</li>
+<li>✅ Contact discovery by 20-bit hash prefix (FR-SOC-2): app only,
+discoverable 18+ accounts only, 500 prefixes a request and 3,000 a
+day</li>
+<li>✅ Direct duel challenges limited to friends and past opponents;
+restricted accounts can be challenged</li>
+<li>✅ Round-trip sampling (TRD §5.3): server-timed pings, median of the
+last 5, capped at 1.5 s, used by duel and taste-test timing</li>
+<li>✅ Tests for each rule, against real Postgres and Redis</li>
+</ul>
+<p>Not in this step: guardian consent for 13–17s by guardian phone code
+(doc 10 §3.3; with the compliance work in step 2.8), reporting players
+and the moderators' forced rename (with moderation in step 2.7), QR
+friend codes (with the app in step 1.4).</p>
+<h3 id="step-13--workers--analytics-loader--next">Step 1.3 · Workers
+&amp; analytics loader ⬜ (next)</h3>
 <p><code>apps/workers</code> (BullMQ): duel expiry at the deadline
 (calling <code>DuelService.expireDue</code>) and reminders at 24 h and 4
 h left (push stand-in until step 2.5); flushing <code>qstat:*</code>
@@ -10437,8 +10512,8 @@ support, commerce, compliance, alerts</td>
 </tr>
 <tr class="even">
 <td>2.8 Platform &amp; compliance ⬜</td>
-<td>Data Saver, Sentry, account deletion and DSAR, iOS build, practice
-packs offline, PWA</td>
+<td>Data Saver, Sentry, account deletion and DSAR, guardian consent for
+13–17s, iOS build, practice packs offline, PWA</td>
 <td>PRD F15, doc 10, TRD §4.10</td>
 </tr>
 </tbody>
