@@ -1,6 +1,6 @@
 # 19 · Build Plan & Progress
 
-**Version:** 1.0 · **Date:** 22 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
+**Version:** 1.1 · **Date:** 22 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
 **Related:** [15 Roadmap](15-roadmap-and-delivery-plan.md) (milestones, sprints, Definition of Done) · [02 PRD](02-PRD.md) (stories and release criteria) · [06 TRD](06-TRD.md) · [09 API](09-API-and-realtime-protocol.md) · [14 Testing](14-testing-and-QA-plan.md) · [18 Admin & Analytics](18-admin-console-and-analytics.md)
 
 ---
@@ -29,32 +29,34 @@ Doc 15 sprint mapping: S0 is done except the Expo skeleton, OTP, Terraform and t
 ## 3. Milestone M1: "First duel" (doc 15, week 8)
 **Done when:** two internal users complete a duel against staging, one on an Android phone and one in the web app, and the duel shows on both players' admin timelines.
 
-### Step 1.1 · Duel API ⬜ (next)
+### Step 1.1 · Duel API ✅
 Docs: [GDD §2.1, §3.2, §9](03-game-design-document.md) · [TRD §4.3, §5.1–5.4](06-TRD.md) · [API §2.5](09-API-and-realtime-protocol.md) · [Data model: `duels`, `duel_rounds`, `duel_answers`](08-data-model.md) · [Testing §4.1–4.2](14-testing-and-QA-plan.md) · [Analytics: duel events](13-analytics-and-metrics.md) · [PRD US-3, US-4](02-PRD.md)
 
-- ⬜ Contracts for every duel endpoint in `packages/shared-types`
-- ⬜ `POST /v1/duels` against a friend (`user_id`) or an invite link; at most 20 active duels per player (PRD US-3 AC4)
-- ⬜ `GET /v1/invites/{token}` (public preview) and `POST /v1/invites/{token}/accept` (binds player B)
-- ⬜ `GET /v1/duels?state=active|done` with "your turn" first, sorted by deadline; `GET /v1/duels/{id}` (questions only for finished rounds)
-- ⬜ `POST /v1/duels/{id}/rounds/{n}/category`: 3 categories offered, picked by A, B, A (GDD §2.1)
-- ⬜ Round questions: both players get the same 3 (1 easy, 1 medium, 1 by combined rating, GDD §3.2), none the players have seen in the last 30 days where the pool allows
-- ⬜ Serve and answer one question at a time, same contract as the taste test: per-player option order, timing clamp, raw timing kept in `duel_answers`, answers idempotent per `(duel, round, seq, player)`
-- ⬜ Turns through the `game-rules` state machine, 48 h turn deadline, running scores
-- ⬜ Tie-break: one closest-number question; closest guess wins, then the faster answer
-- ⬜ Decline, cancel and rematch
-- ⬜ Expiry as a function the workers call in step 1.3 (forfeit or cancel per TRD §5.2)
-- ⬜ Glicko-2 rating update on completion, stored as `rating_delta_a/b`; gains between the same pair dampened after 3 games in 24 h (doc 10 §2)
-- ⬜ Offline tolerance (TRD FR-DUEL-5): an answer re-sent within time limit + 10 s counts, timed at the limit
-- ⬜ Analytics: `duel_created`, `question_served` and `question_answered` (mode `duel`), `duel_round_played`, `duel_completed` (one per player)
-- ⬜ Integration tests: every transition including expiry in each state, forfeit winner, the tie-break path; both players answering at once; replayed answers (doc 14 §4.2)
+- ✅ Contracts for every duel endpoint in `packages/shared-types`
+- ✅ `POST /v1/duels` against a friend (`user_id`) or an invite link, with `Idempotency-Key`; at most 20 active duels per player (PRD US-3 AC4)
+- ✅ `GET /v1/invites/{token}` (public preview) and `POST /v1/invites/{token}/accept` (binds player B)
+- ✅ `GET /v1/duels?state=active|done` with "your turn" first, sorted by deadline; `GET /v1/duels/{id}` (questions only for rounds you finished)
+- ✅ `POST /v1/duels/{id}/rounds/{n}/category`: 3 categories offered, picked by A, B, A (GDD §2.1)
+- ✅ Round questions: both players get the same 3 (1 easy, 1 medium, 1 by combined rating, GDD §3.2), none the players have seen in the last 30 days where the pool allows
+- ✅ Serve and answer one question at a time, same contract as the taste test: per-player option order, timing clamp, raw timing kept in `duel_answers`, answers idempotent per `(duel, round, seq, player)`
+- ✅ Turns through the `game-rules` state machine, 48 h turn deadline, running scores
+- ✅ Tie-break: one closest-number question; closest guess wins, then the faster answer; a draw if both match or nobody answers
+- ✅ Decline, cancel and rematch
+- ✅ Expiry as a function the workers call in step 1.3 (`DuelService.expireDue`), and on any request that touches an overdue duel
+- ✅ Glicko-2 rating update on completion, stored as `rating_delta_a/b`; gains between the same pair halved for each game past 3 in 24 h (doc 10 §2)
+- ✅ Offline tolerance (TRD FR-DUEL-5): an answer re-sent within time limit + 10 s counts, timed at the limit
+- ✅ Analytics: `duel_created`, `question_served` and `question_answered` (mode `duel`), `duel_round_played`, `duel_completed` (one per player)
+- ✅ Integration tests: every transition including expiry in each state, forfeit winner, the tie-break path; both players answering at once; replayed answers (doc 14 §4.2)
 
-Content note: the seed questions have no `closest_number` questions yet, and tie-breaks need them.
+Content: 10 draft `closest_number` questions were added to the seed file for tie-breaks (SEED-0105 to SEED-0114). Like every seed question, they need the fact-check before going live.
 
-### Step 1.2 · Accounts & friends ⬜
-Phone OTP (Termii, Africa's Talking fallback; dev stand-in), Google sign-in, guest-to-account merge, sign out everywhere, username and avatar, add a friend by username or from a past match, per-session RTT sampling for the timing clamp. Docs: [PRD US-2](02-PRD.md), [TRD §4.1, §4.6](06-TRD.md), [API §2.1–2.3](09-API-and-realtime-protocol.md).
+Left for later steps, on purpose: friend challenges currently accept any guest or active player's id, and step 1.2 limits them to friends and past opponents; the timing clamp uses a configured RTT until step 1.2 measures it per session; "your turn" pushes come with step 2.5 and reminders with step 1.3; coins, XP and lifelines with step 2.4; category ratings with step 2.1; the void-and-replace of a question after a network drop (GDD §9) with the app in step 1.4; the per-player Redis seen-filters replace the `user_question_seen` table lookup during M3 hardening.
+
+### Step 1.2 · Accounts & friends ⬜ (next)
+Phone OTP (Termii, Africa's Talking fallback; dev stand-in), Google sign-in, guest-to-account merge, sign out everywhere, username and avatar, add a friend by username or from a past match, friend duels limited to friends and past opponents, per-session RTT sampling for the timing clamp. Docs: [PRD US-2](02-PRD.md), [TRD §4.1, §4.6](06-TRD.md), [API §2.1–2.3](09-API-and-realtime-protocol.md).
 
 ### Step 1.3 · Workers & analytics loader ⬜
-`apps/workers` (BullMQ): duel expiry at the deadline and reminders at 24 h and 4 h left (push stand-in until step 2.4); flushing `qstat:*` counters to `question_stats`; the event loader from the Redis stream into ClickHouse with `schema/analytics.clickhouse.sql`. Docs: [07 §4.3](07-system-architecture.md), [08 §6](08-data-model.md), [18 §15](18-admin-console-and-analytics.md).
+`apps/workers` (BullMQ): duel expiry at the deadline (calling `DuelService.expireDue`) and reminders at 24 h and 4 h left (push stand-in until step 2.5); flushing `qstat:*` counters to `question_stats`; the event loader from the Redis stream into ClickHouse with `schema/analytics.clickhouse.sql`. Docs: [07 §4.3](07-system-architecture.md), [08 §6](08-data-model.md), [18 §15](18-admin-console-and-analytics.md).
 
 ### Step 1.4 · The app: Android and web ⬜
 `apps/app` (Expo, Expo Router): design tokens and core components, platform adapters (TRD §5.6), the taste test, sign-in, home with "Your turn" cards, the duel screens, an invite link that opens straight into the turn in the browser, the analytics tracker wired in, web build in CI. Docs: [05 UX](05-UX-and-user-flows.md), [TRD §4.10, §5.6](06-TRD.md), [PRD US-1, US-3, US-4, US-11](02-PRD.md).
@@ -87,7 +89,7 @@ These are for the team, not pull requests, and some steps wait on them.
 
 | Item | Needed by | Notes |
 |---|---|---|
-| **3,000 approved questions** (≥ 600 per category + 600 mixed) | M2 (2,000), launch (3,000) | The critical path (doc 15 §5). Today: 104 drafts, none fact-checked, no `closest_number` questions |
+| **3,000 approved questions** (≥ 600 per category + 600 mixed) | M2 (2,000), launch (3,000) | The critical path (doc 15 §5). Today: 114 drafts (104 multiple choice, 10 closest-number for tie-breaks), none fact-checked |
 | Termii sender ID (and Africa's Talking) | 1.2 going live | Registration and NCC approval take weeks |
 | Google OAuth client IDs (app and web) | 1.2 going live | |
 | AWS account; ClickHouse Cloud vs self-hosted | 1.6 | Doc 15 §5 item 6 |

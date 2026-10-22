@@ -126,7 +126,7 @@ Translation must be **transcreation**: jokes and slang are rewritten, not transl
 ---
 
 ## 7. Seed question set
-A starter set of **104 draft questions** across the five categories is in [`content/seed-questions.csv`](content/seed-questions.csv). In the seed file the correct answer is always `option_a` so it's easy to review. The server shuffles options for each player when it serves a question (TRD §5.4), and the importer stores options as an array with a `correct_index`.
+A starter set of **114 draft questions** across the five categories is in [`content/seed-questions.csv`](content/seed-questions.csv): 104 multiple choice and 10 `closest_number` questions for duel tie-breaks. In the seed file the correct answer is always `option_a` so it's easy to review; a `closest_number` question leaves the options empty and puts the number in `correct_option`. The server shuffles options for each player when it serves a question (TRD §5.4), and the importer stores options as an array with a `correct_index`.
 
 > **Every seed question has status `draft`. Each one must pass the fact-check and sensitivity steps above before it goes live.** Time-sensitive items carry a `valid_until` date. Box office and award facts were checked against Nairametrics, Intelpoint and Music in Africa in October 2026.
 

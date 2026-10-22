@@ -9,6 +9,7 @@ import type { TokenService } from './auth/tokens';
 import type { Clock } from './clock';
 import type { Config } from './config';
 import { contentRoutes } from './content/routes';
+import { duelRoutes } from './duels/routes';
 import type { Pool } from './db';
 import { registerErrorHandlers } from './errors';
 import { ServerEvents } from './events';
@@ -80,5 +81,6 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   authRoutes(app, deps);
   contentRoutes(app, deps);
   roundRoutes(app, deps);
+  duelRoutes(app, deps);
   return app;
 }

@@ -103,3 +103,13 @@ SEED-0101,mixed,culture,mcq4,2,One naira is made up of how many kobo?,100,10,50,
 SEED-0102,mixed,geography,mcq4,1,Which is Nigeria's most populous city?,Lagos,Kano,Ibadan,Abuja,a,Lagos is also Nigeria's commercial capital.,true,,SW,draft
 SEED-0103,mixed,lagos_life,mcq4,1,"What is a ""keke""?",A tricycle taxi,A small bus,A food seller,A bicycle,a,"""Keke NAPEP"" comes from a 2000s poverty-alleviation scheme.",true,,ALL,draft
 SEED-0104,mixed,sports,mcq4,2,Which Nigerian sprinter set the women's 100m hurdles world record in 2022?,Tobi Amusan,Blessing Okagbare,Ese Brume,Favour Ofili,a,Tobi Amusan ran 12.12s at the World Championships in Eugene.,true,,SW,draft
+SEED-0105,mixed,history,closest_number,2,In what year did Nigeria gain independence?,,,,,1960,Nigeria became independent from Britain on 1 October 1960.,true,,ALL,draft
+SEED-0106,mixed,geography,closest_number,1,How many states does Nigeria have?,,,,,36,"Nigeria has 36 states plus the Federal Capital Territory, Abuja.",true,,ALL,draft
+SEED-0107,mixed,geography,closest_number,4,How many local government areas does Nigeria have?,,,,,774,The 1999 Constitution lists 774 local government areas.,true,,ALL,draft
+SEED-0108,mixed,history,closest_number,3,In what year did Abuja officially replace Lagos as Nigeria's capital?,,,,,1991,The seat of government moved from Lagos to Abuja on 12 December 1991.,true,,ALL,draft
+SEED-0109,mixed,history,closest_number,3,In what year did the naira replace the Nigerian pound?,,,,,1973,"The naira was introduced on 1 January 1973, at two naira to one pound.",true,,ALL,draft
+SEED-0110,mixed,sports,closest_number,3,In what year did Nigeria win Olympic gold in men's football?,,,,,1996,The Dream Team beat Argentina 3–2 in the final at the Atlanta Olympics.,true,,ALL,draft
+SEED-0111,nollywood,classics,closest_number,3,In what year was Living in Bondage first released?,,,,,1992,Kenneth Nnebue's Living in Bondage is often called the film that launched Nollywood.,true,,ALL,draft
+SEED-0112,nollywood,box_office,closest_number,2,In what year was The Wedding Party released?,,,,,2016,The Wedding Party became one of Nollywood's highest-grossing films; a sequel followed in 2017.,true,,ALL,draft
+SEED-0113,music,legends,closest_number,3,In what year was Fela Anikulapo-Kuti born?,,,,,1938,Fela was born in Abeokuta on 15 October 1938.,true,,SW,draft
+SEED-0114,music,afrobeats,closest_number,3,In what year did 2Baba (then 2face Idibia) release 'African Queen'?,,,,,2004,"'African Queen' was on his debut solo album, Face 2 Face, released in 2004.",true,,ALL,draft

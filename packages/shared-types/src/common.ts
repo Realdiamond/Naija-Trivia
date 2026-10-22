@@ -27,6 +27,16 @@ export const ErrorCode = {
   questionNotServed: 'QUESTION_NOT_SERVED',
   outOfOrder: 'QUESTION_OUT_OF_ORDER',
   noQuestions: 'NO_QUESTIONS_AVAILABLE',
+  requestInProgress: 'REQUEST_IN_PROGRESS',
+  turnNotYours: 'TURN_NOT_YOURS',
+  duelFinished: 'DUEL_FINISHED',
+  duelLimitReached: 'DUEL_LIMIT_REACHED',
+  duelAlreadyStarted: 'DUEL_ALREADY_STARTED',
+  opponentUnavailable: 'OPPONENT_UNAVAILABLE',
+  inviteTaken: 'INVITE_TAKEN',
+  categoryNotOffered: 'CATEGORY_NOT_OFFERED',
+  categoryNotPicked: 'CATEGORY_NOT_PICKED',
+  alreadyAnswered: 'ALREADY_ANSWERED',
   internal: 'INTERNAL',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

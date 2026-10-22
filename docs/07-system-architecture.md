@@ -134,13 +134,15 @@ sequenceDiagram
   participant P as Postgres
   C->>A: POST /duels/{id}/rounds/2/questions/1/serve
   A->>P: verify turn, load question (no correct_index in response)
-  A->>R: SET served:{duel}:{q}:{user} = now (TTL 1h)
+  A->>P: INSERT duel_answers (served_at = now) ON CONFLICT DO NOTHING
   A-->>C: question + options (shuffled for this user)
-  C->>A: POST .../answer {display_index, client_elapsed_ms, idempotency_key}
-  A->>R: GET served_at, rtt_est
+  C->>A: POST .../answer {display_index, client_elapsed_ms} + Idempotency-Key
+  A->>P: lock the duel; read served_at
+  A->>R: GET rtt:{session} (build step 1.2; a configured default until then)
   A->>A: map index → canonical, compute accepted_elapsed, score (game-rules)
-  A->>P: INSERT duel_answer (unique duel,round,seq,user)
-  A-->>C: {correct, correct_display_index, points, fact}
+  A->>P: UPDATE duel_answers (first answer wins); next turn if the turn is done; COMMIT
+  A->>R: after the commit: HINCRBY qstat:{q}, XADD ev:stream
+  A-->>C: {correct, correct_display_index, points, fact, next}
 ```
 
 ### 4.2 Party question cycle

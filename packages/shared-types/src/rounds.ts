@@ -21,19 +21,24 @@ export const StartRoundResponse = z.object({
 });
 export type StartRoundResponse = z.infer<typeof StartRoundResponse>;
 
-export const ServedQuestion = z.object({
-  qid: z.string(),
-  seq: z.number().int().positive(),
-  total: z.number().int().positive(),
-  type: QuestionType,
-  category_id: z.string(),
-  text: z.string(),
-  /** In this player's order; the server maps answers back. */
-  options: z.array(z.string()).min(2).max(4),
-  media: z.null(),
-  time_limit_ms: z.number().int().positive(),
-  served_at: z.iso.datetime(),
-});
+export const ServedQuestion = z
+  .object({
+    qid: z.string(),
+    seq: z.number().int().positive(),
+    total: z.number().int().positive(),
+    type: QuestionType,
+    category_id: z.string(),
+    text: z.string(),
+    /** In this player's order; the server maps answers back. Empty for closest-number questions. */
+    options: z.array(z.string()).max(4),
+    media: z.null(),
+    time_limit_ms: z.number().int().positive(),
+    served_at: z.iso.datetime(),
+  })
+  .refine((q) => (q.type === 'closest_number' ? q.options.length === 0 : q.options.length >= 2), {
+    message: 'closest_number questions have no options; every other type has 2 to 4',
+    path: ['options'],
+  });
 export type ServedQuestion = z.infer<typeof ServedQuestion>;
 
 export const AnswerRequest = z.object({

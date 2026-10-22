@@ -38,6 +38,7 @@ export async function createTestApp(env: Record<string, string> = {}) {
     config,
     pool,
     redis,
+    tokens,
     close: async () => {
       await app.close();
       await Promise.all([pool.end(), redis.quit()]);

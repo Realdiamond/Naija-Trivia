@@ -4,7 +4,7 @@
  * break gameplay (TRD FR-ANA-6).
  */
 import { randomUUID } from 'node:crypto';
-import type { FastifyBaseLogger } from 'fastify';
+import type { FastifyBaseLogger, FastifyRequest } from 'fastify';
 import type { EventProps, ServerEventName } from '@whosabi/analytics';
 import { appendRows, pseudonymousId, serverEventRow, type RedisCommander } from '@whosabi/analytics/server';
 import type { Platform } from '@whosabi/shared-types';
@@ -41,4 +41,21 @@ export class ServerEvents {
       this.log.warn({ err, event }, 'analytics event not recorded');
     }
   }
+}
+
+/** Analytics context for a signed-in request: platform from the token, session and app version from headers (doc 09 §1). */
+export function requestEventContext(request: FastifyRequest): EventContext {
+  const auth = request.auth;
+  if (!auth) throw new Error('requestEventContext needs a signed-in request');
+  return {
+    userId: auth.userId,
+    platform: auth.platform,
+    sessionId: headerValue(request, 'x-session-id'),
+    appVersion: headerValue(request, 'x-app-version') ?? undefined,
+  };
+}
+
+function headerValue(request: FastifyRequest, name: string): string | null {
+  const value = request.headers[name];
+  return typeof value === 'string' && value.length > 0 && value.length <= 64 ? value : null;
 }
