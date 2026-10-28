@@ -24,11 +24,15 @@ export type DuelState = z.infer<typeof DuelState>;
 export const DuelSource = z.enum(['friend', 'random', 'rematch', 'link', 'bot']);
 export type DuelSource = z.infer<typeof DuelSource>;
 
-/** Random opponents and the Sabi Bot arrive in build plan step 2.3. */
+/**
+ * A friend or past opponent by id, an invite link for anyone, or a random opponent: a player
+ * near your rating, or the Sabi Bot when nobody is free within a minute (TRD FR-DUEL-6).
+ */
 export const CreateDuelRequest = z.object({
   opponent: z.union([
     z.object({ user_id: z.string().min(3).max(40) }).strict(),
     z.object({ link: z.literal(true) }).strict(),
+    z.object({ random: z.literal(true) }).strict(),
   ]),
 });
 export type CreateDuelRequest = z.infer<typeof CreateDuelRequest>;

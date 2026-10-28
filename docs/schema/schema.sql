@@ -8,7 +8,7 @@ CREATE EXTENSION IF NOT EXISTS citext;
 
 -- ===================== IDENTITY =====================
 CREATE TYPE age_band AS ENUM ('13_17', '18_plus');
-CREATE TYPE user_status AS ENUM ('guest', 'active', 'restricted', 'banned', 'deleted');
+CREATE TYPE user_status AS ENUM ('guest', 'active', 'restricted', 'banned', 'deleted', 'bot');  -- bot: the Sabi Bot
 
 CREATE TABLE users (
   id              text PRIMARY KEY,
@@ -293,6 +293,8 @@ CREATE TABLE duels (
 CREATE INDEX duels_player_a_idx ON duels (player_a, state);
 CREATE INDEX duels_player_b_idx ON duels (player_b, state);
 CREATE INDEX duels_deadline_idx ON duels (turn_deadline) WHERE state IN ('created','wait_b_r1r2','wait_a_r2r3','wait_b_r3','tiebreak');
+-- Random duels still waiting for a player: the matchmaking pool (TRD FR-DUEL-6).
+CREATE INDEX duels_random_open_idx ON duels (created_at) WHERE source = 'random' AND player_b IS NULL;
 
 CREATE TABLE duel_rounds (
   duel_id         text NOT NULL REFERENCES duels(id) ON DELETE CASCADE,
@@ -837,3 +839,7 @@ INSERT INTO categories (id, name_en, name_pcm, emoji, color_hex, sort_order) VAL
 -- Sport (migration 0005) starts switched off until approved sport questions are live.
 INSERT INTO categories (id, name_en, name_pcm, emoji, color_hex, sort_order, active) VALUES
  ('sport','Sport','Sport','⚽','#B8860B',5,false);
+
+-- The Sabi Bot (migration 0018): it takes seat B of a random duel nobody joined within a minute.
+INSERT INTO users (id, username, display_name, status, discoverable) VALUES
+ ('u_sabi_bot','Sabi Bot','Sabi Bot','bot',false);

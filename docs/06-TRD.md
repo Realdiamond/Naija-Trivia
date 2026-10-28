@@ -72,7 +72,7 @@ This document turns the PRD into technical requirements: the platforms, the stac
 - **FR-DUEL-3:** Turn deadline 48 h. The worker ends overdue duels every 30 s and sends reminder pushes at T-24h and T-4h (outside quiet hours).
 - **FR-DUEL-4:** Answer submission is per question (streamed). The server stores `served_at` and `answered_at` (see timing §5.3).
 - **FR-DUEL-5:** Offline tolerance: if the network drops during a question, the client keeps a local answer record. If it re-sends within the grace window (question time limit + 10 s), the answer is accepted with timing clamped to the limit (no speed bonus).
-- **FR-DUEL-6:** Random matchmaking: a Redis queue per rating bucket (±200, widening by 100 every 10 s, max 60 s, then fall back to a "Sabi Bot" with a disclosed bot label).
+- **FR-DUEL-6:** Random matchmaking: a player joins a waiting random duel whose challenger is within ±200 rating, widening by 100 every 10 s of its wait (max 60 s), then the duel falls back to the "Sabi Bot" with a disclosed bot label. The pool is the `duels` table (random duels with no second player), so seating is one transaction; the bot plays like a player of its opponent's rating, and its duels are unrated (build plan step 2.3).
 
 ### 4.4 Party service (live)
 - **FR-PARTY-1:** Room code: 5 characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`. Codes are unique among active rooms and reserved for 10 minutes after the room closes.

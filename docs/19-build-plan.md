@@ -302,11 +302,21 @@ GDD §6.2.
 - ✅ The question page shows "Trending · in the game until …"
 - ✅ Tests: the API (90 days from going live, a sooner date kept, non-trending ones untouched, renewing as an editor only and only trending ones, expiry after the last day, marking a live question trending) and the date rule in game-rules
 
+### Step 2.3 · Random opponents and the Sabi Bot ✅
+TRD FR-DUEL-6, GDD §2.1.
+
+- ✅ **Random opponent** on Home (`POST /v1/duels {opponent: {random: true}}`): the player takes the seat in a waiting random duel whose challenger is within ±200 rating, widening by 100 every 10 s of that duel's wait; duels they can play at once (the challenger has played round 1) go first, then the longest waiting. Nobody meets someone they blocked or are already playing. With no match, they start a random duel of their own and play round 1 while it waits
+- ✅ The pool is the `duels` table itself (random duels with no second player, a partial index), not a Redis queue: one transaction seats the player, and `FOR UPDATE SKIP LOCKED` means two players never take one seat
+- ✅ **The Sabi Bot**: after 60 s with nobody, the worker (`sabi-bot-seats`, every 5 s) seats the bot, a user of its own (`users.status = 'bot'`, so no list of players shows it) and the duel's source becomes `bot`. `sabi-bot-turns` plays its turns and tie-break guesses 20 s after they start: it picks categories at random, answers like a player of its opponent's rating (each answer right with the item-rating odds, in 3–12 s), and guesses tie-breaks near the answer
+- ✅ Duels with the bot are unrated; it gets no pushes, analytics events, question stats or seen questions, can't be challenged directly and plays no rematches (the result screen offers a new random opponent instead). The app names it "Sabi Bot" and says what it is on the waiting and result screens
+- ✅ The app: "Finding you an opponent" while a random duel waits (checked every 5 s), "{name} is playing round 1" for a player seated before the challenger finished, and no decline screen for a random duel
+- ✅ Tests: the window and the bot's play in game-rules; the API (pairing, the widening window, blocks and duels already going, the bot seated after a minute and playing late, unrated, without pushes or events, a tie-break it loses, no direct challenge or rematch); the browser (two players meet through Random opponent)
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
 | 2.2 Party rooms ⬜ | `apps/realtime` (Colyseus), party REST side, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
-| 2.3 Random opponents ⬜ | Rating-bucket matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
+| 2.3 Random opponents ✅ | Rating-window matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
 | 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |

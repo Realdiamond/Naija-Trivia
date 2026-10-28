@@ -6,17 +6,26 @@
  *
  * Expiry runs in two places: `expireDue` for the workers (build plan step 1.3), and lazily
  * whenever someone touches a duel that is past its deadline.
+ *
+ * Random opponents (step 2.3, TRD FR-DUEL-6): a random duel waits in the pool for a stranger
+ * near the challenger's rating; after a minute the workers seat the Sabi Bot, and play its turns.
  */
 import { randomBytes, randomInt } from 'node:crypto';
 import {
   acceptElapsed,
   applyDuelEvent,
+  BOT_TURN_DELAY_MS,
+  botAnswer,
+  botGuess,
+  canMatch,
   categoryPicker,
   DEFAULT_CONFIG,
   displayOrder,
   DUEL_ROUNDS,
   DuelTransitionError,
   isFinished,
+  MATCH_WAIT_MS,
+  NEW_PLAYER_RATING,
   OFFLINE_RESEND_GRACE_MS,
   optionPermutation,
   QUESTIONS_PER_ROUND,
@@ -52,6 +61,7 @@ import { ApiError, conflict, notFound } from '../errors';
 import type { EventContext } from '../events';
 import { newId } from '../ids';
 import {
+  combinedRating,
   loadQuestions,
   markSeen,
   pickRoundQuestions,
@@ -70,12 +80,14 @@ import {
   getDuel,
   getPlayers,
   getRounds,
+  humansOf,
   isDue,
   lockDuel,
   lockPlayers,
   playedRows,
   playerFor,
   roundFinished,
+  SABI_BOT_ID,
   sideOf,
   snapshotOf,
   type AnswerRow,
@@ -90,6 +102,8 @@ export const MAX_ACTIVE_DUELS = 20;
 const RESULT_PUSH_MS = 24 * 3_600_000;
 const TURN_MS = DEFAULT_CONFIG['duel.turn_expiry_h'] * 3_600_000;
 const TIME_LIMIT_MS = DEFAULT_CONFIG['duel.timer_text_s'] * 1000;
+/** Who acts for the Sabi Bot. Its events are never sent: they would count it as a player. */
+const BOT_ACTOR: EventContext = { userId: SABI_BOT_ID, platform: 'web' };
 
 type Outbox = Array<() => Promise<void>>;
 
@@ -113,7 +127,11 @@ const turnNotYours = (detail?: string) => conflict(ErrorCode.turnNotYours, 'It i
 export type DuelDeps = Pick<AppDeps, 'config' | 'pool' | 'redis' | 'clock' | 'events' | 'log'>;
 
 export class DuelService {
-  constructor(private readonly deps: DuelDeps) {}
+  /** `random` decides the Sabi Bot's answers; tests pass a repeatable one. */
+  constructor(
+    private readonly deps: DuelDeps,
+    private readonly random: () => number = Math.random,
+  ) {}
 
   // ----- Reading -----
 
@@ -196,6 +214,7 @@ export class DuelService {
   // ----- Starting a duel -----
 
   async create(viewer: string, body: CreateDuelRequest, ctx: EventContext): Promise<DuelView> {
+    if ('random' in body.opponent) return this.createRandom(viewer, ctx);
     const opponentId = 'user_id' in body.opponent ? body.opponent.user_id : null;
     if (opponentId === viewer) {
       throw new ApiError(
@@ -243,22 +262,65 @@ export class DuelService {
       }
       await lockPlayers(client, [viewer]);
       await this.assertCanStart(client, viewer, null);
-      applyDuelEvent(snapshotOf(duel), { type: 'opponent_joined' });
-      // If the challenger already played round 1, it is now the new player's turn: their 48 h start now.
-      const theirTurn = duel.state === 'wait_b_r1r2';
-      await client.query(
-        `UPDATE duels SET player_b = $2,
-                turn_user_id = CASE WHEN $3 THEN $2 ELSE turn_user_id END,
-                turn_deadline = CASE WHEN $3 THEN $4 ELSE turn_deadline END
-          WHERE id = $1`,
-        [duel.id, viewer, theirTurn, new Date(now + TURN_MS)],
-      );
+      await this.seat(client, duel, viewer, now);
       return { kind: 'done', id: duel.id } as const;
     });
     await flush(outbox);
     if (outcome.kind === 'missing') throw notFound('This challenge link does not exist.');
     if (outcome.kind === 'expired') throw duelFinished('The challenge ran out of time.');
     return this.view(outcome.id, viewer);
+  }
+
+  /**
+   * A random opponent (FR-DUEL-6): take the seat in a waiting random duel whose challenger is
+   * close enough in rating for how long they have waited, or start one that waits for the next
+   * player. Duels you can play at once (the challenger has played round 1) go first, then the
+   * longest waiting. Nobody is paired with someone they blocked, or already playing them.
+   */
+  private async createRandom(viewer: string, ctx: EventContext): Promise<DuelView> {
+    const now = this.deps.clock.now();
+    const outbox: Outbox = [];
+    const duelId = await withTransaction(this.deps.pool, async (client) => {
+      await lockPlayers(client, [viewer]);
+      await this.assertCanStart(client, viewer, null);
+      const rating = await combinedRating(client, [viewer]);
+      const pool = await client.query<{
+        id: string;
+        player_a: string;
+        rating: number;
+        created_at: Date;
+        ready: boolean;
+      }>(
+        `SELECT d.id, d.player_a, coalesce(r.rating, $3) AS rating, d.created_at, d.state = 'wait_b_r1r2' AS ready
+           FROM duels d LEFT JOIN ratings r ON r.user_id = d.player_a AND r.scope = 'overall'
+          WHERE d.source = 'random' AND d.player_b IS NULL AND d.created_at > $2
+            AND d.state IN ('created', 'wait_b_r1r2') AND d.player_a <> $1
+          ORDER BY d.created_at LIMIT 100`,
+        [viewer, new Date(now - MATCH_WAIT_MS), NEW_PLAYER_RATING.rating],
+      );
+      const candidates = pool.rows
+        .filter((c) => canMatch(rating, c.rating, now - c.created_at.getTime()))
+        .sort((x, y) => Number(y.ready) - Number(x.ready));
+      for (const c of candidates) {
+        if (await isBlocked(client, c.player_a, viewer)) continue;
+        if (await playingAlready(client, c.player_a, viewer)) continue;
+        // Someone else may be taking it right now: then try the next.
+        const duel = (
+          await client.query<DuelRow>(
+            'SELECT * FROM duels WHERE id = $1 AND player_b IS NULL FOR UPDATE SKIP LOCKED',
+            [c.id],
+          )
+        ).rows[0];
+        if (!duel || (duel.state !== 'created' && duel.state !== 'wait_b_r1r2')) continue;
+        await this.seat(client, duel, viewer, now);
+        return duel.id;
+      }
+      const id = await this.insertDuel(client, { playerA: viewer, playerB: null, source: 'random', now });
+      outbox.push(() => this.deps.events.emit('duel_created', { opponent_type: 'random' }, ctx));
+      return id;
+    });
+    await flush(outbox);
+    return this.view(duelId, viewer);
   }
 
   /** A rematch of a finished duel. Both players asking at once still get one new duel. */
@@ -277,6 +339,13 @@ export class DuelService {
       ]);
       if (existing.rows[0]) return existing.rows[0].id;
       const opponentId = playerFor(duel, side === 'a' ? 'b' : 'a')!;
+      if (opponentId === SABI_BOT_ID) {
+        throw conflict(
+          ErrorCode.conflict,
+          'The Sabi Bot does not play rematches',
+          'Find a random opponent instead.',
+        );
+      }
       await lockPlayers(client, [viewer, opponentId]);
       await this.assertCanStart(client, viewer, opponentId);
       const newDuel = await this.insertDuel(client, {
@@ -317,14 +386,7 @@ export class DuelService {
           `Offered: ${round.offered.join(', ')}.`,
         );
       }
-      const players = playersOf(duel);
-      const ids = await pickRoundQuestions(client, categoryId, {
-        players,
-        familySafeOnly: await familySafeOnly(client, players),
-        exclude: rounds.flatMap((r) => r.question_ids),
-        now,
-      });
-      if (ids.length < QUESTIONS_PER_ROUND) {
+      if (!(await this.fillRound({ client, duel, now }, rounds, roundNo, categoryId, viewer))) {
         throw new ApiError(
           503,
           ErrorCode.noQuestions,
@@ -332,11 +394,6 @@ export class DuelService {
           'Pick another category or try again soon.',
         );
       }
-      await client.query(
-        `UPDATE duel_rounds SET category_id = $3, picked_by = $4, question_ids = $5
-          WHERE duel_id = $1 AND round_no = $2`,
-        [duel.id, roundNo, categoryId, viewer, ids],
-      );
     });
     return this.view(duelId, viewer);
   }
@@ -585,18 +642,7 @@ export class DuelService {
         ),
       );
 
-      const answered = (await getAnswers(client, [duel.id])).filter(
-        (a) => a.round_no === TIEBREAK_ROUND && a.received_at !== null,
-      );
-      if (answered.length === 2) {
-        const of = (s: DuelSide) => answered.find((a) => a.user_id === playerFor(duel, s))!;
-        const winner = tiebreakWinner(q.numeric_answer!, of('a'), of('b'));
-        await this.transition(
-          tx,
-          applyDuelEvent(snapshotOf(tx.duel), { type: 'tiebreak_resolved', winner }),
-          ctx,
-        );
-      }
+      const answered = await this.resolveTiebreak(tx, q, ctx);
       return this.tiebreakResponse(tx, findAnswer(answered, TIEBREAK_ROUND, 1, viewer)!);
     });
   }
@@ -626,6 +672,157 @@ export class DuelService {
     });
     await flush(outbox);
     return expired;
+  }
+
+  // ----- The Sabi Bot (FR-DUEL-6), for the workers -----
+
+  /** Random duels nobody took within a minute get the Sabi Bot. Returns how many. */
+  async seatBots(limit = 50): Promise<number> {
+    const now = this.deps.clock.now();
+    return withTransaction(this.deps.pool, async (client) => {
+      const waiting = await client.query<DuelRow>(
+        `SELECT * FROM duels
+          WHERE source = 'random' AND player_b IS NULL AND created_at <= $1
+            AND state IN ('created', 'wait_b_r1r2')
+          ORDER BY created_at LIMIT $2 FOR UPDATE SKIP LOCKED`,
+        [new Date(now - MATCH_WAIT_MS), limit],
+      );
+      for (const duel of waiting.rows) await this.seat(client, duel, SABI_BOT_ID, now, 'bot');
+      return waiting.rows.length;
+    });
+  }
+
+  /**
+   * The bot's turns and tie-breaks, each played once it has waited BOT_TURN_DELAY_MS. Returns
+   * how many it played. One that fails (a category out of questions, say) waits for the next run.
+   */
+  async playBotTurns(limit = 20): Promise<number> {
+    const now = this.deps.clock.now();
+    const due = await this.deps.pool.query<{ id: string }>(
+      `SELECT d.id FROM duels d
+        WHERE d.player_b = $1 AND d.state = ANY($2::duel_state[]) AND d.turn_deadline <= $3
+          AND (d.turn_user_id = $1 OR (d.state = 'tiebreak' AND NOT EXISTS (
+                SELECT 1 FROM duel_answers a WHERE a.duel_id = d.id AND a.round_no = ${TIEBREAK_ROUND}
+                   AND a.user_id = $1 AND a.received_at IS NOT NULL)))
+        ORDER BY d.turn_deadline LIMIT $4`,
+      // A turn started at deadline − 48 h; the bot waits a little into it.
+      [SABI_BOT_ID, ACTIVE_STATES, new Date(now + TURN_MS - BOT_TURN_DELAY_MS), limit],
+    );
+    let played = 0;
+    for (const { id } of due.rows) {
+      try {
+        if (await this.playBotTurn(id)) played++;
+      } catch (err) {
+        this.deps.log.warn({ err, duel_id: id }, 'the Sabi Bot could not play its turn');
+      }
+    }
+    return played;
+  }
+
+  private async playBotTurn(duelId: string): Promise<boolean> {
+    const now = this.deps.clock.now();
+    const outbox: Outbox = [];
+    const played = await withTransaction(this.deps.pool, async (client) => {
+      const duel = await lockDuel(client, duelId);
+      const side = duel ? sideOf(duel, SABI_BOT_ID) : null;
+      if (!duel || side === null || isFinished(duel.state)) return false;
+      const tx: PlayerTx = { client, duel, now, outbox, viewer: SABI_BOT_ID, side };
+      if (isDue(duel, now)) {
+        await this.expire(tx);
+        return false;
+      }
+      if (duel.state === 'tiebreak') return this.botTiebreak(tx);
+      if (turnSide(duel.state) !== side) return false;
+      // It plays at its opponent's level, for a fair game.
+      const strength = await combinedRating(client, humansOf(duel));
+      let streak = trailingStreak(playedRows(await getAnswers(client, [duel.id]), SABI_BOT_ID));
+      for (const roundNo of roundsForTurn(duel.state)) {
+        let rounds = await getRounds(client, [duel.id]);
+        if (rounds.find((r) => r.round_no === roundNo)!.category_id === null) {
+          // Whoever plays a round first picks it, so this one is the bot's pick.
+          const offered = sample(rounds.find((r) => r.round_no === roundNo)!.offered, 3);
+          let filled = false;
+          for (const categoryId of offered) {
+            if ((filled = await this.fillRound(tx, rounds, roundNo, categoryId, SABI_BOT_ID))) break;
+          }
+          if (!filled) throw new Error(`no questions for round ${roundNo} in any offered category`);
+          rounds = await getRounds(client, [duel.id]);
+        }
+        const round = rounds.find((r) => r.round_no === roundNo)!;
+        const questions = await loadQuestions(client, round.question_ids);
+        const answers = await getAnswers(client, [duel.id]);
+        for (const [i, qid] of round.question_ids.entries()) {
+          if (findAnswer(answers, roundNo, i + 1, SABI_BOT_ID)?.received_at) continue;
+          const q = questions.get(qid)!;
+          const pick = botAnswer(
+            { itemRating: q.d_rating, optionCount: q.options.length, correctIndex: q.correct_index! },
+            strength,
+            this.random,
+          );
+          const score = scoreAnswer({
+            correct: pick.correct,
+            elapsedMs: pick.elapsedMs,
+            timeLimitMs: TIME_LIMIT_MS,
+            streakBefore: streak,
+          });
+          streak = score.streakAfter;
+          await client.query(
+            `INSERT INTO duel_answers (duel_id, round_no, seq, user_id, question_id, served_at, received_at,
+                                       client_elapsed_ms, accepted_elapsed_ms, display_index, chosen_index,
+                                       correct, points)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, $12)`,
+            [
+              duel.id,
+              roundNo,
+              i + 1,
+              SABI_BOT_ID,
+              qid,
+              new Date(now - pick.elapsedMs),
+              new Date(now),
+              pick.elapsedMs,
+              toDisplayIndex(permFor(duel.id, SABI_BOT_ID, q), pick.chosenIndex),
+              pick.chosenIndex,
+              pick.correct,
+              score.points,
+            ],
+          );
+        }
+        await this.afterAnswer(tx, roundNo, BOT_ACTOR);
+      }
+      return true;
+    });
+    await flush(outbox);
+    return played;
+  }
+
+  /** The bot's closest-number guess; the tie-break is decided if the player already answered. */
+  private async botTiebreak(tx: PlayerTx): Promise<boolean> {
+    const { client, duel, now } = tx;
+    if (findAnswer(await getAnswers(client, [duel.id]), TIEBREAK_ROUND, 1, SABI_BOT_ID)?.received_at) {
+      return false;
+    }
+    const round = (await getRounds(client, [duel.id])).find((r) => r.round_no === TIEBREAK_ROUND);
+    if (!round) return false;
+    const q = (await loadQuestions(client, round.question_ids)).get(round.question_ids[0]!)!;
+    const guess = botGuess(q.numeric_answer!, this.random);
+    const elapsedMs = Math.round(5000 + this.random() * 7000);
+    await client.query(
+      `INSERT INTO duel_answers (duel_id, round_no, seq, user_id, question_id, served_at, received_at,
+                                 client_elapsed_ms, accepted_elapsed_ms, guess, correct, points)
+       VALUES ($1, ${TIEBREAK_ROUND}, 1, $2, $3, $4, $5, $6, $6, $7, $8, 0)`,
+      [
+        duel.id,
+        SABI_BOT_ID,
+        q.id,
+        new Date(now - elapsedMs),
+        new Date(now),
+        elapsedMs,
+        guess,
+        guess === q.numeric_answer,
+      ],
+    );
+    await this.resolveTiebreak(tx, q, BOT_ACTOR);
+    return true;
   }
 
   private async expireOne(duelId: string): Promise<void> {
@@ -686,20 +883,22 @@ export class DuelService {
     const mine = answers.filter((a) => a.user_id === viewer && a.round_no === roundNo);
     const firstServed = Math.min(...mine.map((a) => a.served_at.getTime()));
     const lastAnswered = Math.max(...mine.map((a) => a.received_at!.getTime()));
-    outbox.push(() =>
-      this.deps.events.emit(
-        'duel_round_played',
-        {
-          duel_id: duel.id,
-          round: roundNo,
-          category: round.category_id!,
-          correct_count: mine.filter((a) => a.correct).length,
-          points: mine.reduce((sum, a) => sum + a.points, 0),
-          turn_duration_s: Math.round((lastAnswered - firstServed) / 1000),
-        },
-        ctx,
-      ),
-    );
+    if (viewer !== SABI_BOT_ID) {
+      outbox.push(() =>
+        this.deps.events.emit(
+          'duel_round_played',
+          {
+            duel_id: duel.id,
+            round: roundNo,
+            category: round.category_id!,
+            correct_count: mine.filter((a) => a.correct).length,
+            points: mine.reduce((sum, a) => sum + a.points, 0),
+            turn_duration_s: Math.round((lastAnswered - firstServed) / 1000),
+          },
+          ctx,
+        ),
+      );
+    }
 
     const turnDone = roundsForTurn(duel.state).every((r) =>
       roundFinished(
@@ -725,15 +924,17 @@ export class DuelService {
 
   /**
    * Persist a move of the state machine: the next turn and its 48 h deadline, or the result,
-   * ratings and `duel_completed` events. Entering a tie-break also sets up its question.
+   * ratings and `duel_completed` events. Entering a tie-break also sets up its question. Duels
+   * with the Sabi Bot are unrated.
    */
   private async transition(tx: Tx, next: DuelSnapshot, actor?: EventContext): Promise<void> {
     const { client, duel, now } = tx;
     const finished = isFinished(next.state);
     const decisive = (next.state === 'complete' || next.state === 'forfeit') && duel.player_b !== null;
-    const deltas = decisive
-      ? await applyDuelRatings(client, { ...duel, player_b: duel.player_b! }, next.winner, now)
-      : null;
+    const deltas =
+      decisive && duel.player_b !== SABI_BOT_ID
+        ? await applyDuelRatings(client, { ...duel, player_b: duel.player_b! }, next.winner, now)
+        : null;
     const updated = await client.query<DuelRow>(
       `UPDATE duels SET state = $2, score_a = $3, score_b = $4, turn_user_id = $5, turn_deadline = $6,
               winner_id = $7, rating_delta_a = $8, rating_delta_b = $9, completed_at = $10
@@ -761,7 +962,7 @@ export class DuelService {
   /**
    * Pushes for a move (FR-NOT-1), saved with it: "your turn" to whoever must play now ("X don
    * challenge you" after a direct challenger's first turn), the tie-break to the other player,
-   * and the result to each player who wasn't the one to end it.
+   * and the result to each player who wasn't the one to end it. The Sabi Bot gets none.
    */
   private async queuePushes(tx: Tx, before: DuelRow, actor?: EventContext): Promise<void> {
     const { client, duel, now } = tx;
@@ -778,14 +979,16 @@ export class DuelService {
       const other = duel.player_a === userId ? duel.player_b : duel.player_a;
       return other ? (players.get(other)?.username ?? null) : null;
     };
-    const turn = (userId: string, kind: 'challenge' | 'turn' | 'tiebreak') =>
-      queuePush(client, {
+    const turn = async (userId: string, kind: 'challenge' | 'turn' | 'tiebreak') => {
+      if (userId === SABI_BOT_ID) return;
+      await queuePush(client, {
         userId,
         params: { type: 'your_turn', duel_id: duel.id, kind, opponent: opponentOf(userId) },
         collapseKey: duelKey(duel.id),
         expiresAt: duel.turn_deadline!.getTime(),
         now,
       });
+    };
 
     if (duel.state === 'tiebreak') {
       for (const userId of playersOf(duel)) if (userId !== actor?.userId) await turn(userId, 'tiebreak');
@@ -796,7 +999,7 @@ export class DuelService {
     if ((duel.state === 'complete' || duel.state === 'forfeit') && duel.player_b !== null) {
       for (const side of ['a', 'b'] as const) {
         const userId = playerFor(duel, side)!;
-        if (userId === actor?.userId) continue;
+        if (userId === actor?.userId || userId === SABI_BOT_ID) continue;
         await queuePush(client, {
           userId,
           params: {
@@ -819,7 +1022,7 @@ export class DuelService {
   /** One closest-number question for both; with none to ask, the level scores stand as a draw. */
   private async startTiebreak(tx: Tx, actor?: EventContext): Promise<void> {
     const { client, duel, now } = tx;
-    const players = playersOf(duel);
+    const players = humansOf(duel);
     const rounds = await getRounds(client, [duel.id]);
     const qid = await pickTiebreakQuestion(client, {
       players,
@@ -853,6 +1056,7 @@ export class DuelService {
     const players = await getPlayers(tx.client, playersOf(duel));
     for (const side of ['a', 'b'] as const) {
       const userId = playerFor(duel, side)!;
+      if (userId === SABI_BOT_ID) continue;
       const result = resultFor(duel, side);
       const props = {
         result:
@@ -937,6 +1141,71 @@ export class DuelService {
         'Try again later.',
       );
     }
+  }
+
+  /**
+   * `userId` takes seat B. If the challenger already played round 1, it is now B's turn, and
+   * their 48 h start now.
+   */
+  private async seat(
+    client: PoolClient,
+    duel: DuelRow,
+    userId: string,
+    now: number,
+    source: DuelSource = duel.source,
+  ): Promise<void> {
+    applyDuelEvent(snapshotOf(duel), { type: 'opponent_joined' });
+    const theirTurn = duel.state === 'wait_b_r1r2';
+    await client.query(
+      `UPDATE duels SET player_b = $2, source = $5,
+              turn_user_id = CASE WHEN $3 THEN $2 ELSE turn_user_id END,
+              turn_deadline = CASE WHEN $3 THEN $4 ELSE turn_deadline END
+        WHERE id = $1`,
+      [duel.id, userId, theirTurn, new Date(now + TURN_MS), source],
+    );
+  }
+
+  /** The round's questions from `categoryId`, saved with its picker; false when the category runs dry. */
+  private async fillRound(
+    tx: Pick<Tx, 'client' | 'duel' | 'now'>,
+    rounds: readonly RoundRow[],
+    roundNo: number,
+    categoryId: string,
+    pickedBy: string,
+  ): Promise<boolean> {
+    const { client, duel, now } = tx;
+    const players = humansOf(duel);
+    const ids = await pickRoundQuestions(client, categoryId, {
+      players,
+      familySafeOnly: await familySafeOnly(client, players),
+      exclude: rounds.flatMap((r) => r.question_ids),
+      now,
+    });
+    if (ids.length < QUESTIONS_PER_ROUND) return false;
+    await client.query(
+      `UPDATE duel_rounds SET category_id = $3, picked_by = $4, question_ids = $5
+        WHERE duel_id = $1 AND round_no = $2`,
+      [duel.id, roundNo, categoryId, pickedBy, ids],
+    );
+    return true;
+  }
+
+  /** Once both have answered the tie-break, the closest guess decides the duel. Returns the answers. */
+  private async resolveTiebreak(tx: Tx, q: DuelQuestion, actor: EventContext): Promise<AnswerRow[]> {
+    const { client, duel } = tx;
+    const answered = (await getAnswers(client, [duel.id])).filter(
+      (a) => a.round_no === TIEBREAK_ROUND && a.received_at !== null,
+    );
+    if (answered.length === 2) {
+      const of = (s: DuelSide) => answered.find((a) => a.user_id === playerFor(duel, s))!;
+      const winner = tiebreakWinner(q.numeric_answer!, of('a'), of('b'));
+      await this.transition(
+        tx,
+        applyDuelEvent(snapshotOf(tx.duel), { type: 'tiebreak_resolved', winner }),
+        actor,
+      );
+    }
+    return answered;
   }
 
   private async insertDuel(
@@ -1109,6 +1378,16 @@ function permFor(duelId: string, userId: string, q: DuelQuestion): number[] {
 
 function playersOf(duel: DuelRow): string[] {
   return duel.player_b ? [duel.player_a, duel.player_b] : [duel.player_a];
+}
+
+/** Whether the two are in a duel together already: random play should bring someone new. */
+async function playingAlready(client: PoolClient, a: string, b: string): Promise<boolean> {
+  const result = await client.query(
+    `SELECT 1 FROM duels WHERE state = ANY($3::duel_state[])
+        AND ((player_a = $1 AND player_b = $2) OR (player_a = $2 AND player_b = $1)) LIMIT 1`,
+    [a, b, ACTIVE_STATES],
+  );
+  return result.rows.length > 0;
 }
 
 async function familySafeOnly(client: PoolClient, players: readonly string[]): Promise<boolean> {

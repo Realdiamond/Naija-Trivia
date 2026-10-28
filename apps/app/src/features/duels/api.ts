@@ -37,8 +37,13 @@ export function useDuel(id: string) {
   return useQuery({
     queryKey: duelKeys.one(id),
     queryFn: () => api.get<DuelView>(routes.duel(id)),
-    // Look again now and then while waiting for the opponent (no push yet, step 2.5).
-    refetchInterval: (query) => (query.state.data?.next?.action === 'wait' ? 15_000 : false),
+    // Look again now and then while waiting for the opponent; often while a random duel looks
+    // for one, or the Sabi Bot is about to play (it takes well under a minute).
+    refetchInterval: (query) => {
+      const duel = query.state.data;
+      if (duel?.next?.action !== 'wait') return false;
+      return duel.source === 'bot' || (duel.source === 'random' && !duel.opponent) ? 5_000 : 15_000;
+    },
   });
 }
 
