@@ -96,7 +96,13 @@ export default function TasteTest() {
     );
   }
 
-  return <QuestionView flow={flow} overline={t('taste.overline')} />;
+  return (
+    <QuestionView
+      flow={flow}
+      overline={t('taste.overline')}
+      onLeave={() => router.replace(status === 'guest' || status === 'account' ? '/home' : '/welcome')}
+    />
+  );
 }
 
 const styles = StyleSheet.create({

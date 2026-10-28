@@ -1,12 +1,20 @@
-/** The question screen (mockups 02 and 11), driven by useQuestionFlow. */
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+/**
+ * The question screen (mockups 02, 11 and 30), driven by useQuestionFlow. On computers the keys
+ * play too: 1–4 or A–D answer, Enter continues, Esc asks to leave (FR-WEB-5).
+ */
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { errorMessage } from '../../api';
 import { useT } from '../../i18n';
 import { Button } from '../../ui/Button';
+import { Dialog } from '../../ui/Dialog';
 import { CategoryPill, OptionButton, ProgressSegments, TimerBar, type OptionState } from '../../ui/game';
+import { Icon } from '../../ui/icons';
+import { useIsDesktop } from '../../ui/layout';
 import { Screen } from '../../ui/Screen';
 import { Text } from '../../ui/Text';
 import { category, colors, radius } from '../../ui/theme';
+import { optionForKey, useKeys } from './keys';
 import type { QuestionFlow } from './useQuestionFlow';
 
 interface Props {
@@ -15,11 +23,37 @@ interface Props {
   overline: string;
   /** The button after the last question; "See my result" by default. */
   finishLabel?: string;
+  /** Leaving mid-round, after the player confirms. */
+  onLeave: () => void;
 }
 
-export function QuestionView({ flow, overline, finishLabel }: Props) {
+export function QuestionView({ flow, overline, finishLabel, onLeave }: Props) {
   const t = useT();
+  const desktop = useIsDesktop();
+  const [leaving, setLeaving] = useState(false);
   const { phase, question, chosen, result, seq, total } = flow;
+
+  useKeys((key) => {
+    if (key === 'Escape') {
+      setLeaving((open) => !open);
+      return true;
+    }
+    if (leaving) return false;
+    const option = optionForKey(key);
+    if (option !== null && phase === 'asking' && question && option < question.options.length) {
+      flow.submit(option);
+      return true;
+    }
+    if (key === 'Enter' && phase === 'revealed') {
+      flow.next();
+      return true;
+    }
+    if (key === 'Enter' && phase === 'error') {
+      flow.retry();
+      return true;
+    }
+    return false;
+  });
   const done = phase === 'revealed' || phase === 'finished' ? seq : seq - 1;
   const band = question ? category(question.category_id).color : colors.primary;
 
@@ -42,7 +76,7 @@ export function QuestionView({ flow, overline, finishLabel }: Props) {
       <Button label={t('question.retry')} onPress={flow.retry} testID="retry" />
     ) : (
       <Text variant="bodySoft" align="center">
-        {t('question.hint')}
+        {desktop ? t('question.keysHint') : t('question.hint')}
       </Text>
     );
 
@@ -51,6 +85,16 @@ export function QuestionView({ flow, overline, finishLabel }: Props) {
       <View style={[styles.band, { backgroundColor: band }]} />
       <Screen footer={footer}>
         <View style={styles.header}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('question.leave')}
+            hitSlop={12}
+            onPress={() => setLeaving(true)}
+            style={styles.leave}
+            testID="leave"
+          >
+            <Icon name="back" size={26} />
+          </Pressable>
           <View style={styles.headerText}>
             <Text variant="overline">{overline}</Text>
             <Text variant="heading">{t('question.counter', { seq, total })}</Text>
@@ -78,6 +122,7 @@ export function QuestionView({ flow, overline, finishLabel }: Props) {
                   state={stateOf(index)}
                   disabled={phase !== 'asking'}
                   onPress={() => flow.submit(index)}
+                  keyHint={desktop}
                 />
               ))}
             </View>
@@ -91,6 +136,19 @@ export function QuestionView({ flow, overline, finishLabel }: Props) {
           </Text>
         ) : null}
       </Screen>
+      <Dialog
+        visible={leaving}
+        title={t('question.leaveTitle')}
+        body={t('question.leaveBody')}
+        confirmLabel={t('question.leave')}
+        cancelLabel={t('question.stay')}
+        onConfirm={() => {
+          setLeaving(false);
+          onLeave();
+        }}
+        onCancel={() => setLeaving(false)}
+        testID="leave-dialog"
+      />
     </View>
   );
 }
@@ -132,7 +190,8 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 16,
   },
-  headerText: { gap: 2, flexShrink: 1 },
+  headerText: { gap: 2, flexShrink: 1, flexGrow: 1 },
+  leave: { width: 32, height: 44, justifyContent: 'center', marginLeft: -6 },
   loading: { marginTop: 64 },
   body: { gap: 20, marginTop: 24 },
   options: { gap: 12 },

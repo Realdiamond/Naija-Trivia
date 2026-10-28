@@ -1,6 +1,6 @@
 /** First open (mockup 01): the name, the language and straight into the taste test. */
 import { useState } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { routes } from '@whosabi/shared-types';
@@ -38,65 +38,68 @@ export default function Welcome() {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <Pattern start="dark" />
-      <View style={styles.column}>
-        <View style={styles.top}>
-          <Logo />
-          <Text variant="hero" accessibilityRole="header" style={styles.title}>
-            Who{'\n'}Sabi?
-          </Text>
-          <Text style={styles.tagline} color={colors.white}>
-            {t('welcome.tagline')}
-          </Text>
-        </View>
-
-        <View style={styles.bottom}>
-          <Text variant="label" color={colors.white}>
-            {t('welcome.language')}
-          </Text>
-          <View style={styles.languages} accessibilityRole="radiogroup">
-            {(
-              [
-                ['en', 'English'],
-                ['pcm', 'Pidgin'],
-              ] as Array<[AppLanguage, string]>
-            ).map(([code, name]) => (
-              <Button
-                key={code}
-                label={name}
-                variant={language === code ? 'light' : 'ghost-light'}
-                selected={language === code}
-                onPress={() => setLanguage(code)}
-                style={styles.language}
-                testID={`language-${code}`}
-              />
-            ))}
+      {/* Scrolls when the screen is short, e.g. with the consent banner showing. */}
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.column}>
+          <View style={styles.top}>
+            <Logo />
+            <Text variant="hero" accessibilityRole="header" style={styles.title}>
+              Who{'\n'}Sabi?
+            </Text>
+            <Text style={styles.tagline} color={colors.white}>
+              {t('welcome.tagline')}
+            </Text>
           </View>
-          <Button
-            label={t('welcome.start')}
-            variant="accent"
-            trailingIcon="arrow-right"
-            loading={busy}
-            onPress={() => void start()}
-            testID="start"
-          />
-          {error ? (
-            <Text variant="body" color={colors.white} align="center" accessibilityLiveRegion="polite">
-              {error}
+
+          <View style={styles.bottom}>
+            <Text variant="label" color={colors.white}>
+              {t('welcome.language')}
             </Text>
-          ) : (
-            <Text variant="body" color={colors.white} align="center" style={styles.note}>
-              {t('welcome.note')}
-            </Text>
-          )}
-          <Button
-            label={t('welcome.haveAccount')}
-            variant="link-light"
-            size="medium"
-            onPress={() => router.push('/sign-in')}
-            style={styles.haveAccount}
-          />
+            <View style={styles.languages} accessibilityRole="radiogroup">
+              {(
+                [
+                  ['en', 'English'],
+                  ['pcm', 'Pidgin'],
+                ] as Array<[AppLanguage, string]>
+              ).map(([code, name]) => (
+                <Button
+                  key={code}
+                  label={name}
+                  variant={language === code ? 'light' : 'ghost-light'}
+                  selected={language === code}
+                  onPress={() => setLanguage(code)}
+                  style={styles.language}
+                  testID={`language-${code}`}
+                />
+              ))}
+            </View>
+            <Button
+              label={t('welcome.start')}
+              variant="accent"
+              trailingIcon="arrow-right"
+              loading={busy}
+              onPress={() => void start()}
+              testID="start"
+            />
+            {error ? (
+              <Text variant="body" color={colors.white} align="center" accessibilityLiveRegion="polite">
+                {error}
+              </Text>
+            ) : (
+              <Text variant="body" color={colors.white} align="center" style={styles.note}>
+                {t('welcome.note')}
+              </Text>
+            )}
+            <Button
+              label={t('welcome.haveAccount')}
+              variant="link-light"
+              size="medium"
+              onPress={() => router.push('/sign-in')}
+              style={styles.haveAccount}
+            />
+          </View>
         </View>
-      </View>
+      </ScrollView>
       <Pattern start="light" />
     </SafeAreaView>
   );
@@ -134,8 +137,9 @@ function Pattern({ start }: { start: 'dark' | 'light' }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.primary },
+  scroll: { flexGrow: 1 },
   column: {
-    flex: 1,
+    flexGrow: 1,
     width: '100%',
     maxWidth: CONTENT_MAX_WIDTH,
     alignSelf: 'center',

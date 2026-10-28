@@ -4,11 +4,19 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { levelForXp, NEW_PLAYER_RATING, tierForRating } from '@whosabi/game-rules';
-import { AgeBandRequest, ErrorCode, UpdateMeRequest, type Me, type ProfileCard } from '@whosabi/shared-types';
+import {
+  AgeBandRequest,
+  ConsentsRequest,
+  ErrorCode,
+  UpdateMeRequest,
+  type Me,
+  type ProfileCard,
+} from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
 import { requireAuth } from '../auth/context';
 import { withTransaction, type Pool, type PoolClient } from '../db';
 import { ApiError, conflict, notFound, parse, unauthorized } from '../errors';
+import { requestEventContext } from '../events';
 import { isBlocked } from '../social/graph';
 import { checkUsername } from './usernames';
 
@@ -144,6 +152,26 @@ export function profileRoutes(app: FastifyInstance, deps: AppDeps): void {
       );
     });
     return toMe(await loadMe(pool, auth.userId));
+  });
+
+  /** Consent choices (doc 10 §2): a new record for every change, so the history stays. */
+  app.post('/v1/me/consents', async (request, reply) => {
+    const auth = requireAuth(request);
+    const body = parse(ConsentsRequest, request.body);
+    await pool.query(
+      `INSERT INTO consent_records (user_id, purpose, granted, policy_version, source)
+       SELECT $1, c.purpose, c.granted, c.policy_version, $2
+         FROM jsonb_to_recordset($3::jsonb) AS c(purpose text, granted boolean, policy_version text)`,
+      [auth.userId, body.source, JSON.stringify(body.consents)],
+    );
+    for (const consent of body.consents) {
+      await deps.events.emit(
+        'consent_changed',
+        { purpose: consent.purpose, granted: consent.granted },
+        requestEventContext(request),
+      );
+    }
+    return reply.code(204).send();
   });
 
   /** The public profile card behind whosabi.ng/u/{username} (doc 09 §5). */

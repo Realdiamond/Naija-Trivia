@@ -197,6 +197,21 @@ export const en = {
   'friends.none': 'No friends yet. Add someone by their username, or play a duel link and add your opponent.',
   'friends.guest': 'Sign up to add friends. Guests play through duel links.',
 
+  'consent.title': 'Your data, your choice',
+  'consent.body':
+    'We keep you signed in on this device. With your OK we also count which screens get used, so we can make the game better. No ad tracking, and you can change your mind later.',
+  'consent.allow': 'That is fine',
+  'consent.necessary': 'Only what is needed',
+  'question.leave': 'Leave',
+  'question.leaveTitle': 'Leave this round?',
+  'question.leaveBody':
+    'You can come back to it until your turn ends, but the question on screen keeps its timer, so leaving now may cost you its points.',
+  'question.stay': 'Keep playing',
+  'question.keysHint': 'Press 1 to 4 or A to D to answer, Enter for the next question, Esc to leave.',
+  'nav.home': 'Home',
+  'nav.play': 'Start a duel',
+  'nav.friends': 'Friends',
+
   'error.network': 'Network dey do anyhow. Check your connection and try again.',
   'error.retry': 'Try again',
 } as const;
@@ -395,6 +410,21 @@ export const pcm: Record<MessageKey, string> = {
   'friends.outgoing': 'Dem never accept',
   'friends.none': 'No friends yet. Add person by their username, or play duel link come add your opponent.',
   'friends.guest': 'Sign up make you fit add friends. Guests dey play through duel links.',
+
+  'consent.title': 'Your data, your choice',
+  'consent.body':
+    'We dey keep you signed in for this device. If you gree, we go also count which screens people dey use, make we fit make the game better. No ad tracking, and you fit change your mind later.',
+  'consent.allow': 'E dey okay',
+  'consent.necessary': 'Only wetin dey necessary',
+  'question.leave': 'Comot',
+  'question.leaveTitle': 'You wan comot this round?',
+  'question.leaveBody':
+    'You fit come back until your turn end, but the question wey dey screen still dey count time, so if you comot now you fit lose the points.',
+  'question.stay': 'Make I continue',
+  'question.keysHint': 'Press 1 to 4 or A to D to answer, Enter for next question, Esc to comot.',
+  'nav.home': 'Home',
+  'nav.play': 'Start a duel',
+  'nav.friends': 'Friends',
 
   'error.network': 'Network dey do anyhow. Check your connection and try again.',
   'error.retry': 'Try am again',

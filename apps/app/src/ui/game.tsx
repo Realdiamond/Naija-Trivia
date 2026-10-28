@@ -67,6 +67,8 @@ interface OptionProps {
   state: OptionState;
   disabled: boolean;
   onPress: () => void;
+  /** Shows the number key that picks it, on computers (FR-WEB-5). */
+  keyHint?: boolean;
 }
 
 const LETTERS = ['A', 'B', 'C', 'D'];
@@ -79,7 +81,7 @@ const optionLook: Record<OptionState, { bg: string; border: string; badge: strin
   faded: { bg: colors.surface, border: colors.border, badge: colors.sand, badgeText: colors.muted },
 };
 
-export function OptionButton({ index, text, state, disabled, onPress }: OptionProps) {
+export function OptionButton({ index, text, state, disabled, onPress, keyHint = false }: OptionProps) {
   const look = optionLook[state];
   const letter = LETTERS[index] ?? String(index + 1);
   return (
@@ -109,6 +111,11 @@ export function OptionButton({ index, text, state, disabled, onPress }: OptionPr
         )}
       </View>
       <Text style={styles.optionText}>{text}</Text>
+      {keyHint ? (
+        <View style={styles.keyHint}>
+          <Text variant="caption">{index + 1}</Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -146,4 +153,12 @@ const styles = StyleSheet.create({
   badge: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   letter: { fontFamily: fonts.heavy, fontSize: 15 },
   optionText: { flex: 1, fontFamily: fonts.bold, fontSize: 17, lineHeight: 23 },
+  keyHint: {
+    minWidth: 24,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: 4,
+    alignItems: 'center',
+  },
 });

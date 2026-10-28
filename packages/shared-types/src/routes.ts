@@ -14,6 +14,7 @@ export const routes = {
   authApple: () => `${API_PREFIX}/auth/apple`,
   me: () => `${API_PREFIX}/me`,
   meAge: () => `${API_PREFIX}/me/age`,
+  meConsents: () => `${API_PREFIX}/me/consents`,
   user: (username: string) => `${API_PREFIX}/users/${encodeURIComponent(username)}`,
   friends: () => `${API_PREFIX}/friends`,
   friend: (userId: string) => `${API_PREFIX}/friends/${encodeURIComponent(userId)}`,
