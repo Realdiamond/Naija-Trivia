@@ -1,0 +1,71 @@
+/**
+ * The sign-in buttons that are switched on (GET /v1/auth/methods). At launch phone codes are off
+ * to save SMS costs, so players use Google (or Apple on iPhone) or stay guests.
+ */
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import type { PublicUser } from '@whosabi/shared-types';
+import { api, errorMessage } from '../../api';
+import { GoogleButton, googleAvailable } from '../../auth/GoogleButton';
+import { useT } from '../../i18n';
+import { Button } from '../../ui/Button';
+import { Text } from '../../ui/Text';
+import { colors } from '../../ui/theme';
+
+export function useAuthMethods() {
+  return useQuery({ queryKey: ['auth-methods'], queryFn: () => api.methods(), staleTime: 5 * 60_000 });
+}
+
+/** Where a player goes once signed in: pick a username first if they have none. */
+export function afterSignIn(user: PublicUser): void {
+  router.replace(user.username ? '/home' : '/profile-setup');
+}
+
+export function SignInOptions({ showPhone = true }: { showPhone?: boolean }) {
+  const t = useT();
+  const methods = useAuthMethods();
+  const [error, setError] = useState<string | null>(null);
+
+  const google = async (idToken: string) => {
+    setError(null);
+    try {
+      afterSignIn((await api.signInWithGoogle(idToken)).user);
+    } catch (e) {
+      setError(errorMessage(e, t('error.network')));
+    }
+  };
+
+  if (methods.isPending) return null;
+  const phone = showPhone && methods.data?.phone === true;
+  const withGoogle = methods.data?.google === true && googleAvailable;
+
+  return (
+    <View style={styles.wrap}>
+      {phone ? (
+        <Button
+          label={t('signin.phoneButton')}
+          icon="phone"
+          onPress={() => router.push('/sign-in')}
+          testID="signin-phone"
+        />
+      ) : null}
+      {withGoogle ? (
+        <GoogleButton label={t('signin.google')} onToken={(token) => void google(token)} />
+      ) : null}
+      {!phone && !withGoogle ? (
+        <Text variant="bodySoft" testID="signin-none">
+          {t('signin.noMethods')}
+        </Text>
+      ) : null}
+      {error ? (
+        <Text variant="body" color={colors.wrongInk} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({ wrap: { gap: 12 } });

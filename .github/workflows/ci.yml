@@ -12,7 +12,7 @@ concurrency:
 jobs:
   checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:16
@@ -44,3 +44,17 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Build the web app for the end-to-end tests
+        run: pnpm --filter @whosabi/app build:web
+        env:
+          EXPO_PUBLIC_API_URL: http://localhost:3100
+          EXPO_PUBLIC_EVENTS_URL: http://localhost:3101
+      - run: pnpm --filter @whosabi/app exec playwright install --with-deps chromium
+      - name: End-to-end tests (the web app against the API)
+        run: pnpm --filter @whosabi/app e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-report
+          path: apps/app/e2e/.output
+          retention-days: 7

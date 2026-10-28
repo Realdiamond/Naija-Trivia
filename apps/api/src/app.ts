@@ -60,6 +60,8 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   await app.register(cors, {
     origin: options.config.corsOrigins,
     credentials: true,
+    // The plugin only allows GET, HEAD and POST by default; profile edits and unfriending need these.
+    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: [
       'authorization',
       'content-type',

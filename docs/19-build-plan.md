@@ -100,8 +100,28 @@ Docs: [07 §4.3](07-system-architecture.md), [08 §3, §6](08-data-model.md), [1
 
 Not in this step: reminders during a tie-break (both players answer, so there is no single turn), the 4-a-day cap on non-turn pushes (FR-NOT-2, with real pushes in step 2.5), and difficulty recalibration from the stats (step 2.6).
 
-### Step 1.4 · The app: Android and web ⬜ (next)
-`apps/app` (Expo, Expo Router): design tokens and core components, platform adapters (TRD §5.6), the taste test, sign-in, home with "Your turn" cards, the duel screens, an invite link that opens straight into the turn in the browser, the analytics tracker wired in, web build in CI. Docs: [05 UX](05-UX-and-user-flows.md), [TRD §4.10, §5.6](06-TRD.md), [PRD US-1, US-3, US-4, US-11](02-PRD.md).
+### Step 1.4 · The app: Android and web 🔨
+`apps/app` (Expo SDK 58, Expo Router), built in three pull requests. Docs: [05 UX](05-UX-and-user-flows.md), [TRD §4.10, §5.6](06-TRD.md), [PRD US-1, US-3, US-4, US-11](02-PRD.md), the [screen designs](design/README.md).
+
+**1.4a · Foundation, taste test and sign-in ✅**
+- ✅ The Expo app for Android, iOS and the web from one codebase; the web build is a single-page app (`pnpm --filter @whosabi/app build:web`) with each screen loaded on demand
+- ✅ Design tokens, fonts (Nunito, Baloo 2) and core components from the mockups: buttons, fields, the phone-width column centred on wide screens (FR-WEB-4), avatars, line icons, and the question pieces (category pill, progress, timer, answer buttons)
+- ✅ Platform adapters (TRD §5.6): key-value storage, the refresh token (Keystore/Keychain on phones, the HttpOnly cookie on the web), Google sign-in and the human check; the lint rule keeps native-only modules in `*.native.ts` files, and React hooks are linted too
+- ✅ The API client: problem+json errors, the access token renewed before it runs out and once after a 401, one shared renewal when several requests fail together (the server rotates refresh tokens and treats reuse as theft)
+- ✅ English and Pidgin, chosen on the first screen and saved to the player's profile for reminders (FR-NOT-3)
+- ✅ First run (UX §2.1): welcome → guest sign-in tied to the device → the taste test (server timing, one RTT sample first, the tab-hidden time on the web, FR-WEB-7) → the result with "Save your progress"
+- ✅ Sign-in shows only the methods switched on (`/v1/auth/methods`): phone code with resend countdown and one-time-code autofill, Google on the web through Google Identity Services, and the guest's progress kept (FR-AUTH-4). Native Google sign-in waits for the development build
+- ✅ Profile setup: username (chosen once), six starter avatars, the age gate (under 13 refused, 13–17 restricted), optional home state
+- ✅ A first home screen (greeting, level, save progress, play again, sign out); the full home comes in 1.4b
+- ✅ The analytics tracker wired in: sessions, foreground time and screens, batches sent with the access token, behaviour events held back until the consent banner (1.4c)
+- ✅ API fix found by running the app: CORS now allows `PATCH` and `DELETE` (profile edits were blocked in browsers)
+- ✅ Tests: the API client (11 unit tests), and Playwright end-to-end tests in CI that build the web app and play it against the real API: a guest plays the taste test, signs up with a phone code, is refused as under 13, picks a username and stays signed in after a reload; a returning guest goes straight home
+
+Known gap: the web app's first load is about 460 KB gzipped against the 350 KB budget (TRD §6). Trimming it (Zod out of the first bundle, lighter navigation) is part of the M3 performance work.
+
+**1.4b · Home and duels ⬜ (next):** home with "Your turn", "Waiting on them" and recent results; challenge a friend or share an invite link; category pick; the duel question flow; round review; the result and rematch; friends basics; an end-to-end test of two players finishing a duel in the browser.
+
+**1.4c · Invite links and web polish ⬜:** `/d/{token}` opens straight into the turn in the browser as a guest; the desktop layout and keyboard play (FR-WEB-4, FR-WEB-5); the cookie and consent banner (FR-WEB-11).
 
 ### Step 1.5 · Admin console v0 ⬜
 `apps/admin` (Next.js): staff sign-in with Google (Google Workspace, or an allow-list of staff Google accounts to save cost), roles, the audit log, player search and User 360 with the activity timeline. Docs: [18 §3, §7, §16](18-admin-console-and-analytics.md), [PRD US-12](02-PRD.md).
