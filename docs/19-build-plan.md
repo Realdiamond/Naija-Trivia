@@ -119,9 +119,21 @@ Not in this step: reminders during a tie-break (both players answer, so there is
 
 Known gap: the web app's first load is about 460 KB gzipped against the 350 KB budget (TRD §6). Trimming it (Zod out of the first bundle, lighter navigation) is part of the M3 performance work.
 
-**1.4b · Home and duels ⬜ (next):** home with "Your turn", "Waiting on them" and recent results; challenge a friend or share an invite link; category pick; the duel question flow; round review; the result and rematch; friends basics; an end-to-end test of two players finishing a duel in the browser.
+**1.4b · Home and duels ✅**
+- ✅ Home (mockup 08): "Your turn" cards with the time left (orange in the last 6 hours), the actions row (party rooms and random opponents marked "soon"), "Waiting on them" and recent results with the rating change. It refreshes on return and every 30 s until push notifications (step 2.5)
+- ✅ Start a duel (mockup 09): a duel link for anyone, or a direct challenge to a friend or recent opponent; the request carries an `Idempotency-Key`, so a retry never starts two duels
+- ✅ The duel follows the server's `next` action, so a player can leave and pick up exactly where they stopped: pick a category from the three offered (mockup 10), play the round on the shared question screen with each answer keyed for safe retries, the round review with the right answer, both players and the fact (mockup 12), and the waiting screen
+- ✅ Sending the link: WhatsApp first, then copy or the share sheet; the challenger can cancel until the opponent has answered anything, and a challenged player can decline before playing
+- ✅ The tie-break: one closest-number question with a timer, the answer shown at once, the result when both have answered
+- ✅ The result (mockup 13): win, loss, draw, forfeit, declined or cancelled; round by round; the rating change; rematch; review every round
+- ✅ Duel links `/d/{token}` (mockup 28): who is challenging, then accept and play as a guest in the browser with no sign-up. Moved here from 1.4c because the two-player test needs it
+- ✅ Friends (mockup 23): add by username, accept or decline requests, add recent opponents, challenge a friend
+- ✅ Fix: the sign-in screen no longer says sign-in is off when phone codes are on and only Google is missing
+- ✅ Tests: unit tests for the time left and answer keys; end-to-end, two players finish a whole duel through a link in two browsers (the tie-break too when the scores are level), and two accounts become friends, one challenges and the other declines
 
-**1.4c · Invite links and web polish ⬜:** `/d/{token}` opens straight into the turn in the browser as a guest; the desktop layout and keyboard play (FR-WEB-4, FR-WEB-5); the cookie and consent banner (FR-WEB-11).
+Left for later on purpose: the profile screen and the tab bar (with leagues and the shop in M2), removing friends and blocking from the app (the API has both), lifelines (step 2.4), push notifications and share cards (step 2.5).
+
+**1.4c · Web polish ⬜ (next):** the desktop layout with side navigation and keyboard play (FR-WEB-4, FR-WEB-5); the cookie and consent banner, which switches on behaviour analytics (FR-WEB-11); the leave-match dialog.
 
 ### Step 1.5 · Admin console v0 ⬜
 `apps/admin` (Next.js): staff sign-in with Google (Google Workspace, or an allow-list of staff Google accounts to save cost), roles, the audit log, player search and User 360 with the activity timeline. Docs: [18 §3, §7, §16](18-admin-console-and-analytics.md), [PRD US-12](02-PRD.md).

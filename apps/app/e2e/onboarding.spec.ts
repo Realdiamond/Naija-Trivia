@@ -2,28 +2,8 @@
  * First run on the web (UX §2.1): the taste test as a guest, signing up with a phone code,
  * picking a username, and staying signed in after a reload.
  */
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
-
-/** The newest sign-in code the API "sent" (development writes SMS to its log). */
-async function lastCode(): Promise<string> {
-  const log = await readFile(path.join(test.info().project.testDir, '.output/api.log'), 'utf8');
-  const codes = [...log.matchAll(/code is (\d{6})/g)];
-  const code = codes.at(-1)?.[1];
-  if (!code) throw new Error('no sign-in code in the API log');
-  return code;
-}
-
-async function playTasteTest(page: Page) {
-  for (let i = 0; i < 3; i++) {
-    await expect(page.getByTestId('question-text')).toBeVisible();
-    await page.getByTestId('option-0').click();
-    await expect(page.getByTestId('reveal')).toBeVisible();
-    await page.getByTestId('next').click();
-  }
-  await expect(page.getByTestId('taste-score')).toBeVisible();
-}
+import { expect, test } from '@playwright/test';
+import { enterPhoneCode, playTasteTest, randomPhone } from './helpers';
 
 test('a guest plays the taste test, signs up with a phone code and keeps their progress', async ({
   page,
@@ -44,10 +24,7 @@ test('a guest plays the taste test, signs up with a phone code and keeps their p
 
   // Save progress: phone codes are on in development.
   await page.getByTestId('signin-phone').click();
-  await page.getByTestId('phone').fill('0803 123 4567');
-  await page.getByTestId('send-code').click();
-  await expect(page.getByText('6-digit code', { exact: true })).toBeVisible();
-  await page.getByTestId('code').fill(await lastCode());
+  await enterPhoneCode(page, randomPhone());
 
   // A new account picks a username, an avatar and an age band.
   await expect(page).toHaveURL(/\/profile-setup$/);

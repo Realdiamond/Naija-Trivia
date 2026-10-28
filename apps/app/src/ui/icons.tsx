@@ -22,7 +22,8 @@ export type IconName =
   | 'users'
   | 'shuffle'
   | 'timer'
-  | 'logout';
+  | 'logout'
+  | 'link';
 
 interface IconProps {
   name: IconName;
@@ -139,6 +140,13 @@ function paths(name: IconName, s: Stroke) {
       return (
         <Path
           d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22M18 2l4 4-4 4M2 6h1.9c1.5 0 2.9.9 3.6 2.2M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8M18 14l4 4-4 4"
+          {...s}
+        />
+      );
+    case 'link':
+      return (
+        <Path
+          d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
           {...s}
         />
       );
