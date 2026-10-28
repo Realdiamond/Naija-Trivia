@@ -1,6 +1,6 @@
 /**
  * The admin API, part one (doc 09 §2.10, doc 18 §3, §16): staff sign-in, the audit log, and
- * staff and roles. Players are in players.ts. Every request needs a staff session and the
+ * staff and roles. Players are in players.ts, content in content.ts, phones in phoneRoutes.ts. Every request needs a staff session and the
  * permission for it, and goes into the audit log, reads included.
  */
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -28,6 +28,8 @@ import { auditPage, writeAudit } from './audit';
 import { bearerToken, loadAdmin, requireAdmin, type AdminDeps } from './context';
 import { isActiveGrant, SYSTEM_ADMIN_ID, type GrantRow } from './permissions';
 import { adminContentRoutes } from './content';
+import { adminPhoneRoutes } from './phoneRoutes';
+import { isPhoneToken, phoneSessionFor, revokePhoneSession } from './phones';
 import { adminPlayerRoutes } from './players';
 import { AdminSessions } from './sessions';
 
@@ -119,8 +121,11 @@ export function adminRoutes(app: FastifyInstance, deps: AppDeps): void {
 
   app.post('/admin/auth/logout', async (request, reply) => {
     const token = bearerToken(request);
-    const adminId = token ? await ctx.sessions.adminFor(token) : null;
-    if (token) await ctx.sessions.end(token);
+    // A phone signing out of staff tools ends its 30-day session.
+    const phone = token && isPhoneToken(token) ? await phoneSessionFor(pool, token, clock.now()) : null;
+    if (phone) await revokePhoneSession(pool, phone.id, phone.adminId, clock.now());
+    const adminId = phone ? phone.adminId : token ? await ctx.sessions.adminFor(token) : null;
+    if (token && !phone) await ctx.sessions.end(token);
     if (adminId) {
       await writeAudit(pool, {
         actor: adminId,
@@ -134,7 +139,7 @@ export function adminRoutes(app: FastifyInstance, deps: AppDeps): void {
   });
 
   app.get('/admin/me', async (request): Promise<AdminProfile> => {
-    const { token: _token, ...admin } = await requireAdmin(request, ctx);
+    const { token: _token, phoneSessionId: _phone, ...admin } = await requireAdmin(request, ctx);
     return admin;
   });
 
@@ -267,6 +272,7 @@ export function adminRoutes(app: FastifyInstance, deps: AppDeps): void {
 
   adminPlayerRoutes(app, deps, ctx);
   adminContentRoutes(app, deps, ctx);
+  adminPhoneRoutes(app, deps, ctx);
 }
 
 async function requireStaff(pool: Pool, id: string): Promise<void> {

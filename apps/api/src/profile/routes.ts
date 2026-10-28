@@ -13,6 +13,7 @@ import {
   type ProfileCard,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
+import { isStaffPlayer } from '../admin/staffPlayer';
 import { requireAuth } from '../auth/context';
 import { withTransaction, type Pool, type PoolClient } from '../db';
 import { ApiError, conflict, notFound, parse, unauthorized } from '../errors';
@@ -56,7 +57,10 @@ const SETTABLE = [
 export function profileRoutes(app: FastifyInstance, deps: AppDeps): void {
   const { pool, clock } = deps;
 
-  app.get('/v1/me', async (request): Promise<Me> => toMe(await loadMe(pool, requireAuth(request).userId)));
+  const me = async (userId: string): Promise<Me> =>
+    toMe(await loadMe(pool, userId), await isStaffPlayer(pool, userId, clock.now()));
+
+  app.get('/v1/me', async (request): Promise<Me> => me(requireAuth(request).userId));
 
   app.patch('/v1/me', async (request): Promise<Me> => {
     const auth = requireAuth(request);
@@ -126,7 +130,7 @@ export function profileRoutes(app: FastifyInstance, deps: AppDeps): void {
         throw err;
       }
     });
-    return toMe(await loadMe(pool, auth.userId));
+    return me(auth.userId);
   });
 
   /** The age gate (UX §2.1): once per account; changes go through support. */
@@ -151,7 +155,7 @@ export function profileRoutes(app: FastifyInstance, deps: AppDeps): void {
         [auth.userId, new Date(clock.now())],
       );
     });
-    return toMe(await loadMe(pool, auth.userId));
+    return me(auth.userId);
   });
 
   /** Consent choices (doc 10 §2): a new record for every change, so the history stays. */
@@ -195,7 +199,7 @@ async function loadMe(db: Pool | PoolClient, userId: string, lock = false): Prom
   return row;
 }
 
-function toMe(row: MeRow): Me {
+function toMe(row: MeRow, staff: boolean): Me {
   const xp = Number(row.xp);
   const progress = levelForXp(xp);
   const rating = row.rating ?? NEW_PLAYER_RATING.rating;
@@ -218,6 +222,7 @@ function toMe(row: MeRow): Me {
     rating: Math.round(rating),
     tier: { id: tier.id, name: tier.name, badge: tier.badge },
     created_at: row.created_at.toISOString(),
+    staff,
   };
 }
 

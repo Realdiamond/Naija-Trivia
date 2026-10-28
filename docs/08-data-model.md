@@ -78,7 +78,8 @@ erDiagram
 | `prize_events` | `purchase_independent` has a CHECK that it is TRUE, so a non-compliant event can't be created. `rules_url` is mandatory and `states_excluded` supports per-state legal carve-outs |
 | `consent_records` | An append-only consent history (NDPA accountability) |
 | `dsar_requests` | Tracks the 30-day statutory clock |
-| `admin_users` / `admin_role_grants` | Staff identities from Google Workspace SSO (no passwords). Privileged roles need a second approver, and a CHECK stops anyone approving their own grant. `expires_at` time-boxes contractors |
+| `admin_users` / `admin_role_grants` | Staff identities from Google Workspace SSO (no passwords). Privileged roles need a second approver, and a CHECK stops anyone approving their own grant. `expires_at` time-boxes contractors. `player_id` is the player account a staff member uses in the app, set when they sign in there with their staff Google account (players' emails are not kept) |
+| `admin_phone_sessions` | Staff tools on a phone: 30-day sessions for owners and admins, only the token's hash kept, listed in the console and signed out there (`revoked_at`, `revoked_by`) |
 | `admin_audit_log` | Every admin action **and every view of a player**. Append-only (the app role can only INSERT and SELECT). `reason` is required for PII reveals, exports and grants |
 | `user_notes` | Internal notes on a player for support and moderation; never shown to the player |
 | `integrity_flags` | Anti-cheat and abuse signals with a 0–1 risk score and evidence, waiting for a human decision |

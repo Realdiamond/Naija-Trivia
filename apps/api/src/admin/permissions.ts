@@ -21,15 +21,15 @@ const CONTENT_ALL: AdminPermission[] = [
 ];
 
 export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
-  owner: [...PLAYER_SUPPORT, 'audit.view', 'staff.manage', ...CONTENT_ALL],
-  admin: [...PLAYER_SUPPORT, 'audit.view', ...CONTENT_ALL],
+  owner: [...PLAYER_SUPPORT, 'audit.view', 'staff.manage', ...CONTENT_ALL, 'overview.view'],
+  admin: [...PLAYER_SUPPORT, 'audit.view', ...CONTENT_ALL, 'overview.view'],
   dpo: [...PLAYER_SUPPORT, 'audit.view'],
   support: PLAYER_SUPPORT,
   // Moderators see players masked only.
   moderator: ['players.search', 'players.view'],
-  analyst: ['content.view'],
+  analyst: ['content.view', 'overview.view'],
   growth: [],
-  liveops: ['content.view'],
+  liveops: ['content.view', 'overview.view'],
   editor: CONTENT_ALL,
   fact_checker: ['content.view', 'content.write', 'content.review'],
   // Writers see and edit their own questions only.

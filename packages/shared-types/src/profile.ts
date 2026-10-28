@@ -60,6 +60,8 @@ export const Me = z.object({
   rating: z.number(),
   tier: Tier,
   created_at: z.iso.datetime(),
+  /** On the staff list as an owner or admin: the app shows the Staff tab (step 2.9a). */
+  staff: z.boolean(),
 });
 export type Me = z.infer<typeof Me>;
 

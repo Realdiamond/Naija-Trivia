@@ -302,6 +302,7 @@ flowchart LR
 ## 16. Admin security
 
 - The console is a separate app at `admin.whosabi.ng`, not reachable from the player apps, and is never indexed by search engines.
+- **Staff tools on a phone** (owner's decision, 28 Oct 2026; build plan step 2.9): owners and admins also get a Staff tab in the player app, with live numbers, player lookup and staff alerts. A phone signs in with the staff Google account for 30 days, the tab opens only with the phone's fingerprint or PIN, the session ends at once when the person loses the role or is suspended, and every staff phone is listed in the console (**Staff phones**) where it can be signed out. Revealing PII, exports and role changes stay in the console.
 - Google Workspace SSO with 2-step verification enforced; security keys for Owner, Admin, Finance and DPO. Sessions expire after 12 hours.
 - You sign in again before revealing PII, exporting, granting coins above the limit, changing roles or publishing config to production.
 - An optional IP allow-list (office or VPN) for Owner, Admin and Finance.

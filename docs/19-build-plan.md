@@ -176,7 +176,15 @@ To do by the team (§6): create the two apps and deploy them by following the [g
 ## 4. Milestone M2: "Feature complete" (doc 15, week 12)
 **Done when:** every P0 story works on Android, iOS and web; the admin console's MVP modules are live (doc 18 §4); 2,000+ approved questions.
 
-Order: 2.1 first, then **2.6 content tools**, moved up because approved questions are the critical path (§6) and the team needs a way to review and publish them, then 2.5 (sharing, then push), then the rest. Step 2.6b waits until after 2.5: calibration and re-scoring matter once real players are answering.
+Order: 2.1 first, then **2.6 content tools**, moved up because approved questions are the critical path (§6) and the team needs a way to review and publish them, then 2.5 (sharing, then push), then **2.9 staff on the phone** (the owner runs the game from their phone from launch), email sign-in codes, then the rest. Step 2.6b waits until after 2.5: calibration and re-scoring matter once real players are answering.
+
+**Decisions from the owner (28 Oct 2026):**
+- Staff tools live in the one app, as a Staff tab only staff see; for now only owners and admins get it.
+- On a phone, staff sign in once with their staff Google account (they play as themselves too). The staff session lasts 30 days on that phone, the Staff tab opens with the fingerprint or phone PIN, and the console can sign a phone out.
+- Staff alerts by push, day or night, all on by default and each switchable in the Staff tab: problems, every sign-up, and the payment journey (opened the payment screen, started paying, paid).
+- Re-scoring a corrected question (2.6b): players who picked the new right answer get its points, nobody loses points, a duel's result changes only if the totals flip, and both players are told.
+- Android and the web first; the iPhone app later (2.8).
+- Players can also sign in with a code sent to their email (step 2.10).
 
 ### Step 2.1 · Daily & leaderboards ✅
 PRD US-8, GDD §2.3, TRD §4.5, §5.5, API §2.6.
@@ -233,8 +241,25 @@ TRD §4.8 (FR-NOT-1 to 3), API §2.2 and §4, doc 05 §4. Web push follows in 2.
 ### Step 2.5c · Web push ⬜
 Push in the browser through the standard Web Push protocol (VAPID keys from the keys script): a service worker shows the push and opens the page, the same prompt cards on the web, and the iOS rule that web push needs the app on the Home Screen (FR-NOT-4). A notifications section in settings to switch kinds off where the phone has no channels.
 
+### Step 2.9a · Staff on the phone: the Staff tab ✅
+doc 18 §16, owner's decisions above.
+
+- ✅ Google sign-in on Android: Google's account picker through Play services, for players too (phone codes stay off until the SMS sender is approved). It needs `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in the Android build and an Android OAuth client for the app's signing certificate (§6)
+- ✅ Signing in to the app with Google using an email on the staff list links that player account to the staff member; owners and admins then see a shield on Home (`Me.staff`). Nobody else ever sees it, and players' emails are still not kept
+- ✅ Staff tools on the phone: a 30-day session from the same Google sign-in (`POST /admin/auth/phone`), kept in the phone's secure storage; the tab opens only with the fingerprint, face or PIN, and locks when the app leaves the screen. A phone with no screen lock can't sign in. Losing the role, being suspended or being signed out from the console stops the phone at once
+- ✅ The Staff tab: players playing now, today so far against yesterday up to the same time (new players, sign-ups, duels started and finished, Daily players), work waiting (reported questions, in review, approved), refreshed every 30 seconds; player lookup with the profile and recent activity in plain words (the console's wording, now shared)
+- ✅ The console: **Staff phones** lists phones signed in to staff tools (owners and admins see everyone's) and signs one out
+- ✅ Fix: guest sign-in now uses the app's clock like every other sign-in (only tests could tell)
+- ✅ Tests: the API (7: who gets the tab, phone sign-in and refusals, 30 days, suspension, demotion and sign-out from the console or the phone, the phone list, live numbers today against yesterday, the permission); end to end in the console, an owner signs a phone out
+
+### Step 2.9b · Staff on the phone: staff alerts ⬜
+Problems (a question suspended by player reports, no Daily for tomorrow, a worker job failing again and again), every sign-up, and the payment journey (switched on by the shop in 2.4), pushed to staff phones at once, day or night; an alerts list and a switch for each kind in the Staff tab, all on to start.
+
+### Step 2.10 · Email sign-in codes ⬜
+A 6-digit code by email (FR-AUTH), like phone codes: hashed, 10 minutes, 5 tries, limits per address and IP, Turnstile on the web. Sent through Resend (free: 100 a day, 3,000 a month); `RESEND_API_KEY` and a sending domain. A guest keeps their progress, as with every sign-in.
+
 ### Step 2.6b · Calibration and re-scoring ⬜
-Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly re-bucketing into levels 1–5; flags for questions that are too hard, too easy or whose most-picked answer is a distractor (doc 04 §4); re-scoring the last 14 days of games when a live question's answer is corrected, and telling the players (FR-CON-7); "trending" questions expiring after 90 days unless renewed (GDD §6.2).
+Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly re-bucketing into levels 1–5; flags for questions that are too hard, too easy or whose most-picked answer is a distractor (doc 04 §4); re-scoring the last 14 days of games when a live question's answer is corrected, and telling the players (FR-CON-7): those who picked the new right answer get its points, nobody loses any, and a duel's result changes only if the totals flip; "trending" questions expiring after 90 days unless renewed (GDD §6.2).
 
 | Step | Scope | Main docs |
 |---|---|---|
@@ -245,7 +270,9 @@ Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly
 | 2.5 Sharing, links & push: 2.5a ✅, 2.5b ✅, 2.5c ⬜ | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools: 2.6a ✅, 2.6b ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
-| 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build, practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
+| 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
+| 2.9 Staff on the phone: 2.9a ✅, 2.9b ⬜ | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
+| 2.10 Email sign-in codes ⬜ | Codes by email through Resend | TRD §4.1 |
 
 ## 5. Milestone M3: "Beta" (doc 15, week 14)
 Load tests (doc 14 §5), pen-test fixes, the device and browser matrix including the WhatsApp in-app browser, performance budgets (PRD §8), KPI reconciliation (admin numbers within ±1% of the database), closed track and invite-only web build. Detailed when M2 is close.
@@ -256,7 +283,8 @@ These are for the team, not pull requests, and some steps wait on them.
 | Item | Needed by | Notes |
 |---|---|---|
 | **3,600 approved questions** (≥ 600 in each of the six categories) | M2 (2,000), launch (3,600) | The critical path (doc 15 §5). Today: 114 drafts in the seed file, plus researched drafts in the [question bank](content/question-bank/README.md), none fact-checked yet. A daily job adds drafts; the team checks them in the workbook |
-| Google OAuth client IDs (Android, web) | 1.4 | Free in Google Cloud Console; set `GOOGLE_CLIENT_IDS`. The Android client needs the app-signing SHA-1 from Play Console |
+| Google OAuth client IDs (Android, web) | 1.4, and 2.9a for sign-in on Android | Free in Google Cloud Console. A **web** client (its id goes in `GOOGLE_CLIENT_IDS` on the API and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in the app builds) and an **Android** client for package `ng.whosabi.app` with the SHA-1 of the app-signing certificate (Play Console → App integrity), plus one for the upload key while testing. Client ids are not secrets |
+| Resend account and a sending domain | 2.10 | Free plan. Add the domain's DNS records Resend shows; the API key is a secret and goes into Heroku as `RESEND_API_KEY` |
 | Apple Developer Program and Apple sign-in ids | iOS build (2.8) | US$99 a year; `APPLE_AUDIENCES`. Not needed for Android or the web |
 | Expo account (EAS Build) | 1.4 | The free tier builds the Android app; its token goes in CI |
 | Heroku account and the two staging apps | 1.6 | Europe region, about US$29 a month; follow [deploy/heroku.md](deploy/heroku.md). ClickHouse waits until daily players reach the thousands |

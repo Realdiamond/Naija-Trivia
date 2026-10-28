@@ -18,6 +18,11 @@ interface GoogleId {
 
 export const googleAvailable = GOOGLE_WEB_CLIENT_ID !== '';
 
+/** The phone's account picker; the web signs in through the button below instead. */
+export async function googleIdToken(): Promise<string | null> {
+  throw new Error('Google sign-in by picker is for the phone app');
+}
+
 export function GoogleButton({ onToken, label }: { onToken: (idToken: string) => void; label: string }) {
   const host = useRef<ComponentRef<typeof View>>(null);
   const callback = useRef(onToken);

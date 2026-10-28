@@ -1,5 +1,6 @@
 /**
- * Who is calling the admin API (doc 09 §2.10): `Authorization: Bearer <staff session>`. Roles
+ * Who is calling the admin API (doc 09 §2.10): `Authorization: Bearer <staff session>`, from
+ * the console (12 hours) or the Staff tab on a phone (30 days, owners and admins). Roles
  * are read from Postgres on every request, so a removed role or a suspended account stops
  * working at once; the console only hides what the server would refuse anyway.
  */
@@ -8,6 +9,7 @@ import { ErrorCode, type AdminPermission, type AdminProfile, type AdminRole } fr
 import type { Pool } from '../db';
 import { ApiError, unauthorized } from '../errors';
 import { isActiveGrant, permissionsFor, type GrantRow } from './permissions';
+import { canUsePhone, isPhoneToken, phoneSessionFor } from './phones';
 import type { AdminSessions } from './sessions';
 
 export interface AdminDeps {
@@ -18,6 +20,8 @@ export interface AdminDeps {
 
 export interface AdminContext extends AdminProfile {
   token: string;
+  /** The phone session, when the request comes from the Staff tab on a phone. */
+  phoneSessionId: string | null;
 }
 
 export function bearerToken(request: FastifyRequest): string | null {
@@ -46,11 +50,21 @@ export async function requireAdmin(
   permission?: AdminPermission,
 ): Promise<AdminContext> {
   const token = bearerToken(request);
-  const adminId = token ? await deps.sessions.adminFor(token) : null;
+  const phone = token && isPhoneToken(token) ? await phoneSessionFor(deps.pool, token, deps.now()) : null;
+  const adminId = phone ? phone.adminId : token ? await deps.sessions.adminFor(token) : null;
   const admin = adminId ? await loadAdmin(deps.pool, adminId, deps.now()) : null;
   if (!token || !admin) throw unauthorized('Sign in to the admin console again.');
+  // A phone keeps working only while its staff member is still an owner or admin.
+  if (phone && !canUsePhone(admin)) {
+    throw new ApiError(
+      403,
+      ErrorCode.forbidden,
+      'Not allowed',
+      'Staff tools on the phone are for owners and admins.',
+    );
+  }
   if (permission && !admin.permissions.includes(permission)) {
     throw new ApiError(403, ErrorCode.forbidden, 'Not allowed', `Your roles don't include ${permission}.`);
   }
-  return { ...admin, token };
+  return { ...admin, token, phoneSessionId: phone?.id ?? null };
 }
