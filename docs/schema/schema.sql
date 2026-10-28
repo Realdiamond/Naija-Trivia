@@ -162,6 +162,7 @@ CREATE TABLE questions (
 );
 CREATE INDEX questions_serve_idx ON questions (category_id, status, difficulty) WHERE status = 'live';
 CREATE INDEX questions_text_trgm ON questions USING gin (text gin_trgm_ops);
+CREATE INDEX questions_console_idx ON questions (status, updated_at DESC, id);
 
 CREATE TABLE question_stats (
   question_id     text PRIMARY KEY REFERENCES questions(id) ON DELETE CASCADE,
@@ -185,6 +186,23 @@ CREATE TABLE question_reports (
   resolved_at     timestamptz,
   UNIQUE (question_id, user_id)
 );
+CREATE INDEX question_reports_open_idx ON question_reports (question_id) WHERE resolution IS NULL;
+
+-- Every step of a question's life (step 2.6a): created, imported, edited (with the content
+-- before the edit), submitted, approved, sent back, published, suspended (by staff or by
+-- reports), restored, retired or expired. `actor` is admin_users.id, or 'system'.
+CREATE TABLE question_history (
+  id              bigserial PRIMARY KEY,
+  question_id     text NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  action          text NOT NULL,
+  actor           text NOT NULL,
+  note            text,
+  version         int NOT NULL,
+  snapshot        jsonb,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX question_history_question_idx ON question_history (question_id, id DESC);
+
 
 CREATE TABLE packs (
   id              text PRIMARY KEY,

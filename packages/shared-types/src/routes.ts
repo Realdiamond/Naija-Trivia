@@ -27,6 +27,7 @@ export const routes = {
   ping: () => `${API_PREFIX}/ping`,
   pong: (pingId: string) => `${API_PREFIX}/ping/${encodeURIComponent(pingId)}`,
   categories: () => `${API_PREFIX}/categories`,
+  questionReports: (qid: string) => `${API_PREFIX}/questions/${encodeURIComponent(qid)}/reports`,
   rounds: () => `${API_PREFIX}/rounds`,
   round: (roundId: string) => `${API_PREFIX}/rounds/${encodeURIComponent(roundId)}`,
   serve: (roundId: string, seq: number) =>
@@ -73,6 +74,13 @@ export const routes = {
       `/admin/staff/${encodeURIComponent(id)}/roles/${encodeURIComponent(role)}`,
     approveRole: (id: string, role: string) =>
       `/admin/staff/${encodeURIComponent(id)}/roles/${encodeURIComponent(role)}/approve`,
+    questions: () => '/admin/questions',
+    question: (id: string) => `/admin/questions/${encodeURIComponent(id)}`,
+    questionAction: (id: string) => `/admin/questions/${encodeURIComponent(id)}/actions`,
+    questionsPublish: () => '/admin/questions/publish',
+    questionsImport: () => '/admin/questions/import',
+    reports: () => '/admin/reports',
+    resolveReports: (id: string) => `/admin/questions/${encodeURIComponent(id)}/reports/resolve`,
   },
   /** Served by the ingest service, routed by the load balancer (doc 09 §2.11). */
   events: () => `${API_PREFIX}/events`,

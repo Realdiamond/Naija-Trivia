@@ -27,6 +27,7 @@ import { newId } from '../ids';
 import { auditPage, writeAudit } from './audit';
 import { bearerToken, loadAdmin, requireAdmin, type AdminDeps } from './context';
 import { isActiveGrant, SYSTEM_ADMIN_ID, type GrantRow } from './permissions';
+import { adminContentRoutes } from './content';
 import { adminPlayerRoutes } from './players';
 import { AdminSessions } from './sessions';
 
@@ -265,6 +266,7 @@ export function adminRoutes(app: FastifyInstance, deps: AppDeps): void {
   });
 
   adminPlayerRoutes(app, deps, ctx);
+  adminContentRoutes(app, deps, ctx);
 }
 
 async function requireStaff(pool: Pool, id: string): Promise<void> {

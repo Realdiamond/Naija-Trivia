@@ -1,6 +1,6 @@
 # 19 · Build Plan & Progress
 
-**Version:** 1.5 · **Date:** 28 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
+**Version:** 1.6 · **Date:** 28 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
 **Related:** [15 Roadmap](15-roadmap-and-delivery-plan.md) (milestones, sprints, Definition of Done) · [02 PRD](02-PRD.md) (stories and release criteria) · [06 TRD](06-TRD.md) · [09 API](09-API-and-realtime-protocol.md) · [14 Testing](14-testing-and-QA-plan.md) · [18 Admin & Analytics](18-admin-console-and-analytics.md)
 
 ---
@@ -192,6 +192,22 @@ PRD US-8, GDD §2.3, TRD §4.5, §5.5, API §2.6.
 - ✅ Admin: the Daily events read in plain words on a player's timeline
 - ✅ Tests: the rules (picking, streaks and freezes, grid and share text, XP, board order); the API against real Postgres and Redis (one Daily for everyone, once only, result and XP, percentile, state ranks and the leading state, boards and hidden names, friends, rebuilding a lost board, streak days with the freeze, the week's total, a merged guest, both worker jobs, too few questions); end to end, a guest plays the Daily from Home, shares the grid, finds themselves on the boards, and a friend opening the link lands in today's Daily
 
+### Step 2.6a · Content tools: the CMS, import and reports ✅
+TRD §4.2, doc 04 §3–4, doc 18 §12, PRD US-9. Step 2.6 is split in two: this part gets questions reviewed and live; calibration and re-scoring follow in 2.6b.
+
+- ✅ The Question Bible's format rules in one place (`checkQuestion` in game-rules, the same rules as the question bank's checker): lengths, four different options with the right one marked, a number for closest-number questions, a date for "As of" questions, a region, and a source link before review
+- ✅ The workflow (doc 04 §3): writers draft and send for review, a fact-checker (never the writer) approves or sends back with a note, an editor publishes, suspends, retires or reopens. Writers see only their own questions. New permissions `content.view`, `.write`, `.review`, `.publish`, `.import` for the writer, fact-checker and editor roles (owners and admins have them all)
+- ✅ Every change in `question_history` (an edit keeps the content before it, as a new version) and in the audit log. A changed answer on a live question is noted; re-scoring the games already played comes in 2.6b
+- ✅ The console: Questions (by status with counts, category and text filters, batch publish for approved ones), the editor with live character counts, the right answer marked and the checks, how each question plays (plays, % right, average time, picks per option, open reports), look-alikes (trigram similarity above 70%) and the history; Import; Reports. Sign-in now lands each person on the first section their roles open
+- ✅ CSV import (FR-CON-6): a seed or question-bank file, checked first without saving, then imported. Rows approved in the question bank arrive approved (or live, if the editor says so), the rest in review, rejected rows and copies skipped, rows with errors listed by line. Imported questions have no writer, so whoever imports them may check them. The real `sport.csv` (158 questions) checks clean
+- ✅ Player reports (PRD US-9, mockup 27): "Report this question" under every answer, a reason in one tap and an optional note; once per player and question, 30 an hour. Five "wrong answer" reports, or reports on more than 3% of plays from 100 plays, suspend the question at once. Editors close the reports: fixed or nothing wrong (it goes back live), or retired
+- ✅ The worker retires questions past their "valid until" date every hour, with a line in their history
+- ✅ Tests: the rules; the API (10 integration tests: the three-person workflow, writers' limits, sending back, editing live questions, import with every kind of row, batch publishing, both report thresholds, resolving, expiry); end to end, a writer drafts and an editor publishes, imports and clears a reported question in the console, and a player reports a question in two taps
+- ✅ Fix: the duel end-to-end test now handles a level score, where the tie-break's last player is left on its reveal
+
+### Step 2.6b · Calibration and re-scoring ⬜
+Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly re-bucketing into levels 1–5; flags for questions that are too hard, too easy or whose most-picked answer is a distractor (doc 04 §4); re-scoring the last 14 days of games when a live question's answer is corrected, and telling the players (FR-CON-7); "trending" questions expiring after 90 days unless renewed (GDD §6.2).
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
@@ -199,7 +215,7 @@ PRD US-8, GDD §2.3, TRD §4.5, §5.5, API §2.6.
 | 2.3 Random opponents ⬜ | Rating-bucket matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
 | 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ⬜ | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
-| 2.6 Content tools ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
+| 2.6 Content tools: 2.6a ✅, 2.6b ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build, practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 

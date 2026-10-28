@@ -15,6 +15,7 @@ import { Screen } from '../../ui/Screen';
 import { Text } from '../../ui/Text';
 import { category, colors, radius } from '../../ui/theme';
 import { optionForKey, useKeys } from './keys';
+import { ReportSheet } from './ReportSheet';
 import type { QuestionFlow } from './useQuestionFlow';
 
 interface Props {
@@ -31,9 +32,12 @@ export function QuestionView({ flow, overline, finishLabel, onLeave }: Props) {
   const t = useT();
   const desktop = useIsDesktop();
   const [leaving, setLeaving] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const { phase, question, chosen, result, seq, total } = flow;
 
   useKeys((key) => {
+    // The report sheet has its own text field: no game keys while it is open.
+    if (reporting) return false;
     if (key === 'Escape') {
       setLeaving((open) => !open);
       return true;
@@ -126,7 +130,7 @@ export function QuestionView({ flow, overline, finishLabel, onLeave }: Props) {
                 />
               ))}
             </View>
-            {result ? <Reveal flow={flow} /> : null}
+            {result ? <Reveal flow={flow} onReport={() => setReporting(true)} /> : null}
           </View>
         ) : null}
 
@@ -136,6 +140,14 @@ export function QuestionView({ flow, overline, finishLabel, onLeave }: Props) {
           </Text>
         ) : null}
       </Screen>
+      {question ? (
+        <ReportSheet
+          visible={reporting}
+          qid={question.qid}
+          text={question.text}
+          onClose={() => setReporting(false)}
+        />
+      ) : null}
       <Dialog
         visible={leaving}
         title={t('question.leaveTitle')}
@@ -153,7 +165,7 @@ export function QuestionView({ flow, overline, finishLabel, onLeave }: Props) {
   );
 }
 
-function Reveal({ flow }: { flow: QuestionFlow }) {
+function Reveal({ flow, onReport }: { flow: QuestionFlow; onReport: () => void }) {
   const t = useT();
   const result = flow.result!;
   const headline = result.correct
@@ -176,6 +188,17 @@ function Reveal({ flow }: { flow: QuestionFlow }) {
           {result.fact}
         </Text>
       ) : null}
+      <Pressable
+        accessibilityRole="button"
+        onPress={onReport}
+        hitSlop={8}
+        style={styles.report}
+        testID="report-question"
+      >
+        <Text variant="caption" color={colors.inkSoft} style={styles.reportText}>
+          {t('report.link')}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -196,4 +219,6 @@ const styles = StyleSheet.create({
   body: { gap: 20, marginTop: 24 },
   options: { gap: 12 },
   reveal: { borderRadius: radius.card, padding: 16, gap: 6 },
+  report: { alignSelf: 'flex-start', marginTop: 4 },
+  reportText: { textDecorationLine: 'underline' },
 });

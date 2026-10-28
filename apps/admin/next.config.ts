@@ -4,6 +4,8 @@ const config: NextConfig = {
   // The shared contracts ship TypeScript source.
   transpilePackages: ['@whosabi/shared-types'],
   poweredByHeader: false,
+  // A question-bank category file is a few hundred kilobytes (the default limit is 1 MB).
+  experimental: { serverActions: { bodySizeLimit: '3mb' } },
   // Staff only (doc 18 §16): never indexed, never framed, no referrer leaking player ids.
   async headers() {
     return [

@@ -23,7 +23,7 @@ export class AdminApiError extends Error {
 }
 
 interface Options {
-  method?: 'GET' | 'POST' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
   /** Send this token instead of the session cookie (signing in). */
   token?: string | null;

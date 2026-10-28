@@ -5,6 +5,7 @@ export * from './daily';
 export * from './duel';
 export * from './hash';
 export * from './progression';
+export * from './questionRules';
 export * from './rating';
 export * from './roomCode';
 export * from './scoring';

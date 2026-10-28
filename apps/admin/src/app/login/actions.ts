@@ -25,7 +25,7 @@ async function signIn(path: string, body: object): Promise<SignInState> {
   } catch (error) {
     return { error: error instanceof AdminApiError ? error.message : 'The API is not answering. Try again.' };
   }
-  redirect('/players');
+  redirect('/');
 }
 
 export async function signInWithGoogle(idToken: string): Promise<SignInState> {

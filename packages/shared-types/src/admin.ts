@@ -40,6 +40,16 @@ export const AdminPermission = z.enum([
   'pii.reveal',
   'audit.view',
   'staff.manage',
+  /** The question bank and its live performance. */
+  'content.view',
+  /** Write and edit drafts, and send them for review. */
+  'content.write',
+  /** Fact-check: approve someone else's question, or send it back. */
+  'content.review',
+  /** Publish, suspend, retire and edit live questions; resolve player reports. */
+  'content.publish',
+  /** Import questions from a CSV file. */
+  'content.import',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 

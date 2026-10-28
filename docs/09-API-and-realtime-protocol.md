@@ -73,7 +73,7 @@ Everything in §2.3 needs an account (`ACCOUNT_REQUIRED`): guests play through i
 | GET | `/categories` | With localised names and colours |
 | GET | `/packs` | Catalogue with access state |
 | GET | `/packs/{id}/practice` | 50 questions **with** answers (practice only, no rating), signed URLs for media |
-| POST | `/questions/{id}/reports` | `{reason, note?}` |
+| POST | `/questions/{id}/reports` | `{reason: wrong_answer|outdated|offensive|typo|unfair, note?}` → `202`. Once per player and question (again is still `202`), 30 an hour per player, only for questions players can have seen. Five open "wrong answer" reports, or open reports on more than 3% of plays (from 100 plays), suspend the question at once |
 | POST | `/rounds` | `{mode: "taste_test"}` → `{round_id, mode, total, categories}`. The first-run taste test: one easy, family-safe question each from Slang, Food and Music (PRD US-1). Practice and the Daily will use the same round flow |
 | POST | `/rounds/{id}/questions/{seq}/serve` · `/answer` | Same contract as duels (§2.5): one question at a time, served time recorded once, answers idempotent |
 | GET | `/rounds/{id}` | `{total, answered, correct_count, score, complete, answers[]}` |
@@ -158,6 +158,8 @@ POST /v1/duels/d_01J9/rounds/2/questions/1/answer
 Served by the core API under `/admin`, only to admin-console sessions (Google Workspace OIDC). Every call is permission-checked on the server and written to `admin_audit_log`, reads included. Each screen is described in [doc 18](18-admin-console-and-analytics.md).
 
 Built so far (step 1.5): `POST /admin/auth/google {id_token}` (the console's own Google client; the account must be on the staff list, and in the Workspace domain when `ADMIN_GOOGLE_DOMAIN` is set) → `{token, expires_at, admin}`, a 12-hour staff session sent as `Authorization: Bearer`; `POST /admin/auth/logout`; `GET /admin/me`; the Players rows below except `/sessions`, `/time`, `/matches` and `/ledger`; `POST /admin/users/{id}/reveal {field: phone, reason}`; `GET /admin/audit?actor=&entity=&entity_id=&before=`; and `/admin/staff` (list, add, `POST /admin/staff/{id}/roles {role, reason, expires_at?}`, `…/roles/{role}/approve`, `DELETE …/roles/{role}`). Outside production, `POST /admin/auth/dev {email}` signs staff in without Google.
+
+The Content module (step 2.6a): `GET /admin/questions?status=&category=&q=&reported=&cursor=` (writers see only their own) · `POST /admin/questions` (a draft) · `GET` and `PUT /admin/questions/{id}` (the detail has live stats, the Question Bible checks, look-alikes, the moves you may make and the history; an edit is a new version) · `POST /admin/questions/{id}/actions {action, note?}` with `submit`, `approve` (never your own), `send_back` (with a note), `publish`, `suspend`, `restore`, `retire`, `reopen` · `POST /admin/questions/publish {ids}` · `POST /admin/questions/import {csv, dry_run, publish_approved}` (seed or question-bank CSV, up to 3 MB) · `GET /admin/reports` · `POST /admin/questions/{id}/reports/resolve {resolution: fixed|rejected|retired, note?}`. Permissions: `content.view`, `content.write`, `content.review`, `content.publish`, `content.import` (doc 18 §3: writer, fact-checker, editor).
 
 | Area | Endpoints |
 |---|---|
