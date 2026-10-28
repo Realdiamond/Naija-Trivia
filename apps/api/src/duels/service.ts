@@ -58,6 +58,7 @@ import {
   pickTiebreakQuestion,
   type DuelQuestion,
 } from './questions';
+import { duelKey, queuePush } from '../push/queue';
 import { rttFor } from '../rtt';
 import { canChallenge, isBlocked } from '../social/graph';
 import { applyDuelRatings } from './ratings';
@@ -85,6 +86,8 @@ import { buildSummary, buildView, nextAction, resultFor, visibleQuestionIds, typ
 
 /** PRD US-3 AC4: up to 20 duels going at once (the Sabi Pass lifts this in v1.1). */
 export const MAX_ACTIVE_DUELS = 20;
+/** A result push still means something for a day. */
+const RESULT_PUSH_MS = 24 * 3_600_000;
 const TURN_MS = DEFAULT_CONFIG['duel.turn_expiry_h'] * 3_600_000;
 const TIME_LIMIT_MS = DEFAULT_CONFIG['duel.timer_text_s'] * 1000;
 
@@ -750,6 +753,65 @@ export class DuelService {
     tx.duel = updated.rows[0]!;
     if (decisive) await this.queueCompleted(tx, actor);
     if (next.state === 'tiebreak') await this.startTiebreak(tx, actor);
+    await this.queuePushes(tx, duel, actor);
+  }
+
+  /**
+   * Pushes for a move (FR-NOT-1), saved with it: "your turn" to whoever must play now ("X don
+   * challenge you" after a direct challenger's first turn), the tie-break to the other player,
+   * and the result to each player who wasn't the one to end it.
+   */
+  private async queuePushes(tx: Tx, before: DuelRow, actor?: EventContext): Promise<void> {
+    const { client, duel, now } = tx;
+    if (duel.state === before.state) return;
+    // Whoever just moved needs no "your turn" or reminder still waiting (in quiet hours, say).
+    if (actor?.userId) {
+      await client.query(
+        'DELETE FROM push_outbox WHERE user_id = $1 AND collapse_key = $2 AND sent_at IS NULL',
+        [actor.userId, duelKey(duel.id)],
+      );
+    }
+    const players = await getPlayers(client, playersOf(duel));
+    const opponentOf = (userId: string) => {
+      const other = duel.player_a === userId ? duel.player_b : duel.player_a;
+      return other ? (players.get(other)?.username ?? null) : null;
+    };
+    const turn = (userId: string, kind: 'challenge' | 'turn' | 'tiebreak') =>
+      queuePush(client, {
+        userId,
+        params: { type: 'your_turn', duel_id: duel.id, kind, opponent: opponentOf(userId) },
+        collapseKey: duelKey(duel.id),
+        expiresAt: duel.turn_deadline!.getTime(),
+        now,
+      });
+
+    if (duel.state === 'tiebreak') {
+      for (const userId of playersOf(duel)) if (userId !== actor?.userId) await turn(userId, 'tiebreak');
+    } else if (duel.turn_user_id && duel.turn_user_id !== actor?.userId) {
+      await turn(duel.turn_user_id, before.state === 'created' ? 'challenge' : 'turn');
+    }
+
+    if ((duel.state === 'complete' || duel.state === 'forfeit') && duel.player_b !== null) {
+      for (const side of ['a', 'b'] as const) {
+        const userId = playerFor(duel, side)!;
+        if (userId === actor?.userId) continue;
+        await queuePush(client, {
+          userId,
+          params: {
+            type: 'duel_result',
+            duel_id: duel.id,
+            opponent: opponentOf(userId),
+            result: resultFor(duel, side)!,
+            forfeit: duel.state === 'forfeit',
+            you: side === 'a' ? duel.score_a : duel.score_b,
+            them: side === 'a' ? duel.score_b : duel.score_a,
+          },
+          collapseKey: duelKey(duel.id),
+          expiresAt: now + RESULT_PUSH_MS,
+          now,
+        });
+      }
+    }
   }
 
   /** One closest-number question for both; with none to ask, the level scores stand as a draw. */

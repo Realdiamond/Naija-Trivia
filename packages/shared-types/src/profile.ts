@@ -122,3 +122,29 @@ export type PingResponse = z.infer<typeof PingResponse>;
 
 export const PongResponse = z.object({ rtt_ms: z.number().int(), rtt_est_ms: z.number().int() });
 export type PongResponse = z.infer<typeof PongResponse>;
+
+/** An FCM registration token: letters, digits and `:_-`, in practice about 160 characters. */
+const PushToken = z
+  .string()
+  .min(20)
+  .max(4096)
+  .regex(/^[A-Za-z0-9:_-]+$/);
+
+/**
+ * Turn pushes on for this phone (doc 09 §2.2, FR-NOT-1). Sent on every start, since the token can
+ * change; the token moves to whoever is signed in on the phone. Android only until web push
+ * (step 2.5c) and the iOS build (step 2.8).
+ */
+export const RegisterDeviceRequest = z
+  .object({
+    platform: z.literal('android'),
+    push_token: PushToken,
+    app_version: z.string().max(20).optional(),
+    model: z.string().max(60).optional(),
+  })
+  .strict();
+export type RegisterDeviceRequest = z.infer<typeof RegisterDeviceRequest>;
+
+/** Turn pushes off for this phone: on sign-out, or when the player switches them off. */
+export const ForgetDeviceRequest = z.object({ push_token: PushToken }).strict();
+export type ForgetDeviceRequest = z.infer<typeof ForgetDeviceRequest>;

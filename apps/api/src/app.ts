@@ -19,6 +19,7 @@ import { ingestRoutes } from '@whosabi/ingest';
 import { ServerEvents } from './events';
 import { newId } from './ids';
 import { profileRoutes } from './profile/routes';
+import { pushRoutes } from './push/routes';
 import { roundRoutes } from './rounds/routes';
 import { rttRoutes } from './rtt';
 import { socialRoutes } from './social/routes';
@@ -106,6 +107,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   authRoutes(app, deps);
   contentRoutes(app, deps);
   profileRoutes(app, deps);
+  pushRoutes(app, deps);
   socialRoutes(app, deps);
   rttRoutes(app, deps);
   roundRoutes(app, deps);

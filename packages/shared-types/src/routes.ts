@@ -15,6 +15,8 @@ export const routes = {
   me: () => `${API_PREFIX}/me`,
   meAge: () => `${API_PREFIX}/me/age`,
   meConsents: () => `${API_PREFIX}/me/consents`,
+  /** POST to turn pushes on for this phone, DELETE (same body shape, the token) to turn them off. */
+  meDevices: () => `${API_PREFIX}/me/devices`,
   user: (username: string) => `${API_PREFIX}/users/${encodeURIComponent(username)}`,
   friends: () => `${API_PREFIX}/friends`,
   friend: (userId: string) => `${API_PREFIX}/friends/${encodeURIComponent(userId)}`,

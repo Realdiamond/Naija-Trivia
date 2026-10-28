@@ -215,8 +215,23 @@ TRD §4.8, API §5, UX §3.3, mockup 14. Step 2.5 is split in two: this part mak
 - ✅ App links: the API serves `/.well-known/assetlinks.json` (Android, from `ANDROID_CERT_SHA256`) and `apple-app-site-association` (iOS, from `APPLE_TEAM_ID`); the app claims `/d/`, `/duel/` and `/daily/` links on its domain (`LINK_HOST`, default `whosabi.ng`), so they open the installed app, which routes them like the web app does
 - ✅ Tests: the API (previews with and without names, escaping, the pictures' sizes and headers, who may fetch each, names on the duel picture for active, guest and 13–17 players, captions for every outcome, both app-link files with and without settings); the client's picture download and token refresh; end to end, both players download the duel picture and a Daily player downloads theirs
 
-### Step 2.5b · Push notifications ⬜
-Device registration (`POST /v1/me/devices`), FCM behind the existing notifier with a log stand-in, the notification types with English and Pidgin wording, quiet hours and the 4-a-day cap on non-turn pushes (FR-NOT-2), "your turn" and reminder pushes replacing the log, the app asking at the right moment (expo-notifications), and web push. Staff alerts on the phone (proposed step 2.9) build on it.
+### Step 2.5b · Push notifications: the pipeline and Android ✅
+TRD §4.8 (FR-NOT-1 to 3), API §2.2 and §4, doc 05 §4. Web push follows in 2.5c.
+
+- ✅ Phones: the app registers its FCM token (`POST /v1/me/devices`) on every start once pushes are allowed, and forgets it on sign-out. A token moves to whoever signs in on that phone; a player keeps their 10 newest. Guests get pushes too
+- ✅ Every push is queued in `push_outbox` in the same transaction as the move that causes it, so none goes out for a move that failed, and the worker sends it within seconds:
+  - quiet hours (22:00–07:00 WAT) hold it until 07:00
+  - pushes not about a turn stop at four a player a day
+  - a newer push about the same duel, friend or Daily replaces a waiting one; a player's waiting push about a duel goes once they play it
+  - one past its time (the end of the turn) is dropped
+  - dead tokens are forgotten, a busy push service is tried again up to five times, and only real pushes count as `push_sent`
+- ✅ What sends what, in English or Pidgin by the player's language (doc 05 §4): "Tolu don challenge you! 🔥" after a direct challenger's first turn, "your turn", the tie-break, the 24 h and 4 h reminders (now through the same queue), the result to whoever didn't end the duel (or both, when time runs out), friend requests and acceptances, and "Daily #142 is live" at 09:00 WAT for players who played in the last week and not yet today, with their streak
+- ✅ FCM HTTP v1 from the worker, signed in with the Firebase service account (`FIREBASE_SERVICE_ACCOUNT`); without it, pushes go to the worker's log as before. Android channels (Duels, Friends, Daily challenge) let players switch each kind off in Settings
+- ✅ The app (Android): asks at the right moment, not on first open (a card after playing a turn, "we'll tell you the moment Chidi plays", and after the Daily), then the system prompt. Pushes show while the app is open and refresh what is on screen; a tap opens the duel, Friends or the Daily, also from a cold start. `push_received` and `push_opened` are counted
+- ✅ Tests: the API (16: registering phones, what each duel move, friend request and the Daily queue, quiet hours, the cap, expiry, collapsing, dead tokens, refusals and retries, a guest's pushes moving to their account, the wording, and the FCM sign-in and message against a stand-in for Google); the reminder tests rewritten on the queue; settings; the app's push routing
+
+### Step 2.5c · Web push ⬜
+Push in the browser through the standard Web Push protocol (VAPID keys from the keys script): a service worker shows the push and opens the page, the same prompt cards on the web, and the iOS rule that web push needs the app on the Home Screen (FR-NOT-4). A notifications section in settings to switch kinds off where the phone has no channels.
 
 ### Step 2.6b · Calibration and re-scoring ⬜
 Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly re-bucketing into levels 1–5; flags for questions that are too hard, too easy or whose most-picked answer is a distractor (doc 04 §4); re-scoring the last 14 days of games when a live question's answer is corrected, and telling the players (FR-CON-7); "trending" questions expiring after 90 days unless renewed (GDD §6.2).
@@ -227,7 +242,7 @@ Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly
 | 2.2 Party rooms ⬜ | `apps/realtime` (Colyseus), party REST side, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
 | 2.3 Random opponents ⬜ | Rating-bucket matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
 | 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
-| 2.5 Sharing, links & push: 2.5a ✅, 2.5b ⬜ | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
+| 2.5 Sharing, links & push: 2.5a ✅, 2.5b ✅, 2.5c ⬜ | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools: 2.6a ✅, 2.6b ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build, practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
@@ -247,7 +262,7 @@ These are for the team, not pull requests, and some steps wait on them.
 | Heroku account and the two staging apps | 1.6 | Europe region, about US$29 a month; follow [deploy/heroku.md](deploy/heroku.md). ClickHouse waits until daily players reach the thousands |
 | Staff Google accounts for the admin console | 1.5 | Google Workspace, or an allow-list of personal Google accounts. Also a Google OAuth web client for the console (`ADMIN_GOOGLE_CLIENT_IDS` on the API, `ADMIN_GOOGLE_CLIENT_ID` on the console) |
 | Termii sender ID (and Africa's Talking), Turnstile keys | Only when phone sign-in is switched on | Not needed for launch. Registration and NCC approval take weeks. Then set `TERMII_API_KEY`, `TERMII_SENDER_ID` (and `AT_USERNAME`, `AT_API_KEY`), `OTP_SECRET`, `TURNSTILE_SECRET` and the app's `SMS_RETRIEVER_APP_HASH` |
-| Firebase project (FCM, web push) | 2.5b | |
+| Firebase project (FCM) | 2.5b, before the Android build | Free. Add an Android app with package `ng.whosabi.app` and send the developers its `google-services.json` (it identifies the app, not a secret: it goes in the repo). Then **Project settings → Service accounts → Generate new private key**: that file **is** a secret, so it goes straight into the game app's Heroku settings as `FIREBASE_SERVICE_ACCOUNT`, never into chat ([deploy guide](deploy/heroku.md#later)) |
 | Play app-signing SHA-256 fingerprint | 2.5a, once the app is on Play | Public, not a secret: Play Console → App integrity → App signing. Set `ANDROID_CERT_SHA256` so links open the installed app ([deploy guide](deploy/heroku.md#later)) |
 | Google Play developer account ✅, AdMob, RevenueCat | 2.4, M4 | The Play account exists and is an **organisation** account, so the rule that makes new personal accounts run a closed test with 12 testers for 14 days before publishing does not apply. AdMob approval takes 2–4 weeks: start it now |
 | Legal review (NDPA, prizes, ARCON), DPO, DPIA | Before beta | Doc 10 |

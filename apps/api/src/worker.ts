@@ -1,7 +1,8 @@
 /**
- * The worker (build plan steps 1.3, 2.1 and 2.6): a second process beside the API that ends
- * overdue duels, sends turn reminders, picks the Daily, saves final leaderboard ranks, retires
- * expired questions, moves question stats into Postgres and loads analytics events.
+ * The worker (build plan steps 1.3, 2.1, 2.5 and 2.6): a second process beside the API that ends
+ * overdue duels, sends pushes and queues turn and Daily reminders, picks the Daily, saves final
+ * leaderboard ranks, retires expired questions, moves question stats into Postgres and loads
+ * analytics events.
  *
  * Every job is safe with several workers running (locked rows, claimed reminder rows, a Redis
  * lock, a stream consumer group), so the worker scales by running more copies and needs no job
@@ -19,9 +20,11 @@ import { AnalyticsLoader } from './jobs/analyticsLoader';
 import { retireExpiredQuestions } from './jobs/contentExpiry';
 import { expireDueDuels } from './jobs/expiry';
 import { flushQuestionStats } from './jobs/questionStats';
-import { sendTurnReminders } from './jobs/reminders';
+import { queueDailyReminders } from './jobs/dailyReminder';
+import { queueTurnReminders } from './jobs/reminders';
 import { migrate } from './migrate';
-import { LogNotifier } from './notify';
+import { prunePushes, sendDuePushes } from './push/dispatch';
+import { FcmTransport, LogTransport } from './push/transport';
 import { createRedis } from './redis';
 
 const SECOND = 1_000;
@@ -37,7 +40,10 @@ const events = new ServerEvents(redis, config.analyticsKey, systemClock, log);
 const deps = { config, pool, redis, clock: systemClock, events, log };
 const duels = new DuelService(deps);
 const daily = new DailyService(deps);
-const notifier = new LogNotifier(log);
+// Real pushes once the Firebase key is set; until then they go to the log.
+const transport = config.firebaseServiceAccount
+  ? new FcmTransport(config.firebaseServiceAccount)
+  : new LogTransport(log);
 const loader = new AnalyticsLoader({ ...deps, redis: streamRedis });
 
 if (config.env !== 'production') await migrate(pool);
@@ -73,7 +79,10 @@ async function loadEvents(): Promise<void> {
 
 const jobs = [
   every('expire-duels', 30 * SECOND, () => expireDueDuels(duels)),
-  every('turn-reminders', MINUTE, () => sendTurnReminders(deps, notifier)),
+  every('push-send', 5 * SECOND, () => sendDuePushes(deps, transport)),
+  every('turn-reminders', MINUTE, () => queueTurnReminders(deps)),
+  every('daily-reminder', 5 * MINUTE, () => queueDailyReminders(deps)),
+  every('push-prune', 60 * MINUTE, () => prunePushes(deps)),
   every('daily-schedule', 5 * MINUTE, () => daily.schedule()),
   every('leaderboard-snapshot', 10 * MINUTE, () => daily.snapshot()),
   every('question-expiry', 60 * MINUTE, () => retireExpiredQuestions(deps)),

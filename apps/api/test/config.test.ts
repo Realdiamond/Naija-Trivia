@@ -44,3 +44,34 @@ describe('phone sign-in settings', () => {
     expect(() => loadConfig({ ...production, JWT_PRIVATE_KEY: '' })).toThrow('JWT_PRIVATE_KEY');
   });
 });
+
+describe('push settings', () => {
+  const key = {
+    type: 'service_account',
+    project_id: 'who-sabi',
+    private_key_id: 'abc',
+    private_key: '-----BEGIN PRIVATE KEY-----\nsecret-key-material\n-----END PRIVATE KEY-----\n',
+    client_email: 'firebase-adminsdk@who-sabi.iam.gserviceaccount.com',
+  };
+
+  it('starts without Firebase, and reads the key file pasted whole', () => {
+    expect(loadConfig(production).firebaseServiceAccount).toBeUndefined();
+    expect(
+      loadConfig({ ...production, FIREBASE_SERVICE_ACCOUNT: JSON.stringify(key, null, 2) })
+        .firebaseServiceAccount,
+    ).toEqual({
+      project_id: 'who-sabi',
+      client_email: key.client_email,
+      private_key: key.private_key,
+      token_uri: 'https://oauth2.googleapis.com/token',
+    });
+  });
+
+  it('says what is wrong with a bad key, without repeating it', () => {
+    const attempt = (value: string) => () => loadConfig({ ...production, FIREBASE_SERVICE_ACCOUNT: value });
+    expect(attempt('not json secret-key-material')).toThrow(/is not JSON/);
+    expect(attempt('not json secret-key-material')).not.toThrow(/secret-key-material/);
+    expect(attempt(JSON.stringify({ ...key, client_email: undefined }))).toThrow(/client_email/);
+    expect(attempt(JSON.stringify({ ...key, client_email: undefined }))).not.toThrow(/secret-key-material/);
+  });
+});

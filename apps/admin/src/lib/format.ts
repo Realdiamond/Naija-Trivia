@@ -88,17 +88,25 @@ export function describeEvent(e: Pick<AdminTimelineEvent, 'event' | 'props' | 'p
     case 'daily_completed':
       return `Finished Daily #${num(p.daily_id)} · ${num(p.score)} points · ${num(p.streak)}-day streak`;
     case 'daily_shared':
-      return `Shared their Daily result (${str(p.channel)})`;
+      return p.channel === 'status'
+        ? 'Shared their Daily result as a picture'
+        : `Shared their Daily result (${str(p.channel)})`;
     case 'friend_added':
       return `Added a friend (${str(p.source)})`;
     case 'invite_shared':
-      return `Shared a ${str(p.context)} link (${str(p.channel)})`;
+      return p.channel === 'status'
+        ? `Shared a ${str(p.context)} result as a picture`
+        : `Shared a ${str(p.context)} link (${str(p.channel)})`;
     case 'invite_opened':
       return `Opened a ${str(p.type)} link in the ${str(p.opened_in).replace('_', ' ')}`;
     case 'consent_changed':
       return `${p.granted ? 'Allowed' : 'Refused'} ${str(p.purpose)}`;
     case 'push_sent':
       return `Push sent: ${str(p.type)}`;
+    case 'push_received':
+      return `Got a push while in the app: ${str(p.type)}`;
+    case 'push_opened':
+      return `Opened a push: ${str(p.type)}`;
     default: {
       const props = JSON.stringify(p);
       return props === '{}' ? e.event : `${e.event} ${props}`;
