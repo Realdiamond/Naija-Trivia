@@ -6,5 +6,5 @@
     "verbatimModuleSyntax": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "e2e", "playwright.config.ts", "vitest.config.mts"]
+  "include": ["src", "e2e", "app.config.ts", "playwright.config.ts", "vitest.config.mts"]
 }

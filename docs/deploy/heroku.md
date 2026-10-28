@@ -56,7 +56,7 @@ heroku config:set --app whosabi-staging \
 |---|---|
 | `PGSSLMODE=no-verify`, `REDIS_TLS_VERIFY=false` | Heroku's database and Redis use encrypted connections with certificates Node can't check |
 | `EVENTS_IN_API=true` | The API takes the app's analytics events itself, so there is no separate ingest app to pay for |
-| `PUBLIC_WEB_URL`, `CORS_ORIGINS` | The app's own address: duel links use it, and the sign-in cookie only refreshes from it |
+| `PUBLIC_WEB_URL`, `CORS_ORIGINS` | The app's own address: duel links and link previews use it, and the sign-in cookie only refreshes from it |
 
 Optional, for Google sign-in for players (both the same web client ID; Android and iOS client IDs join the first list later):
 
@@ -130,6 +130,7 @@ Open its address and sign in with Google. Add more staff on **Staff and roles**.
 - **Two players, one duel (the M1 goal):** open the game's address on a computer, tap **Start playing**, then **Challenge a friend → Send a duel link**, play round 1 and send the link on WhatsApp to a phone. Open it on the phone, accept, and take turns until the result.
 - **The Android app:** on your computer, `cd apps/app`, put `EXPO_PUBLIC_API_URL=https://whosabi-staging-1234.herokuapp.com` in `.env`, run `pnpm dev`, and scan the QR code with Expo Go on an Android phone.
 - **The Daily:** the orange card on Home opens today's 7 questions. Play them, share the grid on WhatsApp, and open **Leaderboards** (the trophy). A new Daily starts at midnight, Nigerian time; the worker picks it at 23:00.
+- **Link previews and pictures:** paste a duel link into a WhatsApp chat: the preview shows who sent the challenge. After a duel or a Daily, **Share picture for Status** makes the picture for WhatsApp Status (on a computer it downloads).
 - **The admin console:** search the player's username or user ID; their timeline shows the game within a minute or two.
 
 ## When something goes wrong
@@ -147,6 +148,7 @@ Open its address and sign in with Google. Add more staff on **Staff and roles**.
 ## Later
 
 - **Real production:** the same steps on new apps (for example `whosabi` and `whosabi-admin`), with new keys from step 2 and **without** `SEED_LIVE_ALLOWED`. Questions go live through the content workflow (step 2.6).
-- **Your own domain:** `heroku domains:add whosabi.ng --app whosabi`, then update `PUBLIC_WEB_URL` and `CORS_ORIGINS`.
+- **Your own domain:** `heroku domains:add whosabi.ng --app whosabi`, then update `PUBLIC_WEB_URL` and `CORS_ORIGINS`. The Android app opens `whosabi.ng` links itself; for another domain, build the app with `LINK_HOST` set to it.
+- **Links that open the Android app:** in Play Console, **Test and release → App integrity → App signing**, copy the **SHA-256** certificate fingerprint (it is public, not a secret) and set `ANDROID_CERT_SHA256` to it (several, comma-separated, for an upload key too). The API then serves `/.well-known/assetlinks.json`, and challenge, duel and Daily links open in the app when it is installed. `APPLE_TEAM_ID` does the same for iOS later.
 - **Phone sign-in:** set the Termii or Africa's Talking keys plus `OTP_SECRET` and `TURNSTILE_SECRET` (build plan §6).
 - **Bigger:** more `web` dynos (`heroku ps:scale web=2`), a bigger Postgres plan, and the separate ingest service when events grow (set `EVENTS_IN_API=false` and point the app's `EXPO_PUBLIC_EVENTS_URL` at it).

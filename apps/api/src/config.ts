@@ -54,6 +54,22 @@ const Env = z.object({
   ADMIN_GOOGLE_CLIENT_IDS: z.string().default(''),
   /** When set, staff must sign in with a Google Workspace account on this domain (doc 18 §16). */
   ADMIN_GOOGLE_DOMAIN: z.string().min(3).optional(),
+  /**
+   * SHA-256 fingerprints of the Android app's signing certificates (Play Console, App signing),
+   * comma-separated. With them, links to the web app open the installed app (App Links).
+   */
+  ANDROID_CERT_SHA256: z
+    .string()
+    .default('')
+    .refine(
+      (v) => v.split(',').every((f) => !f.trim() || /^([0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2}$/.test(f.trim())),
+      'Each fingerprint is 32 pairs of hex digits joined by colons',
+    ),
+  /** The Apple developer Team ID, for iOS Universal Links; unset until there is an iOS app. */
+  APPLE_TEAM_ID: z
+    .string()
+    .regex(/^[A-Z0-9]{10}$/)
+    .optional(),
 });
 
 export interface Config {
@@ -89,6 +105,8 @@ export interface Config {
   appleAudiences: string[];
   adminGoogleClientIds: string[];
   adminGoogleDomain?: string;
+  androidCertSha256: string[];
+  appleTeamId?: string;
 }
 
 // Stable outside production so analytics ids don't change on every restart.
@@ -147,5 +165,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     appleAudiences: list(e.APPLE_AUDIENCES),
     adminGoogleClientIds: list(e.ADMIN_GOOGLE_CLIENT_IDS),
     adminGoogleDomain: e.ADMIN_GOOGLE_DOMAIN,
+    androidCertSha256: list(e.ANDROID_CERT_SHA256).map((f) => f.toUpperCase()),
+    appleTeamId: e.APPLE_TEAM_ID,
   };
 }

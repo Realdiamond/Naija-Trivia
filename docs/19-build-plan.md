@@ -176,7 +176,7 @@ To do by the team (§6): create the two apps and deploy them by following the [g
 ## 4. Milestone M2: "Feature complete" (doc 15, week 12)
 **Done when:** every P0 story works on Android, iOS and web; the admin console's MVP modules are live (doc 18 §4); 2,000+ approved questions.
 
-Order: 2.1 first, then **2.6 content tools**, moved up because approved questions are the critical path (§6) and the team needs a way to review and publish them, then the rest.
+Order: 2.1 first, then **2.6 content tools**, moved up because approved questions are the critical path (§6) and the team needs a way to review and publish them, then 2.5 (sharing, then push), then the rest. Step 2.6b waits until after 2.5: calibration and re-scoring matter once real players are answering.
 
 ### Step 2.1 · Daily & leaderboards ✅
 PRD US-8, GDD §2.3, TRD §4.5, §5.5, API §2.6.
@@ -205,6 +205,19 @@ TRD §4.2, doc 04 §3–4, doc 18 §12, PRD US-9. Step 2.6 is split in two: this
 - ✅ Tests: the rules; the API (10 integration tests: the three-person workflow, writers' limits, sending back, editing live questions, import with every kind of row, batch publishing, both report thresholds, resolving, expiry); end to end, a writer drafts and an editor publishes, imports and clears a reported question in the console, and a player reports a question in two taps
 - ✅ Fix: the duel end-to-end test now handles a level score, where the tie-break's last player is left on its reveal
 
+### Step 2.5a · Share pictures, link previews and app links ✅
+TRD §4.8, API §5, UX §3.3, mockup 14. Step 2.5 is split in two: this part makes shared links and results look good; push notifications follow in 2.5b.
+
+- ✅ Link previews: every page of the web app carries its own Open Graph tags, added by the API that serves it. A duel link shows who sent the challenge, a Daily link its number, any other page the game's own card. Guests and 13–17s are never named ("Someone")
+- ✅ The pictures, drawn on the server with the game's fonts (Satori and resvg): previews at 1200×630 (about 45 KB, WhatsApp's limit is 300 KB), and Status pictures at 1080×1920 with the green-and-orange band, a QR code to the game, and a line in Pidgin: "tolu don school ada for Food", the round won by the most, "Think you sabi pass tolu?". The Daily picture shows the score, time, the coloured squares by category, the streak and "Sabi pass 83% of Naija today", never the answers. About a fifth of a second each, and recent ones are kept in memory
+- ✅ Who may see what: preview pictures only for invites and Dailies that exist, rate-limited per IP; Status pictures only for the players in the duel or Daily, once it is over
+- ✅ The app: **Share picture for Status** on the duel result and the Daily result. On a phone the picture goes to the share sheet (WhatsApp Status, Instagram and the rest); in a browser it uses the share sheet where the browser can share files, or downloads it. Counted as `invite_shared` and `daily_shared` with the `status` channel
+- ✅ App links: the API serves `/.well-known/assetlinks.json` (Android, from `ANDROID_CERT_SHA256`) and `apple-app-site-association` (iOS, from `APPLE_TEAM_ID`); the app claims `/d/`, `/duel/` and `/daily/` links on its domain (`LINK_HOST`, default `whosabi.ng`), so they open the installed app, which routes them like the web app does
+- ✅ Tests: the API (previews with and without names, escaping, the pictures' sizes and headers, who may fetch each, names on the duel picture for active, guest and 13–17 players, captions for every outcome, both app-link files with and without settings); the client's picture download and token refresh; end to end, both players download the duel picture and a Daily player downloads theirs
+
+### Step 2.5b · Push notifications ⬜
+Device registration (`POST /v1/me/devices`), FCM behind the existing notifier with a log stand-in, the notification types with English and Pidgin wording, quiet hours and the 4-a-day cap on non-turn pushes (FR-NOT-2), "your turn" and reminder pushes replacing the log, the app asking at the right moment (expo-notifications), and web push. Staff alerts on the phone (proposed step 2.9) build on it.
+
 ### Step 2.6b · Calibration and re-scoring ⬜
 Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly re-bucketing into levels 1–5; flags for questions that are too hard, too easy or whose most-picked answer is a distractor (doc 04 §4); re-scoring the last 14 days of games when a live question's answer is corrected, and telling the players (FR-CON-7); "trending" questions expiring after 90 days unless renewed (GDD §6.2).
 
@@ -214,7 +227,7 @@ Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly
 | 2.2 Party rooms ⬜ | `apps/realtime` (Colyseus), party REST side, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
 | 2.3 Random opponents ⬜ | Rating-bucket matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
 | 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
-| 2.5 Sharing, links & push ⬜ | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
+| 2.5 Sharing, links & push: 2.5a ✅, 2.5b ⬜ | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools: 2.6a ✅, 2.6b ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build, practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
@@ -234,6 +247,7 @@ These are for the team, not pull requests, and some steps wait on them.
 | Heroku account and the two staging apps | 1.6 | Europe region, about US$29 a month; follow [deploy/heroku.md](deploy/heroku.md). ClickHouse waits until daily players reach the thousands |
 | Staff Google accounts for the admin console | 1.5 | Google Workspace, or an allow-list of personal Google accounts. Also a Google OAuth web client for the console (`ADMIN_GOOGLE_CLIENT_IDS` on the API, `ADMIN_GOOGLE_CLIENT_ID` on the console) |
 | Termii sender ID (and Africa's Talking), Turnstile keys | Only when phone sign-in is switched on | Not needed for launch. Registration and NCC approval take weeks. Then set `TERMII_API_KEY`, `TERMII_SENDER_ID` (and `AT_USERNAME`, `AT_API_KEY`), `OTP_SECRET`, `TURNSTILE_SECRET` and the app's `SMS_RETRIEVER_APP_HASH` |
-| Firebase project (FCM, web push) | 2.5 | |
+| Firebase project (FCM, web push) | 2.5b | |
+| Play app-signing SHA-256 fingerprint | 2.5a, once the app is on Play | Public, not a secret: Play Console → App integrity → App signing. Set `ANDROID_CERT_SHA256` so links open the installed app ([deploy guide](deploy/heroku.md#later)) |
 | Google Play developer account ✅, AdMob, RevenueCat | 2.4, M4 | The Play account exists and is an **organisation** account, so the rule that makes new personal accounts run a closed test with 12 testers for 14 days before publishing does not apply. AdMob approval takes 2–4 weeks: start it now |
 | Legal review (NDPA, prizes, ARCON), DPO, DPIA | Before beta | Doc 10 |

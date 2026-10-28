@@ -191,4 +191,47 @@ describe('ApiClient', () => {
     const t = setup();
     await expect(t.client.methods()).rejects.toBeInstanceOf(TypeError);
   });
+
+  it('fetches a share picture with the token, renewing it like any other call', async () => {
+    const t = setup({ stored: 'refresh-old-xxxxxxxxxxxxxx' });
+    t.routes.set('POST /v1/auth/guest', () => json(200, auth('access-stale')));
+    t.routes.set('POST /v1/auth/refresh', () => json(200, auth('access-new', 'refresh-new-xxxxxxxxxxxxxx')));
+    t.routes.set('GET /v1/share/duels/d_1/card.png', (call) =>
+      call.headers.authorization === 'Bearer access-new'
+        ? new Response(new Uint8Array([137, 80, 78, 71]), { headers: { 'content-type': 'image/png' } })
+        : json(401, {}),
+    );
+    t.routes.set('GET /v1/share/duels/d_2/card.png', () =>
+      json(409, { code: 'CONFLICT', title: 'This duel is not over', detail: 'Share it once it ends.' }),
+    );
+    await t.client.signInGuest('device-abc');
+
+    const picture = await t.client.blob('/v1/share/duels/d_1/card.png');
+    expect(new Uint8Array(await picture.arrayBuffer())).toEqual(new Uint8Array([137, 80, 78, 71]));
+    expect(t.calls.at(-1)?.headers.accept).toBe('image/png');
+    await expect(t.client.blob('/v1/share/duels/d_2/card.png')).rejects.toMatchObject({
+      status: 409,
+      detail: 'Share it once it ends.',
+    });
+  });
+
+  it('gives a phone download a fresh token and the context headers', async () => {
+    const t = setup({ stored: 'refresh-old-xxxxxxxxxxxxxx' });
+    t.routes.set('POST /v1/auth/guest', () => json(200, auth('access-1')));
+    t.routes.set('POST /v1/auth/refresh', () => json(200, auth('access-2', 'refresh-new-xxxxxxxxxxxxxx')));
+    await t.client.signInGuest('device-abc');
+
+    expect(await t.client.fileRequest('/v1/share/daily/7/card.png')).toEqual({
+      url: 'https://api.test/v1/share/daily/7/card.png',
+      headers: expect.objectContaining({ authorization: 'Bearer access-1', accept: 'image/png' }),
+    });
+    t.advance(899_000);
+    const later = await t.client.fileRequest('/v1/share/daily/7/card.png');
+    expect(later.headers.authorization).toBe('Bearer access-2');
+
+    const signedOut = setup();
+    await expect(signedOut.client.fileRequest('/v1/share/daily/7/card.png')).rejects.toMatchObject({
+      status: 401,
+    });
+  });
 });

@@ -270,3 +270,15 @@ on (all answered) or (now >= endsAt): score all, phase = REVEAL (2.5 s) → LEAD
 | `whosabi.ng/l/{invite}` | `/league/join/{invite}` | Web app: join the league |
 
 The link service serves OG tags (`og:title`, `og:description`, and `og:image` 1200×630 ≤ 300 KB) to link-preview bots, so WhatsApp shows a rich preview. People are sent on to the app if it is installed, or to the web app if not.
+
+**At launch (step 2.5a)** the API is the link service, since it serves the web app from the same origin (Heroku): every page of the web app gets its OG and Twitter tags in `index.html`. A challenge link names the challenger ("tolu don challenge you on Who Sabi?"; "Someone" for guests and 13–17s), a Daily link names the Daily, and every other page gets the game's own preview. Links to the app's paths open the installed app through Android App Links and iOS Universal Links:
+
+| Path | Who | Returns |
+|---|---|---|
+| `GET /og/default.png`, `/og/invite/{token}.png`, `/og/daily/{n}.png` | Anyone, 60 a minute per IP | The preview pictures, 1200×630 PNG, `public` cache (5 minutes for invites, a day for the rest); 404 for invites and Dailies that don't exist (or haven't started) |
+| `GET /v1/share/duels/{id}/card.png` | The duel's two players, 20 a minute | The result for WhatsApp Status (mockup 14), 1080×1920 PNG, `private`; 409 until the duel is over |
+| `GET /v1/share/daily/{n}/card.png` | The player who finished it | Their Daily for Status: score, time, coloured squares, streak and the share beaten, never the answers; 409 until finished |
+| `GET /.well-known/assetlinks.json` | Android | The app (`ng.whosabi.app`) and its signing certificates from `ANDROID_CERT_SHA256`; an empty list while unset |
+| `GET /.well-known/apple-app-site-association` | iOS | `/d/*`, `/daily/*`, `/duel/*` for `{APPLE_TEAM_ID}.ng.whosabi.app`; 404 while unset |
+
+Pictures name only players with a public name: a guest or a 13–17 shows as "Player". When the web app moves to its own origin, the edge sends `/og/` and `/.well-known/` to the API as it does `/v1/`.

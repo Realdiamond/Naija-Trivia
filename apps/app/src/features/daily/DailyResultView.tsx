@@ -111,7 +111,7 @@ export function DailyResultView({ result }: { result: DailyResult }) {
 
       <Text variant="bodySoft">{t('daily.xp', { xp: result.xp })}</Text>
 
-      <DailyShare text={result.share_text} />
+      <DailyShare id={result.id} text={result.share_text} />
 
       <Button
         label={t('daily.leaderboards')}

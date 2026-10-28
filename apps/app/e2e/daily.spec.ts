@@ -1,8 +1,9 @@
 /**
  * The Daily Sabi Challenge (PRD US-8) against the real API: a guest plays today's 7 questions
- * from Home, gets the grid and the share text, finds themselves on the boards, and a friend
- * opening the shared link lands on today's Daily in their browser.
+ * from Home, gets the grid, the share text and a Status picture, finds themselves on the boards,
+ * and a friend opening the shared link lands on today's Daily in their browser.
  */
+import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { newPlayer, playTasteTest } from './helpers';
 
@@ -36,6 +37,14 @@ test('a guest plays the Daily, shares the grid and finds themselves on the board
   expect(share).toMatch(new RegExp(`^Who Sabi\\? #${id} [0-7]/7 ⏱ \\d+s`));
   expect(share).toMatch(/[🟩🟥]{7}/u);
   expect(share).toContain(`/daily/${id}`);
+
+  // The picture for WhatsApp Status: this browser can't share files, so it downloads it.
+  const download = page.waitForEvent('download');
+  await page.getByTestId('daily-share-picture').click();
+  const picture = await download;
+  expect(picture.suggestedFilename()).toBe(`whosabi-daily-${id}.png`);
+  expect((await readFile(await picture.path())).subarray(1, 4).toString('ascii')).toBe('PNG');
+  await expect(page.getByTestId('daily-share-picture-note')).toContainText('Picture saved');
 
   await page.getByTestId('daily-review').click();
   await expect(page.getByText(/^Answer: /).first()).toBeVisible();

@@ -82,6 +82,30 @@ export class ApiClient {
   }
 
   async request<T>(method: Method, path: string, options: RequestOptions = {}): Promise<T> {
+    return this.read<T>(await this.exchange(method, path, options));
+  }
+
+  /** A picture the API draws (a share card), with the same token handling as any other call. */
+  async blob(path: string): Promise<Blob> {
+    const res = await this.exchange('GET', path, { headers: { accept: 'image/png' } });
+    return res.ok ? res.blob() : this.read<never>(res);
+  }
+
+  /**
+   * Where to fetch a file from outside fetch (a download straight to the phone's storage): its
+   * address and headers, with a token that has time left on it.
+   */
+  async fileRequest(path: string): Promise<{ url: string; headers: Record<string, string> }> {
+    if (!this.session || this.session.expiresAt - this.now() < REFRESH_MARGIN_MS) await this.refresh();
+    if (!this.session) throw new ApiError(401, 'UNAUTHORIZED', 'You need to sign in');
+    return {
+      url: `${this.opts.baseUrl}${path}`,
+      headers: { ...this.headers({}, 'required'), accept: 'image/png' },
+    };
+  }
+
+  /** Sends a request, renewing the token first if it is about to run out, and once more after a 401. */
+  private async exchange(method: Method, path: string, options: RequestOptions): Promise<Response> {
     const auth = options.auth ?? 'required';
     if (auth !== 'none' && this.session && this.session.expiresAt - this.now() < REFRESH_MARGIN_MS) {
       await this.refresh();
@@ -90,7 +114,7 @@ export class ApiClient {
     if (res.status === 401 && auth === 'required' && this.session) {
       if (await this.refresh()) res = await this.send(method, path, options, auth);
     }
-    return this.read<T>(res);
+    return res;
   }
 
   get<T>(path: string, options?: RequestOptions) {
@@ -206,18 +230,23 @@ export class ApiClient {
     return null;
   }
 
-  private send(method: Method, path: string, options: RequestOptions, auth: Auth): Promise<Response> {
+  private headers(extra: Record<string, string>, auth: Auth): Record<string, string> {
     const headers: Record<string, string> = {
       accept: 'application/json',
       'x-platform': this.opts.platform,
       'x-app-version': this.opts.appVersion,
       // The API only accepts a cookie refresh with this header (CSRF guard, FR-AUTH-7).
       'x-requested-with': 'whosabi',
-      ...options.headers,
+      ...extra,
     };
     const sessionId = this.opts.sessionId?.();
     if (sessionId) headers['x-session-id'] = sessionId;
     if (auth !== 'none' && this.session) headers.authorization = `Bearer ${this.session.access}`;
+    return headers;
+  }
+
+  private send(method: Method, path: string, options: RequestOptions, auth: Auth): Promise<Response> {
+    const headers = this.headers(options.headers ?? {}, auth);
     if (options.body !== undefined) headers['content-type'] = 'application/json';
     return this.fetchImpl(`${this.opts.baseUrl}${path}`, {
       method,

@@ -78,6 +78,11 @@ test('two players finish a duel through a link, both in the browser', async ({ b
     ].map(String),
   ).toContain(String(results));
 
+  // Either player can share the result as a picture for WhatsApp Status.
+  const download = tolu.waitForEvent('download');
+  await tolu.getByTestId('duel-share-picture').click();
+  expect((await download).suggestedFilename()).toMatch(/^whosabi-duel-d_[A-Za-z0-9_-]+\.png$/);
+
   // The finished duel shows under recent results, with a rematch on offer.
   await expect(tolu.getByTestId('rematch')).toBeVisible();
   await tolu.getByTestId('result-home').click();

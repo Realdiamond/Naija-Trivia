@@ -1,14 +1,19 @@
-/** "Share your result" (mockup 16): the emoji grid on WhatsApp first, then X or a copy. */
+/**
+ * "Share your result" (mockup 16): the emoji grid on WhatsApp first, then X or a copy, and a
+ * picture of it for WhatsApp Status.
+ */
 import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { routes } from '@whosabi/shared-types';
 import { trackEvent } from '../../analytics';
 import { useT } from '../../i18n';
 import { Button } from '../../ui/Button';
 import { Text } from '../../ui/Text';
 import { colors, radius } from '../../ui/theme';
+import { SharePicture } from '../share/SharePicture';
 
-export function DailyShare({ text }: { text: string }) {
+export function DailyShare({ id, text }: { id: number; text: string }) {
   const t = useT();
   const [copied, setCopied] = useState(false);
 
@@ -56,6 +61,14 @@ export function DailyShare({ text }: { text: string }) {
           testID="daily-share-copy"
         />
       </View>
+      <SharePicture
+        path={routes.shareDailyCard(id)}
+        fileName={`whosabi-daily-${id}.png`}
+        text={text}
+        onShared={() => trackEvent('daily_shared', { channel: 'status' })}
+        variant="outline"
+        testID="daily-share-picture"
+      />
     </View>
   );
 }
