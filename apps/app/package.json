@@ -1,0 +1,47 @@
+{
+  "name": "@whosabi/app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Expo app for Android, iOS and the web (Expo Router).",
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "web": "expo start --web",
+    "android": "expo start --android",
+    "build:web": "expo export --platform web --output-dir web-build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@expo-google-fonts/baloo-2": "^0.4.0",
+    "@expo-google-fonts/nunito": "^0.4.0",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@tanstack/react-query": "^5.105.0",
+    "@whosabi/analytics": "workspace:*",
+    "@whosabi/game-rules": "workspace:*",
+    "@whosabi/shared-types": "workspace:*",
+    "expo": "~58.0.20",
+    "expo-clipboard": "~58.0.4",
+    "expo-constants": "~58.0.13",
+    "expo-crypto": "~58.0.7",
+    "expo-font": "~58.0.10",
+    "expo-linking": "~58.0.14",
+    "expo-router": "~58.0.27",
+    "expo-secure-store": "~58.0.2",
+    "expo-status-bar": "~58.0.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.30.0",
+    "react-native-svg": "15.16.0",
+    "react-native-web": "~0.21.4",
+    "zod": "^4.6.7",
+    "zustand": "^5.0.16"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/react": "~19.3.0"
+  }
+}

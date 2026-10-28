@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Who Sabi?",
+    "slug": "who-sabi",
+    "version": "0.1.0",
+    "scheme": "whosabi",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FFFDF7",
+    "android": {
+      "package": "ng.whosabi.app",
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "ios": {
+      "bundleIdentifier": "ng.whosabi.app",
+      "supportsTablet": true
+    },
+    "web": {
+      "output": "single",
+      "name": "Who Sabi?",
+      "shortName": "Who Sabi?",
+      "lang": "en",
+      "themeColor": "#008751",
+      "backgroundColor": "#FFFDF7"
+    },
+    "plugins": ["expo-router", "expo-secure-store", "expo-font"]
+  }
+}

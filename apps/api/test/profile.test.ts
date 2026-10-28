@@ -55,6 +55,21 @@ describe('usernames', () => {
 });
 
 describe('me', () => {
+  it('lets the web app send profile edits across origins (CORS preflight)', async () => {
+    const res = await t.app.inject({
+      method: 'OPTIONS',
+      url: '/v1/me',
+      headers: {
+        origin: 'http://localhost:8081',
+        'access-control-request-method': 'PATCH',
+        'access-control-request-headers': 'authorization,content-type',
+      },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.headers['access-control-allow-methods']).toContain('PATCH');
+    expect(res.headers['access-control-allow-origin']).toBe('http://localhost:8081');
+  });
+
   it('shows the profile, level progress and rating tier', async () => {
     const guest = await signInGuest(t.app);
     const me = (
