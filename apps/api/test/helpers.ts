@@ -13,6 +13,7 @@ import { createPool } from '../src/db';
 
 export const TEST_GOOGLE_CLIENT = 'test-client.apps.googleusercontent.com';
 export const TEST_APPLE_AUDIENCE = 'ng.whosabi.app';
+export const TEST_ADMIN_GOOGLE_CLIENT = 'test-admin.apps.googleusercontent.com';
 
 /** Keeps every SMS; `down` makes it fail like a provider outage. */
 export class TestSms extends DevSms {
@@ -36,9 +37,13 @@ async function testIdentityProviders(now: () => number) {
   const keys = createLocalJWKSet({ keys: [{ ...(await exportJWK(publicKey)), kid: 'test', alg: 'RS256' }] });
   const signer =
     (issuer: string, audience: string) =>
-    (claims: { sub: string; nonce?: string }, override: { audience?: string; expiresInS?: number } = {}) => {
+    (
+      claims: { sub: string; nonce?: string; email?: string; email_verified?: boolean; hd?: string },
+      override: { audience?: string; expiresInS?: number } = {},
+    ) => {
       const iat = Math.floor(now() / 1000);
-      return new SignJWT(claims.nonce ? { nonce: claims.nonce } : {})
+      const { sub: _sub, ...extra } = claims;
+      return new SignJWT(extra)
         .setProtectedHeader({ alg: 'RS256', kid: 'test' })
         .setIssuer(issuer)
         .setAudience(override.audience ?? audience)
@@ -50,7 +55,14 @@ async function testIdentityProviders(now: () => number) {
   return {
     google: idTokenVerifier({ issuers: GOOGLE_ISSUERS, audiences: [TEST_GOOGLE_CLIENT], keys, now }),
     apple: idTokenVerifier({ issuers: APPLE_ISSUERS, audiences: [TEST_APPLE_AUDIENCE], keys, now }),
+    adminGoogle: idTokenVerifier({
+      issuers: GOOGLE_ISSUERS,
+      audiences: [TEST_ADMIN_GOOGLE_CLIENT],
+      keys,
+      now,
+    }),
     signGoogle: signer(GOOGLE_ISSUERS[0]!, TEST_GOOGLE_CLIENT),
+    signAdminGoogle: signer(GOOGLE_ISSUERS[0]!, TEST_ADMIN_GOOGLE_CLIENT),
     signApple: signer(APPLE_ISSUERS[0]!, TEST_APPLE_AUDIENCE),
   };
 }
@@ -88,6 +100,7 @@ export async function createTestApp(
     captcha: { verify: async (token) => token === 'human' },
     google: identity.google,
     apple: identity.apple,
+    adminGoogle: identity.adminGoogle,
     ...overrides.auth,
   };
   const app = await buildApp({ config, pool, redis, tokens, clock, auth });
@@ -103,6 +116,7 @@ export async function createTestApp(
     sms,
     signGoogle: identity.signGoogle,
     signApple: identity.signApple,
+    signAdminGoogle: identity.signAdminGoogle,
     close: async () => {
       await app.close();
       await Promise.all([pool.end(), redis.quit()]);

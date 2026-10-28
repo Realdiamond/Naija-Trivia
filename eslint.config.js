@@ -26,6 +26,8 @@ export default defineConfig(
       '**/.turbo/**',
       '**/.expo/**',
       'apps/app/web-build/**',
+      'apps/admin/.next/**',
+      'apps/admin/next-env.d.ts',
       'apps/app/expo-env.d.ts',
       'apps/app/android/**',
       'apps/app/ios/**',
@@ -57,6 +59,16 @@ export default defineConfig(
           })),
         },
       ],
+    },
+  },
+  {
+    // The admin console (Next.js): server and browser code side by side.
+    files: ['apps/admin/**/*.{ts,tsx}'],
+    languageOptions: { globals: { ...globals.browser, ...globals.node } },
+    plugins: { 'react-hooks': reactHooks },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'error',
     },
   },
 );

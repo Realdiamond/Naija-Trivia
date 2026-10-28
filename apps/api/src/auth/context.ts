@@ -18,7 +18,8 @@ export function registerAuth(app: FastifyInstance, tokens: TokenService): void {
   app.addHook('onRequest', async (request) => {
     const header = request.headers.authorization;
     // Sign-in and refresh happen exactly when the access token has expired, so they ignore it.
-    if (!header || request.url.startsWith('/v1/auth/')) return;
+    // The admin API has its own staff sessions (admin/context.ts).
+    if (!header || request.url.startsWith('/v1/auth/') || request.url.startsWith('/admin/')) return;
     const match = /^Bearer\s+(.+)$/i.exec(header);
     if (!match) throw unauthorized('Expected a Bearer token.');
     try {

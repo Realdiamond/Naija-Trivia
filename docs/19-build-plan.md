@@ -143,8 +143,19 @@ Left for later on purpose: the profile screen and the tab bar (with leagues and 
 
 Left for later on purpose: changing the consent in settings (with the profile and settings screens in M2), the privacy policy and terms pages (after the legal review, doc 10), and the installable PWA (step 2.8).
 
-### Step 1.5 · Admin console v0 ⬜
-`apps/admin` (Next.js): staff sign-in with Google (Google Workspace, or an allow-list of staff Google accounts to save cost), roles, the audit log, player search and User 360 with the activity timeline. Docs: [18 §3, §7, §16](18-admin-console-and-analytics.md), [PRD US-12](02-PRD.md).
+### Step 1.5 · Admin console v0 ✅
+`apps/admin` (Next.js) on top of a new admin API in the core API (`/admin/*`, doc 09 §2.10). Docs: [18 §3, §7, §16](18-admin-console-and-analytics.md), [PRD US-12](02-PRD.md).
+
+- ✅ Staff sign-in with Google through the console's own OAuth client (`ADMIN_GOOGLE_CLIENT_IDS`), for accounts on the staff list (`admin_users`): an allow-list of personal Google accounts works, and `ADMIN_GOOGLE_DOMAIN` restricts it to a Google Workspace domain later. A development-only sign-in by email for local work and tests; production has no such route
+- ✅ Staff sessions: a random token kept only as its hash in Redis, ending 12 hours after sign-in (doc 18 §16), held by the console in an HttpOnly cookie and sent from its server only. Player tokens can't open the admin API and staff tokens can't play
+- ✅ Roles (doc 18 §3) with permissions checked on the server for every request and read fresh each time, so a removed role stops working at once. Owner, admin, finance and DPO need a second owner's approval, nobody approves their own grant, and the last owner can't be removed. `pnpm --filter @whosabi/api admin:add` adds the first owner
+- ✅ The audit log: every sign-in, search, look at a player, reveal and role change, reads included, with the staff member, reason and IP; searchable on its own page and per player ("Admin history")
+- ✅ Player search by username, user ID, phone number (exact, its own permission, logged without the number), guest device ID or duel ID; results masked
+- ✅ User 360: profile, masked sign-in methods, level, tier and rating, duel record, friends, latest consents, and the activity timeline grouped into sessions, in WAT with UTC on hover. A guest merged into an account shows on that account's timeline (AD-3)
+- ✅ Reveal a phone number only with the role and a reason, logged before it is shown (AD-5)
+- ✅ Tests: the admin API (9 integration tests: sign-in rules, sessions, permissions, search, User 360 across a merged guest, reveal, four-eyes approval); the timeline wording; and an end-to-end run where a player plays and signs up, the worker loads their events, and staff find them, see the game on the timeline within seconds (AD-1), reveal the number and find it all in the audit log
+
+Left for later on purpose (step 2.7): Overview and Live, analytics dashboards, the other User 360 tabs (sessions and time, matches, money, safety, support), player actions (grants, warnings, bans) and notes, IP allow-lists and signing in again before sensitive actions.
 
 ### Step 1.6 · Staging ⬜
 Heroku in the Europe region, decided on 28 Oct 2026 instead of AWS to save cost: a `Procfile` and `app.json` for the API, ingest, workers, the web app and the admin console, with Heroku Postgres and Heroku Key-Value Store (Redis). Docs: [07 §5](07-system-architecture.md) (its "leaner option"), [TRD §7](06-TRD.md). Needs the team's Heroku account connected to this repo (§6).
@@ -176,7 +187,7 @@ These are for the team, not pull requests, and some steps wait on them.
 | Apple Developer Program and Apple sign-in ids | iOS build (2.8) | US$99 a year; `APPLE_AUDIENCES`. Not needed for Android or the web |
 | Expo account (EAS Build) | 1.4 | The free tier builds the Android app; its token goes in CI |
 | Heroku account connected to this repo | 1.6 | Europe region. ClickHouse waits until daily players reach the thousands |
-| Staff Google accounts for the admin console | 1.5 | Google Workspace, or an allow-list of personal Google accounts |
+| Staff Google accounts for the admin console | 1.5 | Google Workspace, or an allow-list of personal Google accounts. Also a Google OAuth web client for the console (`ADMIN_GOOGLE_CLIENT_IDS` on the API, `ADMIN_GOOGLE_CLIENT_ID` on the console) |
 | Termii sender ID (and Africa's Talking), Turnstile keys | Only when phone sign-in is switched on | Not needed for launch. Registration and NCC approval take weeks. Then set `TERMII_API_KEY`, `TERMII_SENDER_ID` (and `AT_USERNAME`, `AT_API_KEY`), `OTP_SECRET`, `TURNSTILE_SECRET` and the app's `SMS_RETRIEVER_APP_HASH` |
 | Firebase project (FCM, web push) | 2.5 | |
 | Google Play developer account ✅, AdMob, RevenueCat | 2.4, M4 | The Play account exists. A personal (not organisation) account created after November 2023 must run a closed test with at least 12 testers for 14 days before publishing. AdMob approval takes 2–4 weeks |

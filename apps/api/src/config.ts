@@ -41,6 +41,10 @@ const Env = z.object({
   GOOGLE_CLIENT_IDS: z.string().default(''),
   /** Bundle and service ids whose Apple ID tokens we accept; empty turns Apple sign-in off. */
   APPLE_AUDIENCES: z.string().default(''),
+  /** The admin console's Google OAuth client id(s); empty turns staff Google sign-in off. */
+  ADMIN_GOOGLE_CLIENT_IDS: z.string().default(''),
+  /** When set, staff must sign in with a Google Workspace account on this domain (doc 18 §16). */
+  ADMIN_GOOGLE_DOMAIN: z.string().min(3).optional(),
 });
 
 export interface Config {
@@ -71,6 +75,8 @@ export interface Config {
   turnstileSecret?: string;
   googleClientIds: string[];
   appleAudiences: string[];
+  adminGoogleClientIds: string[];
+  adminGoogleDomain?: string;
 }
 
 // Stable outside production so analytics ids don't change on every restart.
@@ -123,5 +129,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     turnstileSecret: e.TURNSTILE_SECRET,
     googleClientIds: list(e.GOOGLE_CLIENT_IDS),
     appleAudiences: list(e.APPLE_AUDIENCES),
+    adminGoogleClientIds: list(e.ADMIN_GOOGLE_CLIENT_IDS),
+    adminGoogleDomain: e.ADMIN_GOOGLE_DOMAIN,
   };
 }

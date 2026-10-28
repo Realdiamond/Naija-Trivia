@@ -15,6 +15,9 @@ export interface CaptchaVerifier {
 export interface VerifiedIdToken {
   subject: string;
   email?: string;
+  emailVerified?: boolean;
+  /** Google Workspace domain (`hd`), for staff sign-in to the admin console. */
+  hostedDomain?: string;
   nonce?: string;
 }
 
@@ -30,6 +33,8 @@ export interface AuthProviders {
   /** Null when the sign-in method is not configured. */
   google: IdTokenVerifier | null;
   apple: IdTokenVerifier | null;
+  /** Staff sign-in to the admin console: a separate Google client, never the players' one. */
+  adminGoogle: IdTokenVerifier | null;
 }
 
 export const GOOGLE_ISSUERS = ['https://accounts.google.com', 'accounts.google.com'];
@@ -54,6 +59,8 @@ export function idTokenVerifier(options: {
       return {
         subject: payload.sub,
         email: typeof payload.email === 'string' ? payload.email : undefined,
+        emailVerified: payload.email_verified === true || payload.email_verified === 'true',
+        hostedDomain: typeof payload.hd === 'string' ? payload.hd : undefined,
         nonce: typeof payload.nonce === 'string' ? payload.nonce : undefined,
       };
     },
@@ -97,6 +104,7 @@ export function createAuthProviders(
     ? new TurnstileVerifier(config.turnstileSecret)
     : { verify: async (token) => token.length > 0 };
 
+  const googleKeys = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
   return {
     sms,
     captcha,
@@ -105,7 +113,7 @@ export function createAuthProviders(
         ? idTokenVerifier({
             issuers: GOOGLE_ISSUERS,
             audiences: config.googleClientIds,
-            keys: createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs')),
+            keys: googleKeys,
             now,
           })
         : null,
@@ -115,6 +123,15 @@ export function createAuthProviders(
             issuers: APPLE_ISSUERS,
             audiences: config.appleAudiences,
             keys: createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys')),
+            now,
+          })
+        : null,
+    adminGoogle:
+      config.adminGoogleClientIds.length > 0
+        ? idTokenVerifier({
+            issuers: GOOGLE_ISSUERS,
+            audiences: config.adminGoogleClientIds,
+            keys: googleKeys,
             now,
           })
         : null,

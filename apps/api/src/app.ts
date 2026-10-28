@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import type { Redis } from 'ioredis';
+import { adminRoutes } from './admin/routes';
 import { createAuthProviders, type AuthProviders } from './auth/providers';
 import { authRoutes } from './auth/routes';
 import { registerAuth } from './auth/context';
@@ -95,5 +96,6 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   rttRoutes(app, deps);
   roundRoutes(app, deps);
   duelRoutes(app, deps);
+  adminRoutes(app, deps);
   return app;
 }

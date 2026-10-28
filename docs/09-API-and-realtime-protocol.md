@@ -156,6 +156,8 @@ POST /v1/duels/d_01J9/rounds/2/questions/1/answer
 ### 2.10 Admin console API (SSO + RBAC)
 Served by the core API under `/admin`, only to admin-console sessions (Google Workspace OIDC). Every call is permission-checked on the server and written to `admin_audit_log`, reads included. Each screen is described in [doc 18](18-admin-console-and-analytics.md).
 
+Built so far (step 1.5): `POST /admin/auth/google {id_token}` (the console's own Google client; the account must be on the staff list, and in the Workspace domain when `ADMIN_GOOGLE_DOMAIN` is set) → `{token, expires_at, admin}`, a 12-hour staff session sent as `Authorization: Bearer`; `POST /admin/auth/logout`; `GET /admin/me`; the Players rows below except `/sessions`, `/time`, `/matches` and `/ledger`; `POST /admin/users/{id}/reveal {field: phone, reason}`; `GET /admin/audit?actor=&entity=&entity_id=&before=`; and `/admin/staff` (list, add, `POST /admin/staff/{id}/roles {role, reason, expires_at?}`, `…/roles/{role}/approve`, `DELETE …/roles/{role}`). Outside production, `POST /admin/auth/dev {email}` signs staff in without Google.
+
 | Area | Endpoints |
 |---|---|
 | Overview & live | `GET /admin/overview` · `GET /admin/live/online?platform=&state=` · `GET /admin/live/rooms` · `GET /admin/live/feed` (server-sent events, PII-free) |
