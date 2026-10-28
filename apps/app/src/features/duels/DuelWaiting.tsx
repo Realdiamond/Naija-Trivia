@@ -1,4 +1,7 @@
-/** Waiting for the opponent's turn, with the link to send while nobody has taken it yet. */
+/**
+ * Waiting for the opponent's turn, with the link to send while nobody has taken it yet. A random
+ * duel says it is still finding a player, and a duel with the Sabi Bot says what the bot is.
+ */
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
@@ -30,6 +33,9 @@ export function DuelWaiting({ duel }: { duel: DuelView }) {
       : t('time.minutesLeft', { minutes: left.minutes });
   // The challenger can call it off until the opponent has answered anything.
   const canCancel = duel.you === 'a' && (duel.rounds[0]?.opponent?.answered ?? 0) === 0;
+  const finding = !duel.opponent && duel.source === 'random';
+  // Seated in a random duel whose challenger is still on round 1.
+  const theirFirst = duel.you === 'b' && duel.state === 'created';
 
   const cancel = async () => {
     setBusy(true);
@@ -56,9 +62,24 @@ export function DuelWaiting({ duel }: { duel: DuelView }) {
       <Scoreline duel={duel} />
       <RoundChips duel={duel} />
       <Text variant="title" accessibilityRole="header" style={styles.title} testID="waiting-title">
-        {t('duel.waitingTitle')}
+        {finding
+          ? t('duel.findingTitle')
+          : theirFirst
+            ? t('duel.firstTurnTitle', { name })
+            : t('duel.waitingTitle')}
       </Text>
-      {time && duel.opponent ? <Text variant="bodySoft">{t('duel.waitingBody', { name, time })}</Text> : null}
+      {finding ? (
+        <Text variant="bodySoft">{t('duel.findingBody')}</Text>
+      ) : theirFirst ? (
+        <Text variant="bodySoft">{t('duel.firstTurnBody')}</Text>
+      ) : time && duel.opponent ? (
+        <Text variant="bodySoft">{t('duel.waitingBody', { name, time })}</Text>
+      ) : null}
+      {duel.source === 'bot' ? (
+        <Text variant="bodySoft" style={styles.note} testID="bot-note">
+          {t('duel.botNote')}
+        </Text>
+      ) : null}
       {duel.invite_url ? <LinkShare url={duel.invite_url} /> : null}
       {duel.opponent ? <PushPrompt reason="duel" name={name} /> : null}
       {canCancel ? (
@@ -77,5 +98,6 @@ export function DuelWaiting({ duel }: { duel: DuelView }) {
 
 const styles = StyleSheet.create({
   title: { marginTop: 8, marginBottom: 4 },
+  note: { marginTop: 8 },
   cancel: { marginTop: 8, alignItems: 'center' },
 });

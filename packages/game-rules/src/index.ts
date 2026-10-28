@@ -4,6 +4,7 @@ export * from './content';
 export * from './daily';
 export * from './duel';
 export * from './hash';
+export * from './matchmaking';
 export * from './progression';
 export * from './questionRules';
 export * from './rating';

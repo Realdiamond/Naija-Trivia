@@ -8,6 +8,8 @@ import { playerName } from './format';
 
 export function useOpponentName(duel: DuelSummary): string {
   const t = useT();
+  // A random duel still looking for its second player.
+  if (!duel.opponent && duel.source === 'random') return t('duel.findingName');
   return playerName(duel.opponent, t('duel.guestOpponent'), t('duel.someone'));
 }
 

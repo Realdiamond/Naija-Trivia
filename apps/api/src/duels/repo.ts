@@ -18,6 +18,12 @@ export const ACTIVE_STATES: readonly DuelState[] = [
 ];
 export const FINISHED_STATES: readonly DuelState[] = ['complete', 'forfeit', 'declined', 'cancelled'];
 
+/**
+ * The Sabi Bot (TRD FR-DUEL-6, migration 0018): it takes seat B of a random duel nobody joined
+ * within a minute. Its duels are unrated, and it gets no pushes, events or seen questions.
+ */
+export const SABI_BOT_ID = 'u_sabi_bot';
+
 export interface DuelRow {
   id: string;
   player_a: string;
@@ -80,6 +86,11 @@ export function sideOf(duel: DuelRow, userId: string): DuelSide | null {
   if (duel.player_a === userId) return 'a';
   if (duel.player_b !== null && duel.player_b === userId) return 'b';
   return null;
+}
+
+/** The people in a duel: the Sabi Bot is left out. */
+export function humansOf(duel: DuelRow): string[] {
+  return [duel.player_a, duel.player_b].filter((id): id is string => id !== null && id !== SABI_BOT_ID);
 }
 
 export function playerFor(duel: DuelRow, side: DuelSide | null): string | null {

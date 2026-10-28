@@ -42,7 +42,7 @@ Every mode plays the same in the Android and iOS apps and in the web app, with t
 | Timer | 15 s per question (text), 20 s (image or audio) |
 | Turn expiry | 48 h, with reminders at 24 h and 4 h left |
 | Ties | Tie-break question: one "closest number" question (e.g. "What year did *Living in Bondage* first come out?"); closest guess wins, then faster answer |
-| Opponents | Friend, rematch, or random matchmaking within ±200 rating |
+| Opponents | Friend, rematch, or random matchmaking within ±200 rating (widening over a minute), then the Sabi Bot, labelled as a bot, in an unrated duel |
 
 ### 2.2 Party Room (live, 2–50 players)
 - Host creates a room, picks packs and settings, and shares the link or code.

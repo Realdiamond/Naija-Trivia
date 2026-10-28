@@ -40,7 +40,7 @@ Common properties on every event: `event_id`, `ts`, `session_id`, `seq`, `screen
 | `friend_added` | Server | `source` (contacts/username/opponent/link/qr) | |
 | `invite_shared` | Client | `channel` (whatsapp/status/x/copy/web_share/other), `context` (duel/party/daily/profile) | |
 | `invite_opened` | Server | `type`, `has_app`, `opened_in` (app/web_app/party_client) | From the link service |
-| `duel_created` | Server | `opponent_type` (friend/random/link/rematch/bot) | |
+| `duel_created` | Server | `opponent_type` (friend/random/link/rematch/bot) | Sent by whoever starts the duel: a random duel that another player joins, or the Sabi Bot takes, counts once as `random`. The bot's own play sends no events |
 | `question_served` | Server | `qid`, `mode`, `seq` | |
 | `question_answered` | Server | `qid`, `category`, `difficulty`, `correct`, `accepted_elapsed_ms`, `mode`, `lifeline`, `tab_hidden_ms` (web) | Every answer, no sampling |
 | `duel_round_played` | Server | `duel_id`, `round`, `category`, `correct_count`, `points`, `turn_duration_s` | |

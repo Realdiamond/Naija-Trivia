@@ -1,8 +1,8 @@
 /**
- * The worker (build plan steps 1.3, 2.1, 2.5 and 2.6): a second process beside the API that ends
- * overdue duels, sends pushes and queues turn and Daily reminders, picks the Daily, saves final
- * leaderboard ranks, retires expired questions, moves question stats into Postgres and loads
- * analytics events.
+ * The worker (build plan steps 1.3, 2.1, 2.3, 2.5 and 2.6): a second process beside the API that
+ * ends overdue duels, seats the Sabi Bot in random duels nobody took and plays its turns, sends
+ * pushes and queues turn and Daily reminders, picks the Daily, saves final leaderboard ranks,
+ * retires expired questions, moves question stats into Postgres and loads analytics events.
  *
  * Every job is safe with several workers running (locked rows, claimed reminder rows, a Redis
  * lock, a stream consumer group), so the worker scales by running more copies and needs no job
@@ -108,6 +108,8 @@ async function loadEvents(): Promise<void> {
 
 const jobs = [
   every('expire-duels', 30 * SECOND, () => expireDueDuels(duels)),
+  every('sabi-bot-seats', 5 * SECOND, () => duels.seatBots()),
+  every('sabi-bot-turns', 5 * SECOND, () => duels.playBotTurns()),
   every('push-send', 5 * SECOND, () => sendDuePushes(deps, transport)),
   every('staff-alerts', 5 * SECOND, () => sendStaffAlerts(deps, transport)),
   every('turn-reminders', MINUTE, () => queueTurnReminders(deps)),

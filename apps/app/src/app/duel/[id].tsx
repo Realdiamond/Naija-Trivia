@@ -107,8 +107,9 @@ function Duel({ id }: { id: string }) {
 
 /** The challenged player opening a duel they have not started: they may still decline. */
 function isNewChallenge(duel: DuelView, next: Extract<DuelNextAction, { action: 'play' }>): boolean {
-  // A link was accepted on purpose, so that player goes straight in.
-  return duel.you === 'b' && duel.source !== 'link' && next.round === 1 && next.seq === 1;
+  // A link was accepted on purpose, and a random duel asked for, so those players go straight in.
+  const challenged = duel.source === 'friend' || duel.source === 'rematch';
+  return duel.you === 'b' && challenged && next.round === 1 && next.seq === 1;
 }
 
 function continueLabel(next: DuelNextAction | null, t: ReturnType<typeof useT>): string {

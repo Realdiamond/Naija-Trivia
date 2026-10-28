@@ -85,7 +85,7 @@ Everything in §2.3 needs an account (`ACCOUNT_REQUIRED`): guests play through i
 ### 2.5 Duels
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/duels` | `{opponent: {user_id} | {random: true} | {link: true}}` → `201 {duel, invite_url}`. Takes `Idempotency-Key`. At most 20 duels going per player (`DUEL_LIMIT_REACHED`). `random` arrives with build step 2.3 |
+| POST | `/duels` | `{opponent: {user_id} | {random: true} | {link: true}}` → `201 {duel, invite_url}`. Takes `Idempotency-Key`. At most 20 duels going per player (`DUEL_LIMIT_REACHED`). `random` seats you in a waiting random duel near your rating (±200, widening by 100 every 10 s of its wait), or starts one; after 60 s with nobody, the Sabi Bot plays it (`source: "bot"`, unrated). The bot can't be challenged by `user_id` (`OPPONENT_UNAVAILABLE`) and plays no rematches (409) |
 | GET | `/duels?state=active|done&limit&cursor` | List for the home screen: active ones with "your turn" first, soonest deadline first; finished ones newest first, paged by `cursor` |
 | GET | `/duels/{id}` | The duel from your side: scores, `next` action, rounds, tie-break. Questions, answers and the opponent's points only for rounds you have finished |
 | POST | `/duels/{id}/rounds/{n}/category` | `{category_id}`, one of the 3 offered. Picked by A (rounds 1 and 3) or B (round 2) during their turn → the duel |

@@ -14,7 +14,8 @@ export const GuestAuthRequest = z.object({
 });
 export type GuestAuthRequest = z.infer<typeof GuestAuthRequest>;
 
-export const UserStatus = z.enum(['guest', 'active', 'restricted', 'banned', 'deleted']);
+/** `bot` is the Sabi Bot, the random-duel stand-in (TRD FR-DUEL-6). */
+export const UserStatus = z.enum(['guest', 'active', 'restricted', 'banned', 'deleted', 'bot']);
 
 export const PublicUser = z.object({
   id: z.string(),

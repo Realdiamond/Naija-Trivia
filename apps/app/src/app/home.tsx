@@ -13,7 +13,9 @@ import { SignInOptions } from '../features/auth/SignInOptions';
 import { useDailyToday } from '../features/daily/api';
 import { DailyBanner } from '../features/daily/DailyBanner';
 import { useDuelList } from '../features/duels/api';
-import { currentRound, isUrgent, playerName, timeLeft } from '../features/duels/format';
+import { currentRound, isUrgent, timeLeft } from '../features/duels/format';
+import { useOpponentName } from '../features/duels/parts';
+import { useRandomDuel } from '../features/duels/useRandomDuel';
 import { useT } from '../i18n';
 import { staffToolsHere } from '../platform/staffLock';
 import { Avatar } from '../ui/Avatar';
@@ -32,6 +34,7 @@ export default function Home() {
   const active = useDuelList('active', signedIn);
   const done = useDuelList('done', signedIn);
   const daily = useDailyToday(signedIn);
+  const random = useRandomDuel();
 
   // Coming back from a duel or the Daily: show the new state at once.
   const { refetch: refetchActive } = active;
@@ -131,8 +134,19 @@ export default function Home() {
           testID="challenge"
         />
         <Action icon="users" label={t('home.party')} soon />
-        <Action icon="shuffle" label={t('home.random')} soon />
+        <Action
+          icon="shuffle"
+          label={t('home.random')}
+          busy={random.busy}
+          onPress={() => void random.start()}
+          testID="random"
+        />
       </View>
+      {random.error ? (
+        <Text variant="body" color={colors.wrongInk} style={styles.error}>
+          {random.error}
+        </Text>
+      ) : null}
 
       {nothingYet ? (
         <Text variant="bodySoft" align="center" style={styles.empty}>
@@ -202,7 +216,7 @@ function useTimeText() {
 function TurnCard({ duel }: { duel: DuelSummary }) {
   const t = useT();
   const timeText = useTimeText();
-  const name = playerName(duel.opponent, t('duel.guestOpponent'), t('duel.someone'));
+  const name = useOpponentName(duel);
   const fresh = duel.score.you === 0 && duel.score.opponent === 0;
   const round = currentRound(duel.state);
   const urgent = isUrgent(duel.turn_deadline, Date.now());
@@ -237,12 +251,17 @@ function TurnCard({ duel }: { duel: DuelSummary }) {
 function WaitingRow({ duel }: { duel: DuelSummary }) {
   const t = useT();
   const timeText = useTimeText();
-  const name = playerName(duel.opponent, t('duel.guestOpponent'), t('duel.someone'));
+  const name = useOpponentName(duel);
+  const finding = !duel.opponent && duel.source === 'random';
   return (
     <PlayerRow
-      name={duel.opponent ? name : t('challenge.link')}
+      name={duel.opponent || finding ? name : t('challenge.link')}
       subtitle={
-        duel.opponent ? t('home.theirTurn', { round: currentRound(duel.state) }) : t('home.linkWaiting')
+        duel.opponent
+          ? t('home.theirTurn', { round: currentRound(duel.state) })
+          : finding
+            ? t('home.findingWaiting')
+            : t('home.linkWaiting')
       }
       right={<Text variant="caption">{timeText(duel.turn_deadline)}</Text>}
       onPress={() => router.push(`/duel/${duel.id}`)}
@@ -253,7 +272,7 @@ function WaitingRow({ duel }: { duel: DuelSummary }) {
 
 function ResultRow({ duel }: { duel: DuelSummary }) {
   const t = useT();
-  const name = playerName(duel.opponent, t('duel.guestOpponent'), t('duel.someone'));
+  const name = useOpponentName(duel);
   const title =
     duel.result === 'win'
       ? t('home.youWon', { name })
@@ -292,12 +311,14 @@ function Action({
   label,
   onPress,
   soon = false,
+  busy = false,
   testID,
 }: {
   icon: IconName;
   label: string;
   onPress?: () => void;
   soon?: boolean;
+  busy?: boolean;
   testID?: string;
 }) {
   const t = useT();
@@ -305,10 +326,10 @@ function Action({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={soon ? `${label} (${t('home.soon')})` : label}
-      accessibilityState={{ disabled: soon }}
-      disabled={soon}
+      accessibilityState={{ disabled: soon || busy, busy }}
+      disabled={soon || busy}
       onPress={onPress}
-      style={({ pressed }) => [styles.action, soon && styles.actionSoon, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.action, soon && styles.actionSoon, (pressed || busy) && styles.pressed]}
       testID={testID}
     >
       <Icon name={icon} size={28} color={colors.primaryInk} />
@@ -335,6 +356,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryTint,
   },
   actionSoon: { opacity: 0.6 },
+  error: { marginTop: 8 },
   pressed: { opacity: 0.85 },
   empty: { marginTop: 20 },
   save: {

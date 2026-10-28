@@ -87,7 +87,8 @@ async function sendOne(
   if (row.expires_at.getTime() <= now) return finish('expired');
   // Queued just before 22:00 and picked up just after: it waits for the morning too.
   if (inQuietHours(now)) return later(nextSendTime(now));
-  if (row.status === 'banned' || row.status === 'deleted') return finish('no_device');
+  // The Sabi Bot has no phone.
+  if (row.status === 'banned' || row.status === 'deleted' || row.status === 'bot') return finish('no_device');
   const rendered = renderPush({ type: row.type, ...row.params } as PushParams, row.language);
   if (row.push_off.includes(rendered.channel)) return finish('muted');
 

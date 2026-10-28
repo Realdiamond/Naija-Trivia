@@ -17,6 +17,7 @@ import { category, colors, CONTENT_MAX_WIDTH, fonts, radius } from '../../ui/the
 import { SharePicture } from '../share/SharePicture';
 import { duelKeys, duels } from './api';
 import { useOpponentName } from './parts';
+import { useRandomDuel } from './useRandomDuel';
 
 export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () => void }) {
   const t = useT();
@@ -25,9 +26,12 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const random = useRandomDuel('replace');
   const played = duel.state === 'complete' || duel.state === 'forfeit';
   const { title, subtitle, background } = headline();
-  const canRematch = played && duel.opponent !== null;
+  // The Sabi Bot plays no rematches: a new random duel may find a person this time.
+  const bot = duel.source === 'bot';
+  const canRematch = played && duel.opponent !== null && !bot;
 
   function headline(): { title: string; subtitle: string; background: string } {
     if (duel.state === 'cancelled')
@@ -173,6 +177,11 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
                   </View>
                 );
               })}
+              {bot ? (
+                <Text variant="bodySoft" style={styles.section} testID="bot-note">
+                  {t('duel.botNote')}
+                </Text>
+              ) : null}
               {duel.rating_delta !== null ? (
                 <View style={styles.rating}>
                   <Text variant="heading" color={colors.primaryInk}>
@@ -185,9 +194,9 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
             </>
           ) : null}
 
-          {error ? (
+          {error || random.error ? (
             <Text variant="body" color={colors.wrongInk}>
-              {error}
+              {error ?? random.error}
             </Text>
           ) : null}
           <View style={styles.actions}>
@@ -206,6 +215,14 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
                 loading={busy}
                 onPress={() => void rematch()}
                 testID="rematch"
+              />
+            ) : null}
+            {bot ? (
+              <Button
+                label={t('duel.newRandom')}
+                loading={random.busy}
+                onPress={() => void random.start()}
+                testID="new-random"
               />
             ) : null}
             {played ? <Button label={t('duel.review')} variant="outline" onPress={onReview} /> : null}
