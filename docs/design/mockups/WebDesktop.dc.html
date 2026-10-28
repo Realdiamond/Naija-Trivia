@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Who Sabi? web app on a computer</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; background: #FFFDF7; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-wrap: wrap">
+  <nav aria-label="Main" style="flex: 1 1 220px; box-sizing: border-box; background: #FFFFFF; border-right: 1px solid #E8E2D2; padding: 24px 16px; display: flex; flex-direction: column; gap: 6px">
+    <p style="margin: 0 8px 18px; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 28px; line-height: 1; color: #006B40">Who Sabi?</p>
+    <a href="#home" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; color: #3F4A44; font-weight: 700; font-size: 16px; text-decoration: none">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><path d="M3 11l9-7 9 7"></path><path d="M5 10v10h14V10"></path></svg>Home</a>
+    <a href="#play" aria-current="page" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: #E3F3EA; color: #006B40; font-weight: 800; font-size: 16px; text-decoration: none">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><circle cx="12" cy="12" r="9"></circle><path d="M10 8.5l5.5 3.5-5.5 3.5z"></path></svg>Play</a>
+    <a href="#leagues" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; color: #3F4A44; font-weight: 700; font-size: 16px; text-decoration: none">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"></path><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"></path><path d="M12 13v4M9 20h6"></path></svg>Leagues</a>
+    <a href="#shop" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; color: #3F4A44; font-weight: 700; font-size: 16px; text-decoration: none">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><path d="M5 8h14l-1 12H6z"></path><path d="M9 8a3 3 0 0 1 6 0"></path></svg>Shop</a>
+    <a href="#profile" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; color: #3F4A44; font-weight: 700; font-size: 16px; text-decoration: none">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>Profile</a>
+    <div style="margin-top: 24px; padding: 14px; border-radius: 14px; background: #FFF1E3">
+      <p style="margin: 0; font-size: 15px; font-weight: 800">Install Who Sabi?</p>
+      <p style="margin: 4px 0 10px; font-size: 13px; line-height: 1.4; font-weight: 600; color: #3F4A44">Opens faster and gets “your turn” alerts.</p>
+      <button type="button" style="height: 40px; padding: 0 14px; border: 0; border-radius: 10px; background: #FF7A00; color: #14231B; font: 800 14px Nunito, system-ui, sans-serif; cursor: pointer">Install</button>
+    </div>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 24px clamp(16px, 4vw, 48px) 32px">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; max-width: 900px; margin: 0 auto">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <span style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #FCEBDB; font-size: 15px; font-weight: 800">
+          <span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 50%; background: #E67E22"></span>Nollywood</span>
+        <p style="margin: 0; font-size: 16px; font-weight: 800">Duel vs ChidiOfLagos · Round 2 of 3 · Question 2 of 3</p>
+      </div>
+      <button type="button" style="height: 40px; padding: 0 14px; border: 2px solid #D9D1BE; border-radius: 10px; background: #FFFFFF; color: #14231B; font: 800 14px Nunito, system-ui, sans-serif; cursor: pointer">Leave <kbd style="font: 700 12px ui-monospace, monospace; padding: 2px 6px; border-radius: 4px; background: #F3EEE1">Esc</kbd></button>
+    </div>
+
+    <div style="margin: 24px auto 0; max-width: 900px; display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; align-items: flex-start">
+      <section aria-label="Question" style="flex: 1 1 420px; max-width: 480px; min-width: 0">
+        <div style="border-radius: 20px; background: #FFFFFF; border: 1px solid #E8E2D2; padding: 24px">
+          <h1 style="margin: 0; font-size: 28px; line-height: 1.25; font-weight: 800">Who directed The Wedding Party (2016)?</h1>
+          <div style="margin-top: 20px; display: flex; align-items: center; gap: 12px">
+            <div aria-hidden="true" style="flex: 1; height: 10px; border-radius: 5px; background: #ECE6D6; overflow: hidden"><div style="width: 73%; height: 100%; background: #008751"></div></div>
+            <span style="font-size: 16px; font-weight: 800">11s</span>
+          </div>
+          <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 10px">
+            <sc-for list="{{options}}" as="o" hint-placeholder-count="4">
+              <button type="button" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 14px; box-sizing: border-box; border-radius: 12px; border: 2px solid #E3DCCB; background: #FFFFFF; color: #14231B; font: 700 17px Nunito, system-ui, sans-serif; text-align: left; cursor: pointer">
+                <span aria-hidden="true" style="width: 32px; height: 32px; border-radius: 50%; background: #F3EEE1; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; flex-shrink: 0">{{o.key}}</span>
+                <span style="flex: 1">{{o.text}}</span>
+                <kbd style="font: 700 12px ui-monospace, monospace; padding: 3px 7px; border-radius: 5px; border: 1px solid #D9D1BE; background: #FFFDF7; color: #3F4A44">{{o.num}}</kbd>
+              </button>
+            </sc-for>
+          </div>
+          <p style="margin: 16px 0 0; font-size: 13px; font-weight: 700; color: #5A6660">Press 1 to 4 or A to D to answer, Enter for the next question.</p>
+        </div>
+      </section>
+
+      <aside aria-label="Score" style="flex: 1 1 260px; max-width: 340px; min-width: 0">
+        <div style="border-radius: 20px; background: #14231B; color: #FFFFFF; padding: 20px">
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <div>
+              <p style="margin: 0; font-size: 13px; font-weight: 800; color: #D3DCD7">You</p>
+              <p style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 36px; line-height: 1.1; color: #B6F0C9">640</p>
+            </div>
+            <div style="text-align: right">
+              <p style="margin: 0; font-size: 13px; font-weight: 800; color: #D3DCD7">ChidiOfLagos</p>
+              <p style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 36px; line-height: 1.1">520</p>
+            </div>
+          </div>
+          <table style="margin-top: 14px; width: 100%; border-collapse: collapse; font-size: 14px">
+            <caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Score by round</caption>
+            <thead>
+              <tr style="color: #D3DCD7; font-size: 12px">
+                <th scope="col" style="text-align: left; padding: 6px 0; font-weight: 800">Round</th>
+                <th scope="col" style="text-align: right; padding: 6px 0; font-weight: 800">You</th>
+                <th scope="col" style="text-align: right; padding: 6px 0; font-weight: 800">Chidi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-top: 1px solid #2C4136"><th scope="row" style="text-align: left; padding: 8px 0; font-weight: 700">1 · Slang</th><td style="text-align: right; font-weight: 800">454</td><td style="text-align: right; font-weight: 800">520</td></tr>
+              <tr style="border-top: 1px solid #2C4136"><th scope="row" style="text-align: left; padding: 8px 0; font-weight: 700">2 · Nollywood</th><td style="text-align: right; font-weight: 800">186…</td><td style="text-align: right; font-weight: 800; color: #D3DCD7">hidden</td></tr>
+              <tr style="border-top: 1px solid #2C4136"><th scope="row" style="text-align: left; padding: 8px 0; font-weight: 700">3 · your pick</th><td style="text-align: right; color: #D3DCD7">–</td><td style="text-align: right; color: #D3DCD7">–</td></tr>
+            </tbody>
+          </table>
+          <p style="margin: 14px 0 0; font-size: 13px; line-height: 1.45; font-weight: 600; color: #D3DCD7">You’ll see Chidi’s round 2 points once you finish it. Turn ends in 41 hours.</p>
+        </div>
+        <div style="margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <button type="button" style="min-height: 52px; border-radius: 12px; border: 2px solid #E3DCCB; background: #FFFFFF; color: #14231B; font: 800 14px Nunito, system-ui, sans-serif; cursor: pointer">50/50 · 60 coins</button>
+          <button type="button" style="min-height: 52px; border-radius: 12px; border: 2px solid #E3DCCB; background: #FFFFFF; color: #14231B; font: 800 14px Nunito, system-ui, sans-serif; cursor: pointer">Ask Naija · 80</button>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      options: [
+        { key: 'A', num: '1', text: 'Niyi Akinmolayan' },
+        { key: 'B', num: '2', text: 'Kemi Adetiba' },
+        { key: 'C', num: '3', text: 'Kunle Afolayan' },
+        { key: 'D', num: '4', text: 'Funke Akindele' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

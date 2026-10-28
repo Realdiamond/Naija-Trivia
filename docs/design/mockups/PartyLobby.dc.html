@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Party room lobby</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFDF7; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+  <div style="background: #14231B; color: #FFFFFF; padding: 8px 16px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <a href="Play.dc.html" aria-label="Close room" style="width: 48px; height: 48px; margin-left: -8px; display: flex; align-items: center; justify-content: center; color: #FFFFFF">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </a>
+      <p style="margin: 0; font-size: 14px; font-weight: 800">10 questions · 15 s · Wahala Round on</p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 14px; margin-top: 4px">
+      <div style="flex: 1; min-width: 0">
+        <p style="margin: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: #FFB547">Room code</p>
+        <p style="margin: 2px 0 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 54px; line-height: 1; letter-spacing: 6px">K7QXM</p>
+        <p style="margin: 6px 0 0; font-size: 15px; font-weight: 700">whosabi.ng/r/K7QXM</p>
+      </div>
+      <div aria-hidden="true" style="width: 92px; height: 92px; padding: 7px; box-sizing: border-box; border-radius: 12px; background: #FFFFFF; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); flex-shrink: 0">
+        <sc-for list="{{qr}}" as="q" hint-placeholder-count="81">
+          <span style="{{q}}"></span>
+        </sc-for>
+      </div>
+    </div>
+    <div style="margin-top: 14px; display: grid; grid-template-columns: 2fr 1fr; gap: 10px">
+      <button type="button" style="height: 50px; border: 0; border-radius: 12px; background: #FF7A00; color: #14231B; font: 800 16px Nunito, system-ui, sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><circle cx="18" cy="5" r="2.5"></circle><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="19" r="2.5"></circle><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"></path></svg>
+        Share to WhatsApp
+      </button>
+      <button type="button" style="height: 50px; border: 2px solid #FFFFFF; border-radius: 12px; background: transparent; color: #FFFFFF; font: 800 16px Nunito, system-ui, sans-serif; cursor: pointer">Copy link</button>
+    </div>
+  </div>
+
+  <div style="flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 14px 16px 18px; box-sizing: border-box">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <h1 style="margin: 0; font-size: 18px; font-weight: 800">Players <span style="color: #5A6660">({{count}}/20)</span></h1>
+      <div style="display: flex; align-items: center; gap: 8px">
+        <span id="lock-label" style="font-size: 14px; font-weight: 800">Lock room</span>
+        <button type="button" role="switch" aria-checked="{{locked}}" aria-labelledby="lock-label" onClick="{{toggleLock}}" style="{{lockTrack}}"><span style="{{lockKnob}}"></span></button>
+      </div>
+    </div>
+    <ul style="list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px">
+      <sc-for list="{{players}}" as="p" hint-placeholder-count="7">
+        <li style="display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #EFEADF; min-width: 0">
+          <span aria-hidden="true" style="{{p.avatar}}">{{p.initial}}</span>
+          <div style="flex: 1; min-width: 0">
+            <p style="margin: 0; font-size: 15px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{p.name}}</p>
+            <p style="margin: 0; font-size: 12px; font-weight: 800; color: #5A6660">{{p.where}}</p>
+          </div>
+          <sc-if value="{{p.kickable}}" hint-placeholder-val="{{ true }}">
+            <button type="button" aria-label="{{p.kickLabel}}" style="width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: #5A6660; display: flex; align-items: center; justify-content: center; cursor: pointer">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round"><path d="M7 7l10 10M17 7L7 17"></path></svg>
+            </button>
+          </sc-if>
+        </li>
+      </sc-for>
+    </ul>
+    <p style="margin: 12px 0 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #3F4A44">
+      <span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 50%; background: #1DB954"></span>
+      Waiting for more people… guests on the web only need a nickname.
+    </p>
+
+    <a href="PartyQuestion.dc.html" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 8px; height: 58px; border-radius: 12px; background: #008751; color: #FFFFFF; font-weight: 800; font-size: 18px; text-decoration: none">
+      Start game
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+    </a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const locked = !!(this.state && this.state.locked);
+    const av = (c) => 'width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 800; font-size: 16px; background: ' + c;
+    const people = [
+      { name: 'ToluSabi', where: 'Host · app', initial: 'T', color: '#008751', host: true },
+      { name: 'ChidiOfLagos', where: 'App', initial: 'C', color: '#1F5F8B' },
+      { name: 'NgoziVibes', where: 'Web', initial: 'N', color: '#8E44AD' },
+      { name: 'FemiTheGreat', where: 'App', initial: 'F', color: '#C0392B' },
+      { name: 'AishaReads', where: 'App', initial: 'A', color: '#7A5A1E' },
+      { name: 'Uncle B', where: 'Web guest', initial: 'U', color: '#14231B' },
+      { name: 'Dami', where: 'Web guest', initial: 'D', color: '#1F5F8B' }
+    ];
+    const rows = [
+      '111101111', '100100001', '101101101', '100010001', '111010111',
+      '001100100', '111001010', '100111101', '111100011'
+    ];
+    const qr = [];
+    rows.forEach((r) => r.split('').forEach((c) => qr.push('display: block; aspect-ratio: 1; background: ' + (c === '1' ? '#14231B' : '#FFFFFF'))));
+    return {
+      qr,
+      count: people.length,
+      locked,
+      toggleLock: () => this.setState({ locked: !locked }),
+      lockTrack: 'position: relative; width: 52px; height: 32px; border-radius: 16px; border: 0; padding: 0; cursor: pointer; background: ' + (locked ? '#008751' : '#8A8270'),
+      lockKnob: 'position: absolute; top: 3px; left: ' + (locked ? '23px' : '3px') + '; width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF',
+      players: people.map((p) => ({
+        name: p.name,
+        where: p.where,
+        initial: p.initial,
+        avatar: av(p.color),
+        kickable: !p.host,
+        kickLabel: 'Remove ' + p.name
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

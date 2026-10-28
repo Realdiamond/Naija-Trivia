@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Challenge someone to a duel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+input::placeholder{color:#6B756F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFDF7; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; padding: 14px 16px 20px; overflow: hidden">
+  <div style="display: flex; align-items: center; gap: 4px">
+    <a href="Home.dc.html" aria-label="Back" style="width: 48px; height: 48px; margin-left: -8px; display: flex; align-items: center; justify-content: center; color: #14231B">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 26px">Start a duel</h1>
+  </div>
+  <p style="margin: 2px 0 0 4px; font-size: 14px; color: #5A6660; font-weight: 700">3 rounds × 3 questions · 48 hours per turn · 6 of 20 duels active</p>
+
+  <a href="#link" style="margin-top: 14px; display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; background: #FF7A00; color: #14231B; text-decoration: none">
+    <span aria-hidden="true" style="width: 44px; height: 44px; border-radius: 12px; background: #14231B; color: #FFB547; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+      <svg viewBox="0 0 24 24" width="22" height="22" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+    </span>
+    <div style="flex: 1; min-width: 0">
+      <p style="margin: 0; font-size: 17px; font-weight: 800">Send a duel link</p>
+      <p style="margin: 2px 0 0; font-size: 14px; font-weight: 700">Drop it in WhatsApp. They can play in the browser, no install.</p>
+    </div>
+  </a>
+
+  <label for="q" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search friends</label>
+  <div style="margin-top: 14px; display: flex; align-items: center; gap: 10px; height: 48px; border-radius: 12px; border: 2px solid #D9D1BE; background: #FFFFFF; padding: 0 14px; box-sizing: border-box">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: none; stroke: #5A6660; stroke-width: 2.2; stroke-linecap: round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+    <input id="q" type="search" placeholder="Search friends" style="flex: 1; min-width: 0; border: 0; outline: none; font: 700 16px Nunito, system-ui, sans-serif; color: #14231B; background: transparent">
+  </div>
+
+  <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: #F3EEE1">
+    <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+      <button type="button" onClick="{{t.pick}}" aria-pressed="{{t.on}}" style="{{t.style}}">{{t.label}}</button>
+    </sc-for>
+  </div>
+
+  <ul style="list-style: none; margin: 8px 0 0; padding: 0">
+    <sc-for list="{{people}}" as="p" hint-placeholder-count="5">
+      <li style="display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid #EFEADF">
+        <span aria-hidden="true" style="{{p.avatar}}">{{p.initial}}</span>
+        <div style="flex: 1; min-width: 0">
+          <p style="margin: 0; font-size: 16px; font-weight: 800">{{p.name}}</p>
+          <p style="margin: 1px 0 0; font-size: 13px; font-weight: 700; color: #5A6660">{{p.detail}}</p>
+        </div>
+        <a href="Category.dc.html" style="display: flex; align-items: center; justify-content: center; height: 44px; padding: 0 14px; border-radius: 12px; background: #008751; color: #FFFFFF; font-weight: 800; font-size: 15px; text-decoration: none">Challenge</a>
+      </li>
+    </sc-for>
+  </ul>
+
+  <a href="Category.dc.html" style="margin-top: auto; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; border: 2px dashed #B9B09B; color: #14231B; text-decoration: none">
+    <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="fill: none; stroke: #006B40; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0"><path d="M16 3h5v5"></path><path d="M4 20L21 3"></path><path d="M21 16v5h-5"></path><path d="M15 15l6 6"></path><path d="M4 4l5 5"></path></svg>
+    <div style="flex: 1">
+      <p style="margin: 0; font-size: 16px; font-weight: 800">Random opponent</p>
+      <p style="margin: 1px 0 0; font-size: 13px; font-weight: 700; color: #5A6660">Someone near your rating</p>
+    </div>
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M9 6l6 6-6 6"></path></svg>
+  </a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tab = (this.state && this.state.tab) || 'friends';
+    const av = (c) => 'width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 800; font-size: 17px; background: ' + c;
+    const on = 'height: 40px; border: 0; border-radius: 9px; background: #FFFFFF; color: #14231B; font: 800 15px Nunito, system-ui, sans-serif; box-shadow: 0 1px 2px rgba(20,35,27,0.12); cursor: pointer';
+    const off = 'height: 40px; border: 0; border-radius: 9px; background: transparent; color: #3F4A44; font: 700 15px Nunito, system-ui, sans-serif; cursor: pointer';
+    const friends = [
+      { name: 'ChidiOfLagos', initial: 'C', color: '#1F5F8B', detail: 'Oga · 1,812 · you lead 4–3' },
+      { name: 'NgoziVibes', initial: 'N', color: '#8E44AD', detail: 'Chairman · 1,950 · Nollywood strong' },
+      { name: 'KemiCooks', initial: 'K', color: '#C0392B', detail: 'Oga · 1,701 · Food strong' },
+      { name: 'AishaReads', initial: 'A', color: '#7A5A1E', detail: 'Learner · 1,455' },
+      { name: 'BigBolu', initial: 'B', color: '#14231B', detail: 'JJC · 1,260 · new this week' }
+    ];
+    const recent = [
+      { name: 'FemiTheGreat', initial: 'F', color: '#C0392B', detail: 'Played 2 hours ago · you won' },
+      { name: 'IkennaQuiz', initial: 'I', color: '#1F5F8B', detail: 'Played yesterday · you lost' },
+      { name: 'SadeSabi', initial: 'S', color: '#008751', detail: 'Played 3 days ago · you won' }
+    ];
+    const list = tab === 'friends' ? friends : recent;
+    return {
+      tabs: [
+        { id: 'friends', label: 'Friends (23)' },
+        { id: 'recent', label: 'Recent opponents' }
+      ].map((t) => ({ label: t.label, on: t.id === tab, style: t.id === tab ? on : off, pick: () => this.setState({ tab: t.id }) })),
+      people: list.map((p) => ({ name: p.name, initial: p.initial, detail: p.detail, avatar: av(p.color) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

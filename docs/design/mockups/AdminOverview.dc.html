@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin console overview</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+input::placeholder{color:#6B756F}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; background: #F6F4EE; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column">
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 12px 24px; background: #14231B; color: #FFFFFF">
+    <p style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px; line-height: 1">Who Sabi? <span style="color: #FFB547">Admin</span></p>
+    <label for="global-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search players, duels and rooms</label>
+    <div style="flex: 1 1 320px; max-width: 560px; display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: 10px; background: #22362B">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" style="fill: none; stroke: #D3DCD7; stroke-width: 2.2; stroke-linecap: round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+      <input id="global-search" type="search" placeholder="Username, user ID, phone, duel ID or room code" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: #FFFFFF; font: 600 14px Nunito, system-ui, sans-serif">
+    </div>
+    <span style="margin-left: auto; padding: 4px 10px; border-radius: 999px; background: #FFB547; color: #14231B; font-size: 12px; font-weight: 800">Sample data</span>
+    <span style="font-size: 14px; font-weight: 700">Wed 28 Oct · 14:32 WAT</span>
+    <span aria-label="Signed in as Ada, support lead" style="width: 34px; height: 34px; border-radius: 50%; background: #8E44AD; display: flex; align-items: center; justify-content: center; font-weight: 800">A</span>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-wrap: wrap">
+    <nav aria-label="Console" style="flex: 1 1 200px; box-sizing: border-box; padding: 16px 12px; border-right: 1px solid #E3DCCB; background: #FFFFFF">
+      <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px">
+        <sc-for list="{{nav}}" as="n" hint-placeholder-count="11">
+          <li><a href="{{n.href}}" aria-current="{{n.current}}" style="{{n.style}}">{{n.name}}</a></li>
+        </sc-for>
+      </ul>
+    </nav>
+
+    <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 20px 24px 32px">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px">
+        <div>
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800">Overview</h1>
+          <p style="margin: 2px 0 0; font-size: 14px; font-weight: 600; color: #5A6660">Today so far, against the same time last Wednesday · tiles refresh every 15 s</p>
+        </div>
+        <div role="group" aria-label="Platform" style="display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: #EDE8DC">
+          <sc-for list="{{platforms}}" as="p" hint-placeholder-count="4">
+            <button type="button" onClick="{{p.pick}}" aria-pressed="{{p.on}}" style="{{p.style}}">{{p.name}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px">
+        <sc-for list="{{tiles}}" as="t" hint-placeholder-count="6">
+          <section style="padding: 14px 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E8E2D2">
+            <h2 style="margin: 0; font-size: 13px; font-weight: 800; color: #5A6660">{{t.label}}</h2>
+            <p style="margin: 4px 0 0; font-size: 28px; font-weight: 800; line-height: 1.1">{{t.value}}</p>
+            <p style="{{t.deltaStyle}}">{{t.delta}}</p>
+            <p style="margin: 6px 0 0; font-size: 12px; font-weight: 600; color: #5A6660">{{t.split}}</p>
+          </section>
+        </sc-for>
+      </div>
+
+      <div style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 12px">
+        <section style="flex: 2 1 520px; min-width: 0; padding: 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E8E2D2">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px">
+            <h2 style="margin: 0; font-size: 16px; font-weight: 800">Players active by hour</h2>
+            <div style="display: flex; gap: 14px; font-size: 13px; font-weight: 700; color: #3F4A44">
+              <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 16px; height: 3px; border-radius: 2px; background: #007A4A"></span>Today</span>
+              <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 16px; height: 3px; border-radius: 2px; background: #E07B1F"></span>Last Wednesday</span>
+            </div>
+          </div>
+          <div style="position: relative; margin-top: 10px">
+            <svg viewBox="0 0 640 230" width="100%" role="img" aria-label="Players active by hour. Today is above last Wednesday at most hours, 350 at 14:00 against 320." style="display: block">
+              <g style="stroke: #ECE7DC; stroke-width: 1">
+                <line x1="44" y1="200" x2="620" y2="200"></line>
+                <line x1="44" y1="146.7" x2="620" y2="146.7"></line>
+                <line x1="44" y1="93.3" x2="620" y2="93.3"></line>
+                <line x1="44" y1="40" x2="620" y2="40"></line>
+              </g>
+              <g style="fill: #5A6660; font: 700 11px Nunito, system-ui, sans-serif">
+                <text x="36" y="204" text-anchor="end">0</text>
+                <text x="36" y="150.7" text-anchor="end">200</text>
+                <text x="36" y="97.3" text-anchor="end">400</text>
+                <text x="36" y="44" text-anchor="end">600</text>
+                <text x="44" y="222" text-anchor="middle">00</text>
+                <text x="194.3" y="222" text-anchor="middle">06</text>
+                <text x="344.6" y="222" text-anchor="middle">12</text>
+                <text x="494.9" y="222" text-anchor="middle">18</text>
+                <text x="620" y="222" text-anchor="middle">23</text>
+              </g>
+              <polyline points="{{lastPts}}" style="fill: none; stroke: #E07B1F; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round"></polyline>
+              <polyline points="{{todayPts}}" style="fill: none; stroke: #007A4A; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round"></polyline>
+              <circle cx="{{todayEndX}}" cy="{{todayEndY}}" r="5" style="fill: #007A4A; stroke: #FFFFFF; stroke-width: 2"></circle>
+              <text x="{{todayLabelX}}" y="{{todayLabelY}}" style="fill: #14231B; font: 800 12px Nunito, system-ui, sans-serif">Today 350</text>
+              <text x="552" y="50" style="fill: #3F4A44; font: 700 12px Nunito, system-ui, sans-serif">Last Wed</text>
+            </svg>
+            <div style="position: absolute; left: 6.25%; right: 2.5%; top: 0; bottom: 12%; display: grid; grid-template-columns: repeat(24, minmax(0, 1fr))">
+              <sc-for list="{{hover}}" as="h" hint-placeholder-count="24">
+                <span title="{{h}}" style="display: block"></span>
+              </sc-for>
+            </div>
+          </div>
+        </section>
+
+        <section style="flex: 1 1 320px; min-width: 0; padding: 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E8E2D2">
+          <h2 style="margin: 0; font-size: 16px; font-weight: 800">Daily players, last 30 days</h2>
+          <p style="margin: 2px 0 0; font-size: 13px; font-weight: 600; color: #5A6660">4,860 today · up from 3,120 a month ago</p>
+          <div role="img" aria-label="Daily active players rose from about 3,100 to 4,860 over 30 days, with weekend peaks." style="margin-top: 12px; height: 150px; display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid #ECE7DC">
+            <sc-for list="{{dau}}" as="d" hint-placeholder-count="30">
+              <span title="{{d.tip}}" style="{{d.style}}"></span>
+            </sc-for>
+          </div>
+          <div style="margin-top: 4px; display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: #5A6660"><span>29 Sep</span><span>Today</span></div>
+        </section>
+      </div>
+
+      <div style="margin-top: 14px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px">
+        <section style="padding: 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E8E2D2">
+          <h2 style="margin: 0 0 10px; font-size: 16px; font-weight: 800">Top states today</h2>
+          <sc-for list="{{states}}" as="s" hint-placeholder-count="6">
+            <div title="{{s.tip}}" style="display: grid; grid-template-columns: 76px minmax(0, 1fr) 52px; align-items: center; gap: 8px; padding: 4px 0">
+              <span style="font-size: 13px; font-weight: 700">{{s.name}}</span>
+              <span aria-hidden="true" style="height: 14px"><span style="{{s.bar}}"></span></span>
+              <span style="font-size: 13px; font-weight: 800; text-align: right">{{s.value}}</span>
+            </div>
+          </sc-for>
+        </section>
+
+        <section style="padding: 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E8E2D2">
+          <h2 style="margin: 0 0 10px; font-size: 16px; font-weight: 800">New players by source</h2>
+          <sc-for list="{{sources}}" as="s" hint-placeholder-count="5">
+            <div title="{{s.tip}}" style="display: grid; grid-template-columns: 110px minmax(0, 1fr) 40px; align-items: center; gap: 8px; padding: 4px 0">
+              <span style="font-size: 13px; font-weight: 700">{{s.name}}</span>
+              <span aria-hidden="true" style="height: 14px"><span style="{{s.bar}}"></span></span>
+              <span style="font-size: 13px; font-weight: 800; text-align: right">{{s.value}}</span>
+            </div>
+          </sc-for>
+        </section>
+
+        <section style="padding: 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E8E2D2">
+          <h2 style="margin: 0 0 10px; font-size: 16px; font-weight: 800">Health</h2>
+          <dl style="margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px"><dt style="font-weight: 700">Crash-free sessions (24 h)</dt><dd style="margin: 0; font-weight: 800">99.4%</dd></div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px"><dt style="font-weight: 700">API response, 95th percentile</dt><dd style="margin: 0; font-weight: 800">182 ms</dd></div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px"><dt style="font-weight: 700">Event ingest delay</dt><dd style="margin: 0; font-weight: 800">38 s</dd></div>
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px"><dt style="font-weight: 700">Phone codes delivered (last hour)</dt><dd style="margin: 0; font-weight: 800">MTN 97% · Airtel 95% · Glo 89%</dd></div>
+          </dl>
+          <div role="alert" style="margin-top: 12px; display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #FFF4DC; border: 1px solid #E5B04A">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: none; stroke: #8A5A00; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0"><path d="M12 3l10 18H2z"></path><path d="M12 10v5M12 18h.01"></path></svg>
+            <p style="margin: 0; font-size: 13px; line-height: 1.4; font-weight: 700"><strong>Warning:</strong> Glo code delivery is below 92% for the last hour. SMS falls back to Africa’s Talking.</p>
+          </div>
+        </section>
+
+        <section style="padding: 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E8E2D2">
+          <h2 style="margin: 0 0 10px; font-size: 16px; font-weight: 800">Queues</h2>
+          <ul style="list-style: none; margin: 0; padding: 0">
+            <sc-for list="{{queues}}" as="q" hint-placeholder-count="4">
+              <li style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #EFEADF">
+                <a href="{{q.href}}" style="font-size: 14px; font-weight: 700; color: #14231B">{{q.name}}</a>
+                <span style="min-width: 28px; padding: 2px 8px; border-radius: 999px; background: #F3EEE1; text-align: center; font-size: 13px; font-weight: 800">{{q.count}}</span>
+              </li>
+            </sc-for>
+          </ul>
+          <p style="margin: 10px 0 0; font-size: 13px; font-weight: 700; color: #3F4A44">Live now: 9 party rooms (61 players) · 2,310 duels waiting on a turn</p>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const plat = (this.state && this.state.plat) || 'all';
+    const navItems = ['Overview', 'Live', 'Players', 'Analytics', 'LiveOps', 'Content', 'Moderation', 'Support', 'Commerce', 'Compliance', 'Settings'];
+    const nav = navItems.map((n, i) => ({
+      name: n,
+      href: '#' + n.toLowerCase(),
+      current: i === 0 ? 'page' : undefined,
+      style: 'display: block; padding: 10px 12px; border-radius: 10px; font-size: 15px; text-decoration: none; ' + (i === 0 ? 'background: #E3F3EA; color: #006B40; font-weight: 800' : 'color: #3F4A44; font-weight: 700')
+    }));
+    const segOn = 'height: 34px; padding: 0 12px; border: 0; border-radius: 8px; background: #FFFFFF; color: #14231B; font: 800 13px Nunito, system-ui, sans-serif; box-shadow: 0 1px 2px rgba(20,35,27,0.12); cursor: pointer';
+    const segOff = 'height: 34px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: #3F4A44; font: 700 13px Nunito, system-ui, sans-serif; cursor: pointer';
+    const platforms = [['all', 'All'], ['android', 'Android'], ['ios', 'iOS'], ['web', 'Web']].map((p) => ({
+      name: p[1], on: p[0] === plat, style: p[0] === plat ? segOn : segOff, pick: () => this.setState({ plat: p[0] })
+    }));
+    const up = 'margin: 2px 0 0; font-size: 13px; font-weight: 800; color: #0B6B33';
+    const down = 'margin: 2px 0 0; font-size: 13px; font-weight: 800; color: #B3191C';
+    const tiles = [
+      { label: 'Online now', value: '312', delta: '▲ 9% vs last Wed', deltaStyle: up, split: 'Android 221 · iOS 34 · Web 57' },
+      { label: 'Daily players', value: '4,860', delta: '▲ 6%', deltaStyle: up, split: 'New today: 612 (▲ 11%)' },
+      { label: 'Matches', value: '9,140', delta: '▲ 4%', deltaStyle: up, split: 'Duel turns 6,980 · Party 212 · Dailies 1,948' },
+      { label: 'Minutes per player', value: '18.4', delta: '▼ 2%', deltaStyle: down, split: 'Median session 6 min 10 s' },
+      { label: 'Money today', value: '₦184,300', delta: '▲ 8%', deltaStyle: up, split: 'Purchases ₦121,500 · ads about ₦62,800' },
+      { label: 'Coins', value: '+412k / −361k', delta: 'earned / spent', deltaStyle: 'margin: 2px 0 0; font-size: 13px; font-weight: 700; color: #5A6660', split: 'Lifelines are 64% of spend' }
+    ];
+    const last = [120, 80, 50, 35, 30, 45, 110, 240, 310, 290, 280, 300, 360, 340, 320, 330, 350, 390, 430, 480, 520, 470, 360, 220];
+    const today = [130, 85, 55, 40, 32, 50, 120, 260, 340, 320, 300, 330, 390, 372, 350];
+    const X = (i) => 44 + i * (576 / 23);
+    const Y = (v) => 200 - (v / 600) * 160;
+    const pts = (arr) => arr.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1)).join(' ');
+    const endX = X(today.length - 1);
+    const endY = Y(today[today.length - 1]);
+    const hover = last.map((v, i) => {
+      const hh = (i < 10 ? '0' : '') + i + ':00';
+      return hh + ' · today ' + (i < today.length ? today[i] : 'not yet') + ' · last Wed ' + v;
+    });
+    const dauVals = [3120, 3180, 3410, 3690, 3260, 3210, 3300, 3350, 3420, 3720, 3980, 3500, 3460, 3540, 3610, 3680, 4020, 4290, 3800, 3760, 3840, 3920, 4010, 4380, 4610, 4120, 4080, 4190, 4400, 4860];
+    const dau = dauVals.map((v, i) => ({
+      tip: (i === 29 ? 'Today' : (30 - i - 1) + ' days ago') + ': ' + v.toLocaleString('en-NG') + ' players',
+      style: 'flex: 1 1 0; max-width: 24px; height: ' + Math.round((v / 5000) * 100) + '%; border-radius: 4px 4px 0 0; background: ' + (i === 29 ? '#006B40' : '#2F8F5E')
+    }));
+    const hbar = (v, max) => 'display: block; height: 14px; border-radius: 0 4px 4px 0; background: #008751; width: ' + Math.round((v / max) * 100) + '%';
+    const stateData = [['Lagos', 1420], ['FCT', 610], ['Rivers', 455], ['Oyo', 410], ['Anambra', 380], ['Kano', 300]];
+    const states = stateData.map((s) => ({ name: s[0], value: s[1].toLocaleString('en-NG'), tip: s[0] + ': ' + s[1] + ' players today', bar: hbar(s[1], 1420) }));
+    const srcData = [['WhatsApp invite', 268], ['TikTok', 141], ['Play Store', 96], ['Campus', 64], ['Referral', 43]];
+    const sources = srcData.map((s) => ({ name: s[0], value: String(s[1]), tip: s[0] + ': ' + s[1] + ' new players', bar: hbar(s[1], 268) }));
+    const queues = [
+      { name: 'Question reports', count: 14, href: '#reports' },
+      { name: 'Questions auto-suspended', count: 3, href: '#suspended' },
+      { name: 'Integrity flags', count: 2, href: '#integrity' },
+      { name: 'Data requests due in 7 days', count: 1, href: '#dsar' }
+    ];
+    return {
+      nav, platforms, tiles, hover, dau, states, sources, queues,
+      todayPts: pts(today),
+      lastPts: pts(last),
+      todayEndX: endX.toFixed(1),
+      todayEndY: endY.toFixed(1),
+      todayLabelX: (endX + 8).toFixed(1),
+      todayLabelY: (endY - 8).toFixed(1)
+    };
+  }
+}
+</script>
+</body>
+</html>

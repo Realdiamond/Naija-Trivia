@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Create a party room</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFDF7; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; padding: 10px 16px 18px; overflow: hidden">
+  <div style="display: flex; align-items: center; gap: 4px">
+    <a href="Play.dc.html" aria-label="Back" style="width: 48px; height: 48px; margin-left: -8px; display: flex; align-items: center; justify-content: center; color: #14231B">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 26px">New party room</h1>
+  </div>
+
+  <fieldset style="border: 0; margin: 10px 0 0; padding: 0; min-width: 0">
+    <legend style="padding: 0; margin: 0 0 10px; font-size: 16px; font-weight: 800">Packs</legend>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px">
+      <sc-for list="{{packs}}" as="p" hint-placeholder-count="6">
+        <button type="button" onClick="{{p.toggle}}" aria-pressed="{{p.on}}" style="{{p.style}}">
+          <span aria-hidden="true" style="{{p.dot}}"></span>{{p.name}}
+        </button>
+      </sc-for>
+    </div>
+  </fieldset>
+
+  <fieldset style="border: 0; margin: 20px 0 0; padding: 0; min-width: 0">
+    <legend style="padding: 0; margin: 0 0 10px; font-size: 16px; font-weight: 800">Questions</legend>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: #F3EEE1">
+      <sc-for list="{{counts}}" as="c" hint-placeholder-count="4">
+        <button type="button" onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="{{c.style}}">{{c.label}}</button>
+      </sc-for>
+    </div>
+  </fieldset>
+
+  <fieldset style="border: 0; margin: 18px 0 0; padding: 0; min-width: 0">
+    <legend style="padding: 0; margin: 0 0 10px; font-size: 16px; font-weight: 800">Time per question</legend>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: #F3EEE1">
+      <sc-for list="{{timers}}" as="t" hint-placeholder-count="3">
+        <button type="button" onClick="{{t.pick}}" aria-pressed="{{t.on}}" style="{{t.style}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+  </fieldset>
+
+  <div style="margin-top: 18px; border-radius: 16px; background: #FFFFFF; border: 1px solid #E8E2D2">
+    <sc-for list="{{switches}}" as="w" hint-placeholder-count="2">
+      <div style="{{w.row}}">
+        <div style="flex: 1; min-width: 0">
+          <p id="{{w.id}}" style="margin: 0; font-size: 16px; font-weight: 800">{{w.name}}</p>
+          <p style="margin: 2px 0 0; font-size: 13px; font-weight: 600; color: #5A6660">{{w.note}}</p>
+        </div>
+        <button type="button" role="switch" aria-checked="{{w.on}}" aria-labelledby="{{w.id}}" onClick="{{w.toggle}}" style="{{w.track}}">
+          <span style="{{w.knob}}"></span>
+        </button>
+      </div>
+    </sc-for>
+  </div>
+
+  <p style="margin: 14px 0 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #3F4A44">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20a6.5 6.5 0 0 1 13 0"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 4 6"></path></svg>
+    Up to 20 players · 50 with Sabi Pass
+  </p>
+
+  <a href="PartyLobby.dc.html" style="margin-top: auto; display: flex; align-items: center; justify-content: center; height: 56px; border-radius: 12px; background: #008751; color: #FFFFFF; font-weight: 800; font-size: 17px; text-decoration: none">Create room</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const picked = s.packs || { slang: true, nollywood: true, music: true, mixed: true };
+    const count = s.count || 10;
+    const timer = s.timer || 15;
+    const family = s.family === undefined ? true : s.family;
+    const wahala = s.wahala === undefined ? true : s.wahala;
+    const packList = [
+      { id: 'slang', name: 'Slang & Pidgin', color: '#8E44AD' },
+      { id: 'nollywood', name: 'Nollywood', color: '#E67E22' },
+      { id: 'music', name: 'Music', color: '#2980B9' },
+      { id: 'food', name: 'Food', color: '#C0392B' },
+      { id: 'mixed', name: 'Mixed Naija', color: '#16A085' },
+      { id: 'owambe', name: 'Owambe Starter Pack', color: '#FF7A00' }
+    ];
+    const chipOn = 'display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 2px solid #008751; background: #E3F3EA; color: #14231B; font: 800 15px Nunito, system-ui, sans-serif; cursor: pointer';
+    const chipOff = 'display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 2px solid #D9D1BE; background: #FFFFFF; color: #3F4A44; font: 700 15px Nunito, system-ui, sans-serif; cursor: pointer';
+    const segOn = 'height: 42px; border: 0; border-radius: 9px; background: #FFFFFF; color: #14231B; font: 800 16px Nunito, system-ui, sans-serif; box-shadow: 0 1px 2px rgba(20,35,27,0.12); cursor: pointer';
+    const segOff = 'height: 42px; border: 0; border-radius: 9px; background: transparent; color: #3F4A44; font: 700 16px Nunito, system-ui, sans-serif; cursor: pointer';
+    const track = (on) => 'position: relative; width: 52px; height: 32px; flex-shrink: 0; border-radius: 16px; border: 0; padding: 0; cursor: pointer; background: ' + (on ? '#008751' : '#8A8270');
+    const knob = (on) => 'position: absolute; top: 3px; left: ' + (on ? '23px' : '3px') + '; width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF';
+    const rowBase = 'display: flex; align-items: center; gap: 12px; padding: 12px 14px';
+    return {
+      packs: packList.map((p) => ({
+        name: p.name,
+        on: !!picked[p.id],
+        style: picked[p.id] ? chipOn : chipOff,
+        dot: 'width: 10px; height: 10px; border-radius: 50%; background: ' + p.color,
+        toggle: () => this.setState({ packs: Object.assign({}, picked, { [p.id]: !picked[p.id] }) })
+      })),
+      counts: [5, 10, 15, 20].map((n) => ({ label: String(n), on: n === count, style: n === count ? segOn : segOff, pick: () => this.setState({ count: n }) })),
+      timers: [10, 15, 20].map((n) => ({ label: n + ' s', on: n === timer, style: n === timer ? segOn : segOff, pick: () => this.setState({ timer: n }) })),
+      switches: [
+        { id: 'sw-family', name: 'Family-safe questions', note: 'Good for mixed groups', on: family, toggle: () => this.setState({ family: !family }), row: rowBase },
+        { id: 'sw-wahala', name: 'Wahala Round', note: 'Last 3 questions are harder and score double', on: wahala, toggle: () => this.setState({ wahala: !wahala }), row: rowBase + '; border-top: 1px solid #EFEADF' }
+      ].map((w) => Object.assign(w, { track: track(w.on), knob: knob(w.on) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

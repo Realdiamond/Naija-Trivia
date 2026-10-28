@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Who Sabi? splash and language</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#FFFFFF}a:hover{color:#FFE2C2}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #008751; color: #FFFFFF; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+  <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); height: 39px; flex-shrink: 0">
+    <sc-for list="{{pattern}}" as="p" hint-placeholder-count="10">
+      <div style="{{p.cell}}"><div style="{{p.mark}}"></div></div>
+    </sc-for>
+  </div>
+
+  <div style="flex: 1; display: flex; flex-direction: column; padding: 48px 24px 0; box-sizing: border-box">
+    <div aria-hidden="true" style="display: flex; align-items: flex-start; gap: 8px">
+      <div style="width: 76px; height: 76px; border-radius: 22px; background: #FFFDF7; color: #008751; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 56px; line-height: 1; transform: rotate(-6deg)">?</div>
+      <div style="width: 20px; height: 20px; border-radius: 50%; background: #FF7A00"></div>
+    </div>
+    <h1 style="margin: 28px 0 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 68px; line-height: 0.92; letter-spacing: -1px">Who<br>Sabi?</h1>
+    <sc-if value="{{isEn}}" hint-placeholder-val="{{ true }}">
+      <p style="margin: 16px 0 0; font-size: 20px; line-height: 1.35; font-weight: 700; max-width: 280px">Naija trivia with your own people. Settle the argument.</p>
+    </sc-if>
+    <sc-if value="{{isPg}}" hint-placeholder-val="{{ false }}">
+      <p style="margin: 16px 0 0; font-size: 20px; line-height: 1.35; font-weight: 700; max-width: 280px">Show your guys say na you sabi pass. Settle the argument.</p>
+    </sc-if>
+
+    <div style="margin-top: auto; padding-bottom: 28px">
+      <fieldset style="border: 0; margin: 0; padding: 0; min-width: 0">
+        <legend style="padding: 0; margin: 0 0 10px; font-weight: 800; font-size: 15px">Choose your language</legend>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <button type="button" onClick="{{pickEn}}" aria-pressed="{{isEn}}" style="{{enStyle}}">English</button>
+          <button type="button" onClick="{{pickPg}}" aria-pressed="{{isPg}}" style="{{pgStyle}}">Pidgin</button>
+        </div>
+      </fieldset>
+      <a href="TasteTest.dc.html" style="margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; height: 58px; border-radius: 12px; background: #FF7A00; color: #14231B; font-weight: 800; font-size: 18px; text-decoration: none">
+        <sc-if value="{{isEn}}" hint-placeholder-val="{{ true }}"><span>Start playing</span></sc-if>
+        <sc-if value="{{isPg}}" hint-placeholder-val="{{ false }}"><span>Oya, make we start</span></sc-if>
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+      </a>
+      <p style="margin: 12px 0 0; text-align: center; font-size: 15px; font-weight: 600">3 quick questions. No sign-up needed.</p>
+    </div>
+  </div>
+
+  <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); height: 39px; flex-shrink: 0">
+    <sc-for list="{{pattern2}}" as="p" hint-placeholder-count="10">
+      <div style="{{p.cell}}"><div style="{{p.mark}}"></div></div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const lang = (this.state && this.state.lang) || 'en';
+    const on = 'height: 54px; border-radius: 12px; border: 2px solid #FFFDF7; background: #FFFDF7; color: #006B40; font: 800 17px Nunito, system-ui, sans-serif; cursor: pointer';
+    const off = 'height: 54px; border-radius: 12px; border: 2px solid #FFFFFF; background: transparent; color: #FFFFFF; font: 700 17px Nunito, system-ui, sans-serif; cursor: pointer';
+    const makePattern = (shift) => {
+      const cells = [];
+      for (let i = 0; i < 10; i++) {
+        const odd = (i + shift) % 2 === 1;
+        cells.push({
+          cell: 'display: flex; align-items: center; justify-content: center; background: ' + (odd ? '#FF7A00' : '#006B40'),
+          mark: odd
+            ? 'width: 14px; height: 14px; background: #FFFDF7; transform: rotate(45deg)'
+            : 'width: 16px; height: 16px; border-radius: 50%; background: #FF7A00'
+        });
+      }
+      return cells;
+    };
+    return {
+      isEn: lang === 'en',
+      isPg: lang === 'pg',
+      enStyle: lang === 'en' ? on : off,
+      pgStyle: lang === 'pg' ? on : off,
+      pickEn: () => this.setState({ lang: 'en' }),
+      pickPg: () => this.setState({ lang: 'pg' }),
+      pattern: makePattern(0),
+      pattern2: makePattern(1)
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Party answer reveal</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E1A14; color: #FFFFFF; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+  <div style="background: #FF7A00; color: #14231B; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between">
+    <p style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px; line-height: 1">Wahala Round</p>
+    <p style="margin: 0; font-size: 15px; font-weight: 800">Points ×2 · Q9 of 10</p>
+  </div>
+
+  <div style="flex: 1; display: flex; flex-direction: column; padding: 16px 16px 18px; box-sizing: border-box">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <span style="display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: #2A1714; font-size: 14px; font-weight: 800; color: #FFD9D3">
+        <span aria-hidden="true" style="width: 9px; height: 9px; border-radius: 50%; background: #E5574A"></span>Food
+      </span>
+      <span style="font-size: 14px; font-weight: 800; color: #B8C4BD">Room K7QXM · 7 players</span>
+    </div>
+    <h1 style="margin: 18px 0 0; font-size: 26px; line-height: 1.25; font-weight: 800">Which of these is NOT a swallow?</h1>
+
+    <ul aria-label="How the room answered" style="list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+      <sc-for list="{{options}}" as="o" hint-placeholder-count="4">
+        <li style="{{o.box}}">
+          <span aria-hidden="true" style="{{o.bar}}"></span>
+          <span aria-hidden="true" style="{{o.badge}}">
+            <sc-if value="{{o.correct}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="18" height="18" style="fill: none; stroke: #0E1A14; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if>
+            <sc-if value="{{o.plain}}" hint-placeholder-val="{{ true }}">{{o.key}}</sc-if>
+          </span>
+          <span style="position: relative; flex: 1; font-size: 17px; font-weight: 800">{{o.text}}<sc-if value="{{o.mine}}" hint-placeholder-val="{{ false }}"><span style="font-size: 13px; font-weight: 800; color: #B6F0C9"> · your pick</span></sc-if></span>
+          <span style="position: relative; font-size: 16px; font-weight: 800">{{o.pct}}</span>
+        </li>
+      </sc-for>
+    </ul>
+
+    <div style="margin-top: 14px; display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 14px; background: #123A26">
+      <p style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 800; color: #B6F0C9">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+        Correct! Omo, you get am!
+      </p>
+      <p style="margin: 0; font-size: 18px; font-weight: 800; color: #B6F0C9">+376</p>
+    </div>
+
+    <section aria-label="Leaderboard" style="margin-top: auto; border-radius: 16px; background: #17291F; padding: 12px 14px">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 800">Top 5</h2>
+        <p style="margin: 0; font-size: 13px; font-weight: 800; color: #B8C4BD">Last question in 3…</p>
+      </div>
+      <ol style="list-style: none; margin: 8px 0 0; padding: 0">
+        <sc-for list="{{board}}" as="b" hint-placeholder-count="5">
+          <li style="{{b.row}}">
+            <span style="width: 22px; font-size: 15px; font-weight: 800; color: #B8C4BD">{{b.rank}}</span>
+            <span style="flex: 1; font-size: 15px; font-weight: 800">{{b.name}}</span>
+            <span style="{{b.moveStyle}}">{{b.move}}</span>
+            <span style="width: 56px; text-align: right; font-size: 15px; font-weight: 800">{{b.pts}}</span>
+          </li>
+        </sc-for>
+      </ol>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const opts = [
+      { key: 'A', text: 'Eba', pct: 6 },
+      { key: 'B', text: 'Amala', pct: 18 },
+      { key: 'C', text: 'Moi moi', pct: 64, correct: true, mine: true },
+      { key: 'D', text: 'Semo', pct: 12 }
+    ];
+    const options = opts.map((o) => ({
+      key: o.key,
+      text: o.text,
+      pct: o.pct + '%',
+      correct: !!o.correct,
+      plain: !o.correct,
+      mine: !!o.mine,
+      box: 'position: relative; overflow: hidden; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 14px; box-sizing: border-box; border-radius: 12px; background: #17291F; border: 2px solid ' + (o.correct ? '#1DB954' : '#2C4136'),
+      bar: 'position: absolute; left: 0; top: 0; bottom: 0; width: ' + o.pct + '%; background: ' + (o.correct ? '#1C5A39' : '#24382D'),
+      badge: 'position: relative; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 800; font-size: 14px; ' + (o.correct ? 'background: #1DB954; color: #0E1A14' : 'background: #2C4136; color: #FFFFFF')
+    }));
+    const rowBase = 'display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; ';
+    const up = 'width: 34px; text-align: right; font-size: 13px; font-weight: 800; color: #B6F0C9';
+    const down = 'width: 34px; text-align: right; font-size: 13px; font-weight: 800; color: #FFC2B8';
+    const same = 'width: 34px; text-align: right; font-size: 13px; font-weight: 800; color: #B8C4BD';
+    const board = [
+      { rank: 1, name: 'NgoziVibes', pts: '2,140', move: '–', moveStyle: same },
+      { rank: 2, name: 'You (ToluSabi)', pts: '1,980', move: '▲2', moveStyle: up, me: true },
+      { rank: 3, name: 'ChidiOfLagos', pts: '1,722', move: '▼1', moveStyle: down },
+      { rank: 4, name: 'FemiTheGreat', pts: '1,710', move: '▼1', moveStyle: down },
+      { rank: 5, name: 'Uncle B', pts: '1,402', move: '–', moveStyle: same }
+    ].map((b) => Object.assign(b, { row: rowBase + (b.me ? 'background: #123A26' : 'background: transparent') }));
+    return { options, board };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Round 2 review</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFDF7; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+  <div aria-hidden="true" style="height: 6px; background: #E67E22; flex-shrink: 0"></div>
+  <div style="flex: 1; display: flex; flex-direction: column; padding: 14px 16px 18px; box-sizing: border-box; min-height: 0">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 10px">
+      <div>
+        <p style="margin: 0; font-size: 13px; font-weight: 800; color: #5A6660; text-transform: uppercase; letter-spacing: 0.6px">Round 2 · Chidi’s pick</p>
+        <h1 style="margin: 2px 0 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 28px; line-height: 1.1">Nollywood</h1>
+      </div>
+      <div style="text-align: right">
+        <p style="margin: 0; font-size: 13px; font-weight: 800; color: #5A6660">This round</p>
+        <p style="margin: 0; font-size: 18px; font-weight: 800"><span style="color: #006B40">379</span> to 310</p>
+      </div>
+    </div>
+
+    <ol style="list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+      <sc-for list="{{items}}" as="q" hint-placeholder-count="3">
+        <li style="border-radius: 16px; background: #FFFFFF; border: 1px solid #E8E2D2; padding: 12px 12px 12px 14px">
+          <div style="display: flex; align-items: flex-start; gap: 8px">
+            <p style="margin: 0; flex: 1; font-size: 15px; font-weight: 800; line-height: 1.35">{{q.n}}. {{q.text}}</p>
+            <a href="Report.dc.html" aria-label="{{q.reportLabel}}" style="width: 32px; height: 32px; margin: -4px -4px 0 0; display: flex; align-items: center; justify-content: center; color: #5A6660; flex-shrink: 0">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+            </a>
+          </div>
+          <p style="margin: 6px 0 0; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: #E6F7EC; font-size: 14px; font-weight: 800; color: #0B6B33">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>{{q.answer}}</p>
+          <div style="margin-top: 8px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+            <sc-for list="{{q.players}}" as="p" hint-placeholder-count="2">
+              <div style="{{p.box}}">
+                <span style="font-size: 13px; font-weight: 800">{{p.who}}</span>
+                <span style="font-size: 13px; font-weight: 800">{{p.result}}</span>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin: 8px 0 0; font-size: 13px; line-height: 1.45; color: #3F4A44"><strong style="color: #14231B">Did you know?</strong> {{q.fact}}</p>
+        </li>
+      </sc-for>
+    </ol>
+
+    <div style="margin-top: auto; padding-top: 12px; display: flex; align-items: center; justify-content: space-between">
+      <p style="margin: 0; font-size: 15px; font-weight: 800">Total: You 833, Chidi 830</p>
+      <a href="Category.dc.html" style="display: flex; align-items: center; justify-content: center; height: 52px; padding: 0 18px; border-radius: 12px; background: #008751; color: #FFFFFF; font-weight: 800; font-size: 16px; text-decoration: none">Pick round 3</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ok = 'display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-radius: 10px; background: #E6F7EC; color: #0B6B33';
+    const bad = 'display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-radius: 10px; background: #FDE8E8; color: #B3191C';
+    const items = [
+      {
+        n: 1,
+        text: 'Which actor played Andy Okeke in Living in Bondage (1992)?',
+        answer: 'Kenneth Okonkwo',
+        players: [{ who: 'You · 2.1s', result: '+186', box: ok }, { who: 'Chidi · 6.0s', result: '+160', box: ok }],
+        fact: 'Living in Bondage is widely seen as the film that launched the Nollywood home-video boom.'
+      },
+      {
+        n: 2,
+        text: 'Who directed The Wedding Party (2016)?',
+        answer: 'Kemi Adetiba',
+        players: [{ who: 'You · 4.0s', result: '+193', box: ok }, { who: 'Chidi', result: '0', box: bad }],
+        fact: 'Niyi Akinmolayan directed the 2017 sequel.'
+      },
+      {
+        n: 3,
+        text: 'As of 2025, which is the highest-grossing Nollywood film of all time?',
+        answer: 'Everybody Loves Jenifa',
+        players: [{ who: 'You', result: '0', box: bad }, { who: 'Chidi · 7.5s', result: '+150', box: ok }],
+        fact: 'Everybody Loves Jenifa (2024) grossed about ₦1.88 billion at the Nigerian box office.'
+      }
+    ];
+    return {
+      items: items.map((q) => Object.assign({}, q, { reportLabel: 'Report question ' + q.n }))
+    };
+  }
+}
+</script>
+</body>
+</html>
