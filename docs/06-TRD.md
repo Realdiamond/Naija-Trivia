@@ -64,7 +64,7 @@ This document turns the PRD into technical requirements: the platforms, the stac
 - **FR-CON-4:** Report intake, with auto-suspend thresholds from the content doc.
 - **FR-CON-5:** Nightly jobs: difficulty recalibration, expiry of `valid_until`, re-bucketing, and flagging outliers.
 - **FR-CON-6:** CMS bulk import from CSV (format = `content/seed-questions.csv`), with validation and dedup check.
-- **FR-CON-7:** When a live question is corrected, matches from the last 14 days that used it are re-scored (async job) and affected players are notified.
+- **FR-CON-7:** When a live question is corrected, matches from the last 14 days that used it are re-scored (async job) and affected players are notified. The owner's rule (28 Oct 2026): those who picked the new right answer get its points (base and speed, as answered), nobody loses any, and a duel's result changes only if the totals flip (a forfeit stays decided by time; ratings are left as they are). Daily scores, grids, boards and final ranks follow. Re-scoring needs the options unchanged: new options can't be matched to old picks.
 
 ### 4.3 Duel service (async)
 - **FR-DUEL-1:** A state machine (see §5.2) runs on the server. Every transition is idempotent and keyed by `(duel_id, round, player)`.

@@ -210,6 +210,22 @@ CREATE TABLE question_history (
 );
 CREATE INDEX question_history_question_idx ON question_history (question_id, id DESC);
 
+-- A played question whose answer was corrected (step 2.6b-2): its games from the last 14 days
+-- are re-scored once by the worker. Those who picked the new answer get its points; nobody
+-- loses any.
+CREATE TABLE question_corrections (
+  id              bigserial PRIMARY KEY,
+  question_id     text NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  version         int NOT NULL,
+  old_index       smallint NOT NULL,
+  new_index       smallint NOT NULL,
+  corrected_by    text NOT NULL,
+  created_at      timestamptz NOT NULL,
+  done_at         timestamptz,
+  result          jsonb                                -- what changed
+);
+CREATE INDEX question_corrections_waiting_idx ON question_corrections (id) WHERE done_at IS NULL;
+
 
 CREATE TABLE packs (
   id              text PRIMARY KEY,
@@ -356,6 +372,7 @@ CREATE TABLE daily_results (
   used_freeze     boolean NOT NULL DEFAULT false,
   rank            int,                                 -- final ranks, from the nightly snapshot
   state_rank      int,
+  answers         jsonb,                               -- [{qid, picked, ms, correct, points}] for re-scoring (0015)
   PRIMARY KEY (daily_id, user_id),
   CONSTRAINT daily_results_grid_check CHECK (grid ~ '^[GR]{7}$')
 );

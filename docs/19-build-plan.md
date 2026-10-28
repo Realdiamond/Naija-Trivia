@@ -283,8 +283,19 @@ GDD §6.3, content doc §4, TRD FR-CON-5.
 - ✅ The console: the new reasons and history entries, "Taken out automatically" in the queue, and the difficulty rating on the question page
 - ✅ Tests: the API (a right answer lowering the rating through the taste test, duel answers recording theirs, levels by quintile once a night and only from 200 plays, the three flags filed once with only the wrong key taken out, an editor keeping it)
 
-### Step 2.6b-2 · Re-scoring and trending expiry ⬜
-Re-scoring the last 14 days of games when a live question's answer is corrected, and telling the players (FR-CON-7): those who picked the new right answer get its points, nobody loses any, and a duel's result changes only if the totals flip. Each Daily answer is then kept with the result, since the round's answers only stay in Redis for two days. "Trending" questions expiring after 90 days unless renewed (GDD §6.2).
+### Step 2.6b-2 · Re-scoring corrected answers ✅
+TRD FR-CON-7, the owner's rule of 28 Oct 2026.
+
+- ✅ An editor giving a played question (live or suspended) a different right answer among the same options queues a correction in the same transaction, and its history says the games are being re-scored. New options, or a question nobody has played, queue nothing
+- ✅ The worker (`rescore`, every minute) takes each correction once, in one transaction, for the games of the last 14 days:
+  - **Duels:** each answer that picked the new right answer becomes right, with its points as answered (base and speed; no streak bonus, which would need the round replayed). Nobody loses any: answers right under the old key stay right. A finished duel's result changes only if the totals flip (a draw no longer level counts); a forfeit stays with the player who waited, and ratings are left as they are. Cancelled duels are left alone
+  - **Dailies:** each answer is now kept with the result (`daily_results.answers`), so the score, grid and correct count follow; final ranks and the week's standings are ranked again, and the boards in Redis set afresh
+  - **Players are told** in one push each (`content_correction`): the points gained, or a duel whose result changed (to both players)
+- ✅ The question's history ends with what changed ("4 answers now right, 3 duels (1 with a new result), 1 Daily result; 4 players told"), and the correction keeps it in `result`
+- ✅ Tests: the API (duels with a flipped result, one still being played, a forfeit, one older than 14 days and a cancelled one; a finished Daily with its ranks, week and board; the pushes and their words; done once; corrected back with nobody losing anything; new options queueing nothing), and Daily answers kept with the result
+
+### Step 2.6b-3 · Trending questions ⬜
+"Trending" questions expiring after 90 days unless renewed (GDD §6.2): a Trending switch in the console that sets the question to leave the game 90 days after it goes live, using the existing `valid_until` expiry, and a Renew button.
 
 | Step | Scope | Main docs |
 |---|---|---|
@@ -293,7 +304,7 @@ Re-scoring the last 14 days of games when a live question's answer is corrected,
 | 2.3 Random opponents ⬜ | Rating-bucket matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
 | 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
-| 2.6 Content tools: 2.6a ✅, 2.6b-1 ✅, 2.6b-2 ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
+| 2.6 Content tools: 2.6a ✅, 2.6b-1 ✅, 2.6b-2 ✅, 2.6b-3 ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
