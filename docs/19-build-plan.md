@@ -294,8 +294,13 @@ TRD FR-CON-7, the owner's rule of 28 Oct 2026.
 - ✅ The question's history ends with what changed ("4 answers now right, 3 duels (1 with a new result), 1 Daily result; 4 players told"), and the correction keeps it in `result`
 - ✅ Tests: the API (duels with a flipped result, one still being played, a forfeit, one older than 14 days and a cancelled one; a finished Daily with its ranks, week and board; the pushes and their words; done once; corrected back with nobody losing anything; new options queueing nothing), and Daily answers kept with the result
 
-### Step 2.6b-3 · Trending questions ⬜
-"Trending" questions expiring after 90 days unless renewed (GDD §6.2): a Trending switch in the console that sets the question to leave the game 90 days after it goes live, using the existing `valid_until` expiry, and a Renew button.
+### Step 2.6b-3 · Trending questions ✅
+GDD §6.2.
+
+- ✅ A **Trending** switch on the question form (`questions.trending`). A trending question leaves the game 90 days after it goes live (published or put back live), unless its own "valid until" date is sooner, through the existing `valid_until` and the nightly expiry. Marking a live question trending starts its 90 days then
+- ✅ **Renew for 90 days** on the question page for editors (`POST /admin/questions/{id}/renew`): another 90 days from today, for an approved, live or suspended trending question, in its history and the audit log. A retired one is reopened first, like any other
+- ✅ The question page shows "Trending · in the game until …"
+- ✅ Tests: the API (90 days from going live, a sooner date kept, non-trending ones untouched, renewing as an editor only and only trending ones, expiry after the last day, marking a live question trending) and the date rule in game-rules
 
 | Step | Scope | Main docs |
 |---|---|---|
@@ -304,7 +309,7 @@ TRD FR-CON-7, the owner's rule of 28 Oct 2026.
 | 2.3 Random opponents ⬜ | Rating-bucket matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
 | 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
-| 2.6 Content tools: 2.6a ✅, 2.6b-1 ✅, 2.6b-2 ✅, 2.6b-3 ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
+| 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |

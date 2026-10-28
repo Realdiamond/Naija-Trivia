@@ -25,6 +25,7 @@ const EMPTY: AdminQuestionInput = {
   region_tag: 'ALL',
   valid_until: null,
   source_url: null,
+  trending: false,
 };
 
 function Count({ value, limit }: { value: string; limit: number }) {
@@ -184,6 +185,10 @@ export function QuestionForm({ id, initial }: { id?: string; initial?: AdminQues
       <label className="check">
         <input type="checkbox" name="family_safe" defaultChecked={start.family_safe} /> Family-safe (13–17s
         can get it)
+      </label>
+      <label className="check">
+        <input type="checkbox" name="trending" defaultChecked={start.trending} data-testid="trending" />{' '}
+        Trending: it leaves the game 90 days after it goes live, unless an editor renews it
       </label>
 
       <div className="row">

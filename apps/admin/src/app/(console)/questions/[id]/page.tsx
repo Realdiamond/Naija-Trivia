@@ -9,6 +9,7 @@ import { AdminApiError, adminApi } from '../../../../lib/api';
 import { CATEGORY_NAME, historyLabel, percent, STATUS_LABEL, STATUS_TONE } from '../../../../lib/content';
 import { watDateTime } from '../../../../lib/format';
 import { QuestionActions } from '../QuestionActions';
+import { RenewTrending } from '../RenewTrending';
 import { QuestionForm } from '../QuestionForm';
 
 export default async function QuestionPage({
@@ -40,6 +41,11 @@ export default async function QuestionPage({
         <span className={`badge ${STATUS_TONE[q.status]}`} data-testid="question-status">
           {STATUS_LABEL[q.status]}
         </span>
+        {q.trending ? (
+          <span className="badge warn" data-testid="trending-badge">
+            Trending{q.valid_until ? ` · in the game until ${q.valid_until}` : ' · 90 days once live'}
+          </span>
+        ) : null}
         <span className="muted small mono">
           {q.id} · version {q.version}
         </span>
@@ -133,6 +139,13 @@ export default async function QuestionPage({
               {q.reviewed_by ? ` · checked by ${q.reviewed_by}` : ''}
             </p>
             <QuestionActions id={q.id} actions={q.allowed_actions} />
+            {/* Editors (who may retire it) renew a trending question that is not retired. */}
+            {q.trending &&
+            q.allowed_actions.includes('retire') &&
+            q.status !== 'draft' &&
+            q.status !== 'in_review' ? (
+              <RenewTrending id={q.id} />
+            ) : null}
           </div>
 
           <div className="card stack" data-testid="checks">

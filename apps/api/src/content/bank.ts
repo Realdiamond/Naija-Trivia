@@ -4,8 +4,12 @@
  * the audit log; an edit keeps the content as it was before.
  */
 import {
+  addDays,
   checkQuestion,
   initialItemRating,
+  TRENDING_DAYS,
+  trendingValidUntil,
+  watDate,
   type DifficultyLevel,
   type QuestionDraft,
 } from '@whosabi/game-rules';
@@ -53,6 +57,7 @@ export interface QuestionRow {
   region_tag: AdminQuestionInput['region_tag'];
   valid_until: string | null;
   source_url: string | null;
+  trending: boolean;
   status: QuestionStatus;
   author_id: string | null;
   reviewed_by: string | null;
@@ -63,7 +68,7 @@ export interface QuestionRow {
 
 const COLUMNS = `id, external_ref, category_id, subcategory, type, text, options, correct_index, numeric_answer,
   fact, difficulty, d_rating, family_safe, region_tag, to_char(valid_until, 'YYYY-MM-DD') AS valid_until,
-  source_url, status, author_id, reviewed_by, version, created_at, updated_at`;
+  source_url, trending, status, author_id, reviewed_by, version, created_at, updated_at`;
 
 /** The parts of a question an edit can change, as the editor sends them. */
 export function inputOf(row: QuestionRow): AdminQuestionInput {
@@ -81,6 +86,7 @@ export function inputOf(row: QuestionRow): AdminQuestionInput {
     region_tag: row.region_tag,
     valid_until: row.valid_until,
     source_url: row.source_url,
+    trending: row.trending,
   };
 }
 
@@ -336,8 +342,8 @@ export class QuestionBank {
       await client.query(
         `INSERT INTO questions (id, category_id, subcategory, type, text, options, correct_index, numeric_answer,
            fact, difficulty, d_rating, family_safe, region_tag, valid_until, source_url, status, author_id,
-           created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'draft', $16, $17, $17)`,
+           created_at, updated_at, trending)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'draft', $16, $17, $17, $18)`,
         [
           id,
           input.category_id,
@@ -356,6 +362,7 @@ export class QuestionBank {
           input.source_url,
           actor.id,
           new Date(now),
+          input.trending,
         ],
       );
       await addHistory(client, { questionId: id, action: 'created', actor: actor.id, version: 1, at: now });
@@ -409,7 +416,7 @@ export class QuestionBank {
         `UPDATE questions SET category_id = $2, subcategory = $3, type = $4, text = $5, options = $6::jsonb,
                 correct_index = $7, numeric_answer = $8, fact = $9, difficulty = $10, d_rating = $11,
                 family_safe = $12, region_tag = $13, valid_until = $14, source_url = $15, version = $16,
-                updated_at = $17
+                updated_at = $17, trending = $18
           WHERE id = $1`,
         [
           id,
@@ -425,10 +432,14 @@ export class QuestionBank {
           unplayed ? initialItemRating(input.difficulty as DifficultyLevel) : row.d_rating,
           input.family_safe,
           input.region_tag,
-          input.valid_until,
+          // A live question marked trending gets its 90 days from now (step 2.6b-3).
+          input.trending && row.status === 'live'
+            ? trendingValidUntil(input.valid_until, watDate(now))
+            : input.valid_until,
           input.source_url,
           version,
           new Date(now),
+          input.trending,
         ],
       );
       if (corrected) {
@@ -563,7 +574,58 @@ export class QuestionBank {
       to,
       new Date(now),
     ]);
+    // A trending question goes live for 90 days at most (GDD §6.2).
+    if (to === 'live' && row.trending) {
+      await client.query('UPDATE questions SET valid_until = $2 WHERE id = $1', [
+        row.id,
+        trendingValidUntil(row.valid_until, watDate(now)),
+      ]);
+    }
     await addHistory(client, { questionId: row.id, action, actor, note, version: row.version, at: now });
+  }
+
+  /** Another 90 days in the game for a trending question, from today (step 2.6b-3). */
+  async renew(id: string, actor: Actor, ip: string | null): Promise<void> {
+    if (!actor.permissions.includes('content.publish'))
+      throw notAllowed("Your roles don't include content.publish.");
+    const now = this.deps.now();
+    await withTransaction(this.deps.pool, async (client) => {
+      const row = await loadQuestionRow(client, id, true);
+      if (!row || !canSee(actor, row)) throw notFound('There is no question with this id.');
+      if (!row.trending || !['approved', 'live', 'suspended'].includes(row.status)) {
+        throw new ApiError(
+          409,
+          ErrorCode.conflict,
+          'Not possible now',
+          row.trending
+            ? `This question is ${row.status.replace('_', ' ')}: reopen it first.`
+            : 'Only trending questions are renewed. Mark it trending first.',
+        );
+      }
+      const until = addDays(watDate(now), TRENDING_DAYS);
+      await client.query('UPDATE questions SET valid_until = $2, updated_at = $3 WHERE id = $1', [
+        id,
+        until,
+        new Date(now),
+      ]);
+      await addHistory(client, {
+        questionId: id,
+        action: 'renewed',
+        actor: actor.id,
+        note: `In the game until ${until}.`,
+        version: row.version,
+        at: now,
+      });
+      await writeAudit(client, {
+        actor: actor.id,
+        action: 'question_renew',
+        entity: 'question',
+        entityId: id,
+        before: { valid_until: row.valid_until },
+        after: { valid_until: until },
+        ip,
+      });
+    });
   }
 }
 

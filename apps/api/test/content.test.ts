@@ -70,6 +70,7 @@ function question(over: Partial<AdminQuestionInput> = {}): AdminQuestionInput {
     region_tag: 'ALL',
     valid_until: null,
     source_url: 'https://example.com/source',
+    trending: false,
     ...over,
   };
 }

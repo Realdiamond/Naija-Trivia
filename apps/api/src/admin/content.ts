@@ -63,6 +63,14 @@ export function adminContentRoutes(app: FastifyInstance, deps: AppDeps, ctx: Adm
     return bank.detail(id, admin);
   });
 
+  // A trending question's next 90 days (step 2.6b-3).
+  app.post('/admin/questions/:id/renew', async (request): Promise<AdminQuestion> => {
+    const admin = await requireAdmin(request, ctx, 'content.publish');
+    const { id } = parse(QuestionParams, request.params);
+    await bank.renew(id, admin, request.ip);
+    return bank.detail(id, admin);
+  });
+
   app.post('/admin/questions/publish', async (request): Promise<AdminBulkPublishResponse> => {
     const admin = await requireAdmin(request, ctx, 'content.publish');
     return bank.publishMany(parse(AdminBulkPublishRequest, request.body).ids, admin, request.ip);
