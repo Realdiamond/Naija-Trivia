@@ -9,9 +9,18 @@ import { colors, fonts, radius } from '../../ui/theme';
 
 const ITEMS: Array<{ path: string; label: MessageKey; icon: IconName; accountOnly?: boolean }> = [
   { path: '/home', label: 'nav.home', icon: 'home' },
+  { path: '/daily/play', label: 'nav.daily', icon: 'calendar' },
   { path: '/challenge', label: 'nav.play', icon: 'play' },
+  { path: '/leaderboards', label: 'nav.leaderboards', icon: 'trophy' },
   { path: '/friends', label: 'nav.friends', icon: 'users', accountOnly: true },
 ];
+
+/** Which item a page belongs to: duels under "Start a duel", any Daily page under the Daily. */
+function isActive(itemPath: string, pathname: string): boolean {
+  if (itemPath === '/challenge') return pathname === itemPath || pathname.startsWith('/duel');
+  if (itemPath === '/daily/play') return pathname.startsWith('/daily');
+  return pathname === itemPath;
+}
 
 export function SideNav() {
   const t = useT();
@@ -21,7 +30,7 @@ export function SideNav() {
     <View style={styles.nav} accessibilityRole="menu">
       <Text style={styles.brand}>Who Sabi?</Text>
       {ITEMS.filter((item) => !item.accountOnly || status === 'account').map((item) => {
-        const active = pathname === item.path || (item.path === '/challenge' && pathname.startsWith('/duel'));
+        const active = isActive(item.path, pathname);
         return (
           <Pressable
             key={item.path}
@@ -29,7 +38,7 @@ export function SideNav() {
             accessibilityState={{ selected: active }}
             onPress={() => router.navigate(item.path)}
             style={({ pressed }) => [styles.item, active && styles.active, pressed && styles.pressed]}
-            testID={`nav-${item.path.slice(1)}`}
+            testID={`nav-${item.path.slice(1).replace('/', '-')}`}
           >
             <Icon name={item.icon} color={active ? colors.primaryInk : colors.ink} />
             <Text variant="label" color={active ? colors.primaryInk : colors.ink} style={styles.label}>

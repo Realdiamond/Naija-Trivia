@@ -40,10 +40,14 @@ export interface StoredAnswer {
 }
 
 export class RoundStore {
-  constructor(private readonly redis: Redis) {}
+  /** `ttlSeconds`: an hour for the taste test; a Daily keeps its answers for two days. */
+  constructor(
+    private readonly redis: Redis,
+    private readonly ttlSeconds = ROUND_TTL_SECONDS,
+  ) {}
 
   async create(round: RoundDef): Promise<void> {
-    await this.redis.set(`round:${round.id}`, JSON.stringify(round), 'EX', ROUND_TTL_SECONDS);
+    await this.redis.set(`round:${round.id}`, JSON.stringify(round), 'EX', this.ttlSeconds);
   }
 
   async get(roundId: string): Promise<RoundDef | null> {
@@ -54,7 +58,7 @@ export class RoundStore {
   /** Record the first serve; later serves return the original time. */
   async markServed(roundId: string, qid: string, userId: string, atMs: number) {
     const key = `served:${roundId}:${qid}:${userId}`;
-    const set = await this.redis.set(key, String(atMs), 'EX', ROUND_TTL_SECONDS, 'NX');
+    const set = await this.redis.set(key, String(atMs), 'EX', this.ttlSeconds, 'NX');
     if (set === 'OK') return { servedAtMs: atMs, first: true };
     return { servedAtMs: Number(await this.redis.get(key)), first: false };
   }
@@ -67,7 +71,7 @@ export class RoundStore {
   /** Keep the first answer; a second attempt gets the stored one back. */
   async saveAnswer(roundId: string, answer: StoredAnswer) {
     const key = `answer:${roundId}:${answer.seq}`;
-    const set = await this.redis.set(key, JSON.stringify(answer), 'EX', ROUND_TTL_SECONDS, 'NX');
+    const set = await this.redis.set(key, JSON.stringify(answer), 'EX', this.ttlSeconds, 'NX');
     if (set === 'OK') return { answer, first: true };
     return { answer: JSON.parse((await this.redis.get(key))!) as StoredAnswer, first: false };
   }

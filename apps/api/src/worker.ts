@@ -1,6 +1,7 @@
 /**
- * The worker (build plan step 1.3): a second process beside the API that ends overdue duels,
- * sends turn reminders, moves question stats into Postgres and loads analytics events.
+ * The worker (build plan steps 1.3 and 2.1): a second process beside the API that ends overdue
+ * duels, sends turn reminders, picks the Daily, saves final leaderboard ranks, moves question
+ * stats into Postgres and loads analytics events.
  *
  * Every job is safe with several workers running (locked rows, claimed reminder rows, a Redis
  * lock, a stream consumer group), so the worker scales by running more copies and needs no job
@@ -10,6 +11,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { pino } from 'pino';
 import { systemClock } from './clock';
 import { loadConfig } from './config';
+import { DailyService } from './daily/service';
 import { createPool } from './db';
 import { DuelService } from './duels/service';
 import { ServerEvents } from './events';
@@ -33,6 +35,7 @@ const streamRedis = createRedis(config, { maxRetriesPerRequest: null });
 const events = new ServerEvents(redis, config.analyticsKey, systemClock, log);
 const deps = { config, pool, redis, clock: systemClock, events, log };
 const duels = new DuelService(deps);
+const daily = new DailyService(deps);
 const notifier = new LogNotifier(log);
 const loader = new AnalyticsLoader({ ...deps, redis: streamRedis });
 
@@ -70,6 +73,8 @@ async function loadEvents(): Promise<void> {
 const jobs = [
   every('expire-duels', 30 * SECOND, () => expireDueDuels(duels)),
   every('turn-reminders', MINUTE, () => sendTurnReminders(deps, notifier)),
+  every('daily-schedule', 5 * MINUTE, () => daily.schedule()),
+  every('leaderboard-snapshot', 10 * MINUTE, () => daily.snapshot()),
   every('question-stats', MINUTE, () => flushQuestionStats(deps)),
   every('analytics-upkeep', 60 * MINUTE, () => loader.maintain(config.analyticsRetentionDays)),
   loadEvents(),

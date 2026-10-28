@@ -31,6 +31,11 @@ export function isoWeek(date: string): string {
   return `${year}-W${String(week).padStart(2, '0')}`;
 }
 
+/** The Monday that starts `date`'s ISO week. */
+export function isoWeekStart(date: string): string {
+  return addDays(date, -((new Date(parseDate(date)).getUTCDay() + 6) % 7));
+}
+
 /** Daily Sabi Challenge number: #1 on the first Daily. */
 export function dailyNumber(date: string, firstDailyDate: string): number {
   return daysBetween(firstDailyDate, date) + 1;

@@ -312,7 +312,9 @@ CREATE TABLE daily_challenges (
   id              int PRIMARY KEY,                     -- sequential number (#142)
   play_date       date UNIQUE NOT NULL,                -- WAT date
   question_ids    text[] NOT NULL CHECK (array_length(question_ids,1) = 7),
-  locked          boolean NOT NULL DEFAULT false
+  locked          boolean NOT NULL DEFAULT false,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  snapshot_at     timestamptz                          -- final ranks saved (nightly snapshot)
 );
 
 CREATE TABLE daily_results (
@@ -324,7 +326,27 @@ CREATE TABLE daily_results (
   grid            text NOT NULL,                       -- e.g. 'GGGRGGG'
   home_state      char(2),
   completed_at    timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (daily_id, user_id)
+  xp              int NOT NULL DEFAULT 0,
+  streak          int NOT NULL DEFAULT 0,              -- the streak after this Daily
+  used_freeze     boolean NOT NULL DEFAULT false,
+  rank            int,                                 -- final ranks, from the nightly snapshot
+  state_rank      int,
+  PRIMARY KEY (daily_id, user_id),
+  CONSTRAINT daily_results_grid_check CHECK (grid ~ '^[GR]{7}$')
+);
+CREATE INDEX daily_results_board_idx ON daily_results (daily_id, score DESC, total_ms);
+CREATE INDEX daily_results_user_idx ON daily_results (user_id, daily_id DESC);
+
+-- The week's board at its end: Daily points from Monday to Sunday WAT.
+CREATE TABLE weekly_standings (
+  iso_week        text NOT NULL,                       -- e.g. '2026-W45'
+  user_id         text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  score           int NOT NULL,
+  dailies         smallint NOT NULL,
+  home_state      char(2),
+  rank            int NOT NULL,
+  state_rank      int,
+  PRIMARY KEY (iso_week, user_id)
 );
 
 CREATE TABLE streaks (

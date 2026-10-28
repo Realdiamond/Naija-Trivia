@@ -94,7 +94,7 @@ heroku run --app whosabi-staging \
   "cd apps/api && SEED_LIVE_ALLOWED=yes node dist/scripts/seed.js --live"
 ```
 
-Never set `SEED_LIVE_ALLOWED` on the real production app. Then make yourself the first owner of the admin console, with the Google account you will sign in with:
+The Daily needs at least 7 live questions, so it appears once this has run. Never set `SEED_LIVE_ALLOWED` on the real production app. Then make yourself the first owner of the admin console, with the Google account you will sign in with:
 
 ```sh
 heroku run --app whosabi-staging \
@@ -129,6 +129,7 @@ Open its address and sign in with Google. Add more staff on **Staff and roles**.
 
 - **Two players, one duel (the M1 goal):** open the game's address on a computer, tap **Start playing**, then **Challenge a friend → Send a duel link**, play round 1 and send the link on WhatsApp to a phone. Open it on the phone, accept, and take turns until the result.
 - **The Android app:** on your computer, `cd apps/app`, put `EXPO_PUBLIC_API_URL=https://whosabi-staging-1234.herokuapp.com` in `.env`, run `pnpm dev`, and scan the QR code with Expo Go on an Android phone.
+- **The Daily:** the orange card on Home opens today's 7 questions. Play them, share the grid on WhatsApp, and open **Leaderboards** (the trophy). A new Daily starts at midnight, Nigerian time; the worker picks it at 23:00.
 - **The admin console:** search the player's username or user ID; their timeline shows the game within a minute or two.
 
 ## When something goes wrong
@@ -141,7 +142,7 @@ Open its address and sign in with Google. Add more staff on **Staff and roles**.
 | Signed out on every reload | `PUBLIC_WEB_URL` and `CORS_ORIGINS` must be exactly the address in the browser, with `https://` and no slash at the end |
 | No questions | Run the seed command in step 4 |
 | The admin console says "No access" | That Google account is not on the staff list: run `admin-add.js` from step 4 for it |
-| The slug is too big (over 500 MB) | The repository holds the phone app's toolchain too. Tell the developers: the fix is a slimmer install for each app |
+| The slug is too big (over 500 MB) | Not expected: a rehearsal of the Heroku build measured about 290 MB for the game app and 320 MB for the admin app. If it happens, tell the developers: the fix is a slimmer install for each app |
 
 ## Later
 

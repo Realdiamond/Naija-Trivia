@@ -2,6 +2,7 @@ export * from './admin';
 export * from './auth';
 export * from './common';
 export * from './content';
+export * from './daily';
 export * from './duels';
 export * from './phone';
 export * from './profile';

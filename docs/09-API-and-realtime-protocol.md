@@ -119,13 +119,14 @@ POST /v1/duels/d_01J9/rounds/2/questions/1/answer
   "next": {"action": "play", "round": 2, "seq": 2} }
 ```
 
-### 2.6 Daily
+### 2.6 Daily and leaderboards
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/daily/today` | `{id, date, played: bool, streak}` |
-| POST | `/daily/{id}/questions/{seq}/serve` · `/answer` | Same contract as duels |
-| GET | `/daily/{id}/result` | `{score, grid, percentile, state_rank, share_text}` |
-| GET | `/daily/{id}/leaderboard?scope=global|state|friends` | Top 100 + self |
+| GET | `/daily/today` | `{id, date, total, categories, played, answered, streak: {current, best, freezes_left}, closes_at}`. `id` is the Daily's number (#142); `answered` lets the app pick up where the player stopped. Picks today's Daily if the worker has not yet; `503 NO_QUESTIONS_AVAILABLE` with fewer than 7 live family-safe questions |
+| POST | `/daily/{id}/questions/{seq}/serve` · `/answer` | Same contract as the taste test and duels; the answer adds `finished` after the 7th. Today's Daily only (`DAILY_CLOSED` for an earlier one) and once (`DAILY_ALREADY_PLAYED`); an answer to a question shown before midnight still counts just after it |
+| GET | `/daily/{id}/result` | `{correct_count, score, total_ms, grid, categories, percentile, players, state: {code, rank, players}, leading_state, streak: {…, used_freeze}, xp, share_text, share_url, review[]}`. `percentile` is the share of the day's other players you beat (null while you are the only one); `review` has each question, its answer and fact. `DAILY_NOT_FINISHED` before the 7th answer |
+| GET | `/daily/{id}/leaderboard?scope=global|state|friends` | Top 100 + `me`: `{board, period, scope, state, players, resets_at, entries[], me}`. Each entry: `{rank, kind: player|guest|restricted, username, avatar_id, home_state, level, tier, score, you}`. Guests and 13–17s show no name or avatar on public boards (doc 10 §3.3); friends see each other's names |
+| GET | `/leaderboards/week?scope=global|state|friends` | The same for this week's Daily points, Monday to Sunday WAT |
 
 ### 2.7 Party (REST side)
 | Method | Path | Notes |

@@ -190,6 +190,29 @@ export async function mergeGuestInto(
   );
   await client.query('DELETE FROM user_question_seen WHERE user_id = $1', [g]);
 
+  // Dailies the account has not played move over; the streak played most recently wins.
+  await client.query(
+    `UPDATE daily_results SET user_id = $2
+      WHERE user_id = $1 AND daily_id NOT IN (SELECT daily_id FROM daily_results WHERE user_id = $2)`,
+    [g, x],
+  );
+  await client.query('DELETE FROM daily_results WHERE user_id = $1', [g]);
+  await client.query(
+    `INSERT INTO streaks (user_id, current, best, last_play_date, freezes_left, freeze_week)
+     SELECT $2, current, best, last_play_date, freezes_left, freeze_week FROM streaks WHERE user_id = $1
+     ON CONFLICT (user_id) DO UPDATE SET
+       current = CASE WHEN EXCLUDED.last_play_date > streaks.last_play_date
+                        OR streaks.last_play_date IS NULL THEN EXCLUDED.current ELSE streaks.current END,
+       freezes_left = CASE WHEN EXCLUDED.last_play_date > streaks.last_play_date
+                        OR streaks.last_play_date IS NULL THEN EXCLUDED.freezes_left ELSE streaks.freezes_left END,
+       freeze_week = CASE WHEN EXCLUDED.last_play_date > streaks.last_play_date
+                        OR streaks.last_play_date IS NULL THEN EXCLUDED.freeze_week ELSE streaks.freeze_week END,
+       last_play_date = GREATEST(streaks.last_play_date, EXCLUDED.last_play_date),
+       best = GREATEST(streaks.best, EXCLUDED.best)`,
+    [g, x],
+  );
+  await client.query('DELETE FROM streaks WHERE user_id = $1', [g]);
+
   await client.query('UPDATE consent_records SET user_id = $2 WHERE user_id = $1', [g, x]);
   await client.query('UPDATE devices SET user_id = $2 WHERE user_id = $1', [g, x]);
   // The guest's device now belongs to the account: guest sign-in there is refused from now on.

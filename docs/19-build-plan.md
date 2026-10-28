@@ -1,6 +1,6 @@
 # 19 · Build Plan & Progress
 
-**Version:** 1.4 · **Date:** 28 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
+**Version:** 1.5 · **Date:** 28 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
 **Related:** [15 Roadmap](15-roadmap-and-delivery-plan.md) (milestones, sprints, Definition of Done) · [02 PRD](02-PRD.md) (stories and release criteria) · [06 TRD](06-TRD.md) · [09 API](09-API-and-realtime-protocol.md) · [14 Testing](14-testing-and-QA-plan.md) · [18 Admin & Analytics](18-admin-console-and-analytics.md)
 
 ---
@@ -176,9 +176,25 @@ To do by the team (§6): create the two apps and deploy them by following the [g
 ## 4. Milestone M2: "Feature complete" (doc 15, week 12)
 **Done when:** every P0 story works on Android, iOS and web; the admin console's MVP modules are live (doc 18 §4); 2,000+ approved questions.
 
+Order: 2.1 first, then **2.6 content tools**, moved up because approved questions are the critical path (§6) and the team needs a way to review and publish them, then the rest.
+
+### Step 2.1 · Daily & leaderboards ✅
+PRD US-8, GDD §2.3, TRD §4.5, §5.5, API §2.6.
+
+- ✅ The Daily Sabi Challenge: the same 7 questions for everyone from 00:00 to 23:59 WAT, numbered from #1 by calendar day. One question from each active category, more from the categories again until six, easiest first, then the hardest as the "boss" #7. Live, family-safe questions only (13–17s play the same Daily), none used in a Daily in the last year while the pool has fresh ones (with a warning in the log when it has to reuse)
+- ✅ Played through the same serve → answer flow as the taste test (now shared code, `rounds/solo.ts`), once a day, picking up where the player stopped. An answer to a question shown just before midnight still counts
+- ✅ The 7th answer records the result, the streak and XP in one transaction, once however often it is retried. Streaks in WAT, with one free freeze a week covering one missed day (FR-DAILY-4). XP per GDD §5.1 (6 of 7 earns 112). Coins come with the economy (2.4), and so does XP for duels
+- ✅ The result: score and time, the streak and its freeze, the grid by category, "you sabi pass N% of Naija today", your rank in your state and the state leading the day (at least 3 players), XP, and the share text with squares only (`Who Sabi? #142 6/7 ⏱ 58s 🟩🟩🟩🟥🟩🟩🟩 🔥12 whosabi.ng/daily/142`), plus every question with its answer and fact
+- ✅ Leaderboards for today's Daily and for the week (Monday to Sunday WAT): All Naija and your state from Redis sorted sets, friends from Postgres; top 100 plus your own line. Guests and 13–17s appear without a name or avatar on public boards ("Player from Lagos", doc 10 §3.3). A board missing from Redis is rebuilt from `daily_results`
+- ✅ Worker jobs: today's Daily, and from 23:00 WAT tomorrow's, picked and locked (FR-DAILY-1); the nightly snapshot of final ranks (`daily_results.rank`, `state_rank`) and each week's standings (`weekly_standings`), each written once however many workers run
+- ✅ A guest who signs in to an existing account brings their Dailies and streak along (FR-AUTH-4)
+- ✅ The app: the Daily card on Home (mockup 08), the question screen, the result (mockup 16) with WhatsApp, X and copy, and the leaderboards (mockup 22: friends, my state, All Naija; this week or today). `whosabi.ng/daily/{n}` shows a player their result and sends anyone else, signed in or not, into today's Daily. Daily and Leaderboards join the side navigation on computers
+- ✅ Admin: the Daily events read in plain words on a player's timeline
+- ✅ Tests: the rules (picking, streaks and freezes, grid and share text, XP, board order); the API against real Postgres and Redis (one Daily for everyone, once only, result and XP, percentile, state ranks and the leading state, boards and hidden names, friends, rebuilding a lost board, streak days with the freeze, the week's total, a merged guest, both worker jobs, too few questions); end to end, a guest plays the Daily from Home, shares the grid, finds themselves on the boards, and a friend opening the link lands in today's Daily
+
 | Step | Scope | Main docs |
 |---|---|---|
-| 2.1 Daily & leaderboards ⬜ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
+| 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
 | 2.2 Party rooms ⬜ | `apps/realtime` (Colyseus), party REST side, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
 | 2.3 Random opponents ⬜ | Rating-bucket matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
 | 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
@@ -203,5 +219,5 @@ These are for the team, not pull requests, and some steps wait on them.
 | Staff Google accounts for the admin console | 1.5 | Google Workspace, or an allow-list of personal Google accounts. Also a Google OAuth web client for the console (`ADMIN_GOOGLE_CLIENT_IDS` on the API, `ADMIN_GOOGLE_CLIENT_ID` on the console) |
 | Termii sender ID (and Africa's Talking), Turnstile keys | Only when phone sign-in is switched on | Not needed for launch. Registration and NCC approval take weeks. Then set `TERMII_API_KEY`, `TERMII_SENDER_ID` (and `AT_USERNAME`, `AT_API_KEY`), `OTP_SECRET`, `TURNSTILE_SECRET` and the app's `SMS_RETRIEVER_APP_HASH` |
 | Firebase project (FCM, web push) | 2.5 | |
-| Google Play developer account ✅, AdMob, RevenueCat | 2.4, M4 | The Play account exists. A personal (not organisation) account created after November 2023 must run a closed test with at least 12 testers for 14 days before publishing. AdMob approval takes 2–4 weeks |
+| Google Play developer account ✅, AdMob, RevenueCat | 2.4, M4 | The Play account exists and is an **organisation** account, so the rule that makes new personal accounts run a closed test with 12 testers for 14 days before publishing does not apply. AdMob approval takes 2–4 weeks: start it now |
 | Legal review (NDPA, prizes, ARCON), DPO, DPIA | Before beta | Doc 10 |

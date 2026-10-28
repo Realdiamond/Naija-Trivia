@@ -69,7 +69,7 @@ erDiagram
 | `user_question_seen` | The fallback for no-repeat. The primary store is a Redis bloom filter per user (`seen:{user}`, about 1% false positives, 30-day rolling via two rotating filters). Partition monthly by `seen_at` and drop partitions older than 60 days |
 | `duels` / `duel_rounds` / `duel_answers` | A `duel_answers` row is written when a question is served (`served_at`) and completed when it is answered, so the first serve starts the timer and the first answer counts. Answers keep every raw timing field for anti-cheat, plus the `platform` and, on the web, `tab_hidden_ms`. The PK `(duel, round, seq, user)` makes answer submission idempotent. Round 4 is the tie-break (`guess`). `rematch_of` is unique, so a finished duel has at most one rematch |
 | `party_games` / `party_results` | Only results are persisted, not per-answer rows (high volume, low value). Per-answer data goes to analytics events |
-| `daily_*` | `daily_results` PK prevents replays. `grid` stores the emoji pattern for re-sharing |
+| `daily_*` | `daily_challenges.id` is the Daily's number (#142), counted in calendar days from the first. `daily_results` PK prevents replays; `grid` stores the pattern (`GGGRGGG`) for re-sharing, with the XP and the streak after that Daily; the nightly snapshot fills its final `rank` and `state_rank`. `weekly_standings` keeps each week's board (Daily points, Monday to Sunday WAT) once the week ends |
 | Ledger | Double entry: every `ledger_transaction` has at least two `ledger_entries` that sum to 0 per currency. User accounts can't go negative (CHECK). A nightly job recomputes balances from entries and alerts on any drift |
 | `ad_rewards` | The PK `reward_ref` is the AdMob SSV `transaction_id` or, for web ads (v1.1), the server-issued ad session id, so duplicate callbacks are ignored |
 | `purchases` / `entitlements` | `store` is `play`, `app_store` or `paystack` (web, v1.1). Entitlements from every source land in one table, so a pass bought anywhere works everywhere |
@@ -94,15 +94,17 @@ erDiagram
 | `rl:{scope}:{id}` | string/counter | window | Rate limiting (token bucket) |
 | `served:{match}:{qid}:{user}` | string (ms timestamp) | 1 h | Timing anchor for solo rounds (SET NX: serving again never resets the timer). Duels keep it in `duel_answers.served_at`, because a turn can last 48 h |
 | `idem:{user}:{operation}:{key}` | string (JSON) | 24 h | `Idempotency-Key` results for mutations without a natural key (e.g. creating a duel), replayed to retries |
-| `round:{id}` | string (JSON) | 1 h | Solo round definition (taste test; practice and Daily next) |
-| `answer:{round}:{seq}` | string (JSON) | 1 h | Scored answer; SET NX makes retries and double taps idempotent |
+| `round:{id}` | string (JSON) | 1 h | Solo round definition (taste test; practice next) |
+| `answer:{round}:{seq}` | string (JSON) | 1 h, 48 h for the Daily | Scored answer; SET NX makes retries and double taps idempotent. A Daily's round is `daily:{n}:{user}`, so it lasts the whole day |
 | `rtt:{user}:{session}` | list (last 5) | 1 h | Round-trip samples; answer timing uses the median, capped at 1.5 s |
 | `ping:{id}` | string (JSON) | 30 s | A ping waiting for its answer; each counts once |
 | `disc:{user}:{date}` | counter | 26 h | Contact-discovery prefixes asked today (max 3,000) |
 | `seen:{user}:{a|b}` | Bloom filter (RedisBloom) | 30 d rotating | No-repeat questions |
 | `mm:{bucket}` | sorted set (enqueue time) | – | Random matchmaking queue |
-| `lb:daily:{yyyymmdd}` | sorted set | 8 d | Daily percentile/leaderboard |
+| `lb:daily:{yyyymmdd}` | sorted set | 8 d | Daily percentile/leaderboard: points × 10⁶ plus the time left from 10⁶ ms, so faster breaks ties. Rebuilt from `daily_results` when missing (`…:built` marks a rebuilt board) |
 | `lb:daily:{yyyymmdd}:state:{st}` | sorted set | 8 d | State board |
+| `lb:daily:{yyyymmdd}:leader:{players}` | string | 60 s | The leading state, worked out again whenever the player count changes |
+| `lb:week:{isoweek}` · `…:state:{st}` | sorted set | 15 d | The week's board: Daily points from Monday to Sunday WAT |
 | `lb:league:{id}:{isoweek}` | sorted set | 21 d | League week |
 | `qstat:{qid}` | hash | flushed every minute | Hot counters; the worker renames each to `qstatf:{qid}` while it writes it to `question_stats` |
 | `lock:qstat-flush` | string | 2 min | One worker flushes question stats at a time |

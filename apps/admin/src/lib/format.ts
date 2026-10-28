@@ -83,6 +83,12 @@ export function describeEvent(e: Pick<AdminTimelineEvent, 'event' | 'props' | 'p
       const delta = num(p.rating_delta);
       return `Duel over: ${str(p.result)} ${num(p.score_self)}–${num(p.score_opp)} · rating ${delta >= 0 ? '+' : ''}${Math.round(delta)}`;
     }
+    case 'daily_started':
+      return `Started Daily #${num(p.daily_id)}`;
+    case 'daily_completed':
+      return `Finished Daily #${num(p.daily_id)} · ${num(p.score)} points · ${num(p.streak)}-day streak`;
+    case 'daily_shared':
+      return `Shared their Daily result (${str(p.channel)})`;
     case 'friend_added':
       return `Added a friend (${str(p.source)})`;
     case 'invite_shared':
