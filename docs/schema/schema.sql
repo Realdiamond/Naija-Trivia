@@ -334,22 +334,27 @@ CREATE TABLE party_games (
   id              text PRIMARY KEY,
   room_code       char(5) NOT NULL,
   host_user_id    text REFERENCES users(id),
-  settings        jsonb NOT NULL,                      -- {questions, timer_s, packs[], family_safe}
+  settings        jsonb NOT NULL,                      -- {questions, timer_s, categories[], family_safe, wahala, host_plays}
   player_count    int NOT NULL,
   started_at      timestamptz NOT NULL,
-  ended_at        timestamptz
+  ended_at        timestamptz,
+  questions       int NOT NULL,                        -- migration 0019
+  mvp             jsonb                                -- {id, name, correct, total, fastest_ms}
 );
 CREATE INDEX ON party_games (room_code, started_at DESC);
 
 CREATE TABLE party_results (
   game_id         text NOT NULL REFERENCES party_games(id) ON DELETE CASCADE,
-  player_ref      text NOT NULL,                       -- user id or 'guest:<nick>#<n>'
+  player_ref      text NOT NULL,                       -- 'u:<user id>' or 'g:<random>' for a web guest
   user_id         text REFERENCES users(id),
   rank            int NOT NULL,
   score           int NOT NULL,
   correct_count   int NOT NULL,
+  name            text NOT NULL,                       -- the name in the room (migration 0019)
+  kind            text NOT NULL CHECK (kind IN ('app','web','web_guest')),
   PRIMARY KEY (game_id, player_ref)
 );
+CREATE INDEX party_results_user_idx ON party_results (user_id) WHERE user_id IS NOT NULL;
 
 -- ===================== DAILY =====================
 CREATE TABLE daily_challenges (

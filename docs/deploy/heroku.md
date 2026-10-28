@@ -8,10 +8,12 @@ Two Heroku apps built from this one repository:
 
 | Heroku app | What it runs | Address (example) |
 |---|---|---|
-| **Game** (`WHOSABI_APP=game`) | `web`: the API, which also serves the web app and takes the analytics events; `worker`: duel expiry, turn reminders, question stats, analytics loading. Migrations run on every release | `https://whosabi-staging-1234.herokuapp.com` |
+| **Game** (`WHOSABI_APP=game`) | `web`: the API, which also serves the web app, takes the analytics events and runs the party rooms; `worker`: duel expiry, turn reminders, question stats, analytics loading. Migrations run on every release | `https://whosabi-staging-1234.herokuapp.com` |
 | **Admin** (`WHOSABI_APP=admin`) | `web`: the staff admin console | `https://whosabi-admin-staging-5678.herokuapp.com` |
 
 The web app and the API share one address on purpose: the sign-in cookie only works when they do, and `herokuapp.com` treats every app as a separate site.
+
+Keep the game app at **one web dyno**. Party rooms live in the memory of the dyno that runs them, and Heroku can't send a player to a particular dyno, so a second web dyno would split the rooms. One Basic dyno holds hundreds of players at once. A restart or deploy ends the rooms that are playing (players are told the room closed), so deploy when nobody is mid-party.
 
 **Monthly cost, roughly** (check [Heroku pricing](https://www.heroku.com/pricing), it changes): 3 Basic dynos (game web, game worker, admin web) at about US$7 each, Heroku Postgres Essential-0 at about US$5, and Heroku Key-Value Store Mini at about US$3. **About US$29 a month** in total. Eco dynos are cheaper but sleep when idle, which stops the worker.
 

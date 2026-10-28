@@ -1,7 +1,9 @@
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import websocket from '@fastify/websocket';
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
+import { PARTY_TIMINGS, type PartyTimings } from '@whosabi/game-rules';
 import type { Redis } from 'ioredis';
 import { adminRoutes } from './admin/routes';
 import { createAuthProviders, type AuthProviders } from './auth/providers';
@@ -18,6 +20,8 @@ import { registerErrorHandlers } from './errors';
 import { ingestRoutes } from '@whosabi/ingest';
 import { ServerEvents } from './events';
 import { newId } from './ids';
+import { PartyRooms } from './party/registry';
+import { partyRoutes } from './party/routes';
 import { profileRoutes } from './profile/routes';
 import { pushRoutes } from './push/routes';
 import { roundRoutes } from './rounds/routes';
@@ -46,6 +50,8 @@ export interface BuildOptions {
   clock: Clock;
   /** Stand-ins for SMS, Turnstile and Google/Apple sign-in (tests); real ones come from config. */
   auth?: Partial<AuthProviders>;
+  /** Faster party rooms for tests. */
+  partyTimings?: Partial<PartyTimings>;
 }
 
 export async function buildApp(options: BuildOptions): Promise<FastifyInstance> {
@@ -91,6 +97,8 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   });
   await app.register(cookie);
   await app.register(rateLimit, { global: false, redis: options.redis, nameSpace: 'rl:' });
+  // Party rooms' WebSockets (step 2.2a): messages are small JSON.
+  await app.register(websocket, { options: { maxPayload: 4096 } });
   registerAuth(app, options.tokens);
 
   // Public signing keys, so other services (ingest) can verify access tokens.
@@ -115,6 +123,11 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   dailyRoutes(app, deps);
   shareRoutes(app, deps);
   adminRoutes(app, deps);
+
+  // Party rooms run in this process (doc 07 §5 at launch): one web dyno holds them all.
+  const rooms = new PartyRooms(deps, { ...PARTY_TIMINGS, ...options.partyTimings });
+  partyRoutes(app, deps, rooms);
+  app.addHook('onClose', async () => rooms.closeAll());
 
   // One process for everything at launch (Heroku, doc 07 §5): the event intake and the web app.
   if (options.config.eventsInApi) {

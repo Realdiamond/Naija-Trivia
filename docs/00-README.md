@@ -19,7 +19,7 @@ Read **01 → 03** to understand *why* and *what*. Engineers start at **06 → 0
 | 06 | [TRD](06-TRD.md) | Stack decisions, functional requirements per subsystem (including the web app and analytics), timing/anti-cheat design, platform adapters, NFR budgets | Engineering |
 | 07 | [System Architecture](07-system-architecture.md) | Diagram, components, monorepo layout, runtime flows (including event tracking), deployment, cost estimate, resilience | Engineering |
 | 08 | [Data Model](08-data-model.md) | ERD, entity notes, Redis keyspace, retention, sizing, analytics store | Backend |
-| 09 | [API & Realtime Protocol](09-API-and-realtime-protocol.md) | REST endpoints, examples, Colyseus room state and messages, push, deep links | Backend, mobile |
+| 09 | [API & Realtime Protocol](09-API-and-realtime-protocol.md) | REST endpoints, examples, party room state and messages, push, deep links | Backend, mobile |
 | 10 | [Security, Anti-Cheat, Privacy & Compliance](10-security-anti-cheat-privacy-compliance.md) | Threat model, anti-cheat, NDPA/GAID checklist, children, prizes vs Play policy, ARCON | Founder, tech lead, DPO |
 | 11 | [Monetisation & Business Model](11-monetization-and-business-model.md) | Revenue streams, Naira price points, unit economics, sponsorship rate card | Founder |
 | 12 | [Go-To-Market](12-go-to-market.md) | Phased launch, WhatsApp/TikTok/campus channels, ASO, KPIs, budget | Growth |
@@ -58,7 +58,7 @@ Categories are Slang & Pidgin, Nollywood, Music, Food, Sport and Mixed Naija. Th
 
 **Compliance by design.** There is **no cash, no wallet and no paid entry**. Google Play bans paid-entry prize games, and since November 2024 Nigeria regulates games of chance state by state. Prizes, if any, are sponsor-funded, free to enter and paid as airtime. The game follows NDPA/GAID with a 13+ rating and a restricted mode with guardian consent for 13–17s.
 
-**Build.** React Native (Expo) for Android, iOS and the web app, a light Preact party client, Node/Fastify API, Colyseus realtime, PostgreSQL and Redis on AWS, and a first-party analytics pipeline into ClickHouse behind a Next.js admin console. A team of about 6 reaches public launch in about 21 weeks for roughly **₦91M (~US$68k)** including launch marketing. A leaner version costs about ₦45–50M.
+**Build.** React Native (Expo) for Android, iOS and the web app, a light Preact party client, Node/Fastify API with WebSocket party rooms, PostgreSQL and Redis on AWS, and a first-party analytics pipeline into ClickHouse behind a Next.js admin console. A team of about 6 reaches public launch in about 21 weeks for roughly **₦91M (~US$68k)** including launch marketing. A leaner version costs about ₦45–50M.
 
 ---
 

@@ -29,7 +29,7 @@ This document turns the PRD into technical requirements: the platforms, the stac
 | Web party client | **Preact + Vite**, PWA, ≤ 150 KB gzipped | Party links (`/r/{CODE}`) must load fast over 3G inside the WhatsApp browser, even though the full web app exists | The full web app for party links (≈ 350 KB first load) |
 | Admin console | **Next.js + shadcn/ui + TanStack Table + ECharts** (internal), behind Google Workspace SSO, with **Metabase** (open source, self-hosted) embedded for exploration | One place for players, live activity, analytics, content, LiveOps, moderation, support and compliance (doc 18) | Retool (licence cost; fine for a v0). PostHog dashboards plus a CMS (two tools, no User 360 or actions next to the data) |
 | API | **Node.js 22 LTS + Fastify + TypeScript**, Zod schemas → OpenAPI | Fast, typed, one language end-to-end | NestJS (heavier) |
-| Realtime | **Colyseus** (Node) for Party Rooms, WebSocket transport, Redis presence/driver | Built for room-based multiplayer, handles reconnection and state sync, scales horizontally with Redis | Socket.IO (more custom code to write), Firebase RTDB (cost and anti-cheat), Ably/Pusher (cost per message at scale) |
+| Realtime | **Plain WebSockets** (`@fastify/websocket`) in the API process for Party Rooms: a room engine of our own with JSON messages, room codes reserved in Redis | Rooms are small (≤ 50 players), so the whole state fits in one message; the browser's own WebSocket needs no client library, which keeps the light party client small (the Colyseus client alone is ~69 KB gzipped); one web dyno on Heroku holds every room, so Colyseus's multi-node presence and driver bring nothing yet | **Colyseus** (the first choice: changed at build step 2.2a for the client size and the single-dyno hosting; worth another look if rooms must spread over several nodes), Socket.IO (more custom code to write), Firebase RTDB (cost and anti-cheat), Ably/Pusher (cost per message at scale) |
 | Database | **PostgreSQL 16** (managed: AWS RDS) | Relational integrity for duels, ledger and content. JSONB where flexible | MongoDB |
 | Cache, leaderboards, queues | **Redis 7**. Sorted sets for leaderboards. Background jobs run in a worker process on timers, each safe to run on several workers at once; BullMQ only if a real job queue is needed later | One dependency covers several needs | Kafka (overkill) |
 | Object storage / CDN | S3 + **CloudFront** (Lagos edge) | Images and audio close to users | – |
@@ -78,7 +78,7 @@ This document turns the PRD into technical requirements: the platforms, the stac
 - **FR-PARTY-1:** Room code: 5 characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`. Codes are unique among active rooms and reserved for 10 minutes after the room closes.
 - **FR-PARTY-2:** The room lifecycle is LOBBY → COUNTDOWN → QUESTION → REVEAL → LEADERBOARD → … → PODIUM → (LOBBY for play again) → CLOSED (after 10 min idle).
 - **FR-PARTY-3:** The server is authoritative for the question clock. It broadcasts `question` with `ends_at` in server time, and clients sync their clock with ping/pong offsets.
-- **FR-PARTY-4:** Reconnection: Colyseus `allowReconnection(client, 60)`. Score is preserved. Questions missed while disconnected score 0.
+- **FR-PARTY-4:** Reconnection: a seat's token reconnects it for 12 hours; in the lobby the seat is kept 60 s after a drop, and in a game until it ends. Score is preserved. A player back within a question gets it again, timed from when it was first sent; questions missed while disconnected score 0.
 - **FR-PARTY-5:** Host migration: if the host disconnects for more than 60 s, the longest-connected player becomes host.
 - **FR-PARTY-6:** Rooms are capped at 20 (free) or 50 (Sabi Pass host). Spectators (v2) are unlimited and read-only.
 - **FR-PARTY-7:** Guests from the web join with a nickname. They get a guest JWT scoped to `party:{roomId}` only. Nickname profanity filter (EN + Pidgin + Yoruba/Igbo/Hausa word lists).
@@ -231,7 +231,7 @@ Screens call one interface; the bundler picks `adapter.native.ts` for Android an
 ## 7. Environments
 | Env | Purpose | Data |
 |---|---|---|
-| `local` | Docker Compose: Postgres, Redis, ClickHouse, API, ingest, Colyseus, admin console, Metabase | Seed CSV |
+| `local` | Docker Compose: Postgres, Redis, ClickHouse, API (party rooms included), ingest, admin console, Metabase | Seed CSV |
 | `dev` | Every merge to `main` | Synthetic |
 | `staging` | Release candidates, load tests, beta testers | Anonymised copy of content only |
 | `prod` | Live | Real |

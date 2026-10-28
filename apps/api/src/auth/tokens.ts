@@ -13,12 +13,16 @@ import {
   SignJWT,
   type JWK,
 } from 'jose';
-import type { Platform } from '@whosabi/shared-types';
+import type { PartySeatKind, Platform } from '@whosabi/shared-types';
 
 export const ACCESS_TTL_SECONDS = 15 * 60;
+/** A party seat lasts the evening: it also reconnects after a drop. */
+export const PARTY_SEAT_TTL_SECONDS = 12 * 3600;
 export const REFRESH_TTL_SECONDS = 30 * 24 * 3600;
 const ISSUER = 'whosabi-api';
 const AUDIENCE = 'whosabi';
+/** Party seats are only for the room's WebSocket, never the API (FR-PARTY-7). */
+const PARTY_AUDIENCE = 'whosabi-party';
 
 export interface AccessClaims {
   userId: string;
@@ -26,9 +30,24 @@ export interface AccessClaims {
   guest: boolean;
 }
 
+/** A seat in one party room: a player (signed in or a web guest with a nickname) or a big screen. */
+export interface PartySeatClaims {
+  roomId: string;
+  /** `u:<user id>`, `g:<random>` for a web guest, `s:<random>` for a screen. */
+  seat: string;
+  name: string;
+  kind: PartySeatKind;
+  role: 'player' | 'screen';
+  userId: string | null;
+  avatarId: string | null;
+  platform: Platform;
+}
+
 export interface TokenService {
   signAccess(claims: AccessClaims): Promise<string>;
   verifyAccess(token: string): Promise<AccessClaims>;
+  signPartySeat(claims: PartySeatClaims): Promise<string>;
+  verifyPartySeat(token: string): Promise<PartySeatClaims>;
   /** Public key set served at /.well-known/jwks.json for other services (ingest) to verify tokens. */
   jwks: { keys: JWK[] };
 }
@@ -79,6 +98,42 @@ export async function createTokenService(
       if (platform !== 'android' && platform !== 'ios' && platform !== 'web')
         throw new Error('bad platform claim');
       return { userId: payload.sub, platform, guest: payload.gst === true };
+    },
+    async signPartySeat({ roomId, seat, name, kind, role, userId, avatarId, platform }) {
+      const nowSeconds = Math.floor(clock() / 1000);
+      const claims = { typ: 'party', room: roomId, nm: name, knd: kind, role, uid: userId, av: avatarId };
+      return new SignJWT({ ...claims, plt: platform })
+        .setProtectedHeader({ alg: 'ES256', kid })
+        .setSubject(seat)
+        .setIssuer(ISSUER)
+        .setAudience(PARTY_AUDIENCE)
+        .setIssuedAt(nowSeconds)
+        .setExpirationTime(nowSeconds + PARTY_SEAT_TTL_SECONDS)
+        .sign(privateKey);
+    },
+    async verifyPartySeat(token) {
+      const { payload } = await jwtVerify(token, publicKey, {
+        issuer: ISSUER,
+        audience: PARTY_AUDIENCE,
+        algorithms: ['ES256'],
+        currentDate: new Date(clock()),
+      });
+      const { room, nm, knd, role, uid, av, plt } = payload;
+      if (
+        payload.typ !== 'party' ||
+        typeof payload.sub !== 'string' ||
+        typeof room !== 'string' ||
+        typeof nm !== 'string' ||
+        (knd !== 'app' && knd !== 'web' && knd !== 'web_guest') ||
+        (role !== 'player' && role !== 'screen') ||
+        (uid !== null && typeof uid !== 'string') ||
+        (av !== null && typeof av !== 'string') ||
+        (plt !== 'android' && plt !== 'ios' && plt !== 'web')
+      ) {
+        throw new Error('not a party seat');
+      }
+      const seat = payload.sub;
+      return { roomId: room, seat, name: nm, kind: knd, role, userId: uid, avatarId: av, platform: plt };
     },
   };
 }

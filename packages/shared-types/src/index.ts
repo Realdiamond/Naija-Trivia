@@ -5,6 +5,7 @@ export * from './common';
 export * from './content';
 export * from './daily';
 export * from './duels';
+export * from './party';
 export * from './phone';
 export * from './profile';
 export * from './rounds';

@@ -302,6 +302,19 @@ GDD §6.2.
 - ✅ The question page shows "Trending · in the game until …"
 - ✅ Tests: the API (90 days from going live, a sooner date kept, non-trending ones untouched, renewing as an editor only and only trending ones, expiry after the last day, marking a live question trending) and the date rule in game-rules
 
+### Step 2.2a · Party room server ✅
+GDD §2.2, TRD §4.4, API §2.7 and §3. Split in three: the server (2.2a), the app's screens (2.2b) and the light web party client (2.2c).
+
+- ✅ **Plain WebSockets instead of Colyseus** (TRD §2): rooms are small enough to send whole, the browser's own WebSocket keeps the light party client small (the Colyseus client alone is ~69 KB gzipped), and on Heroku one web dyno holds every room anyway. The rooms run inside the API (`src/party`), so the game app stays at one web dyno (deploy guide)
+- ✅ The room engine, held in memory: lobby → countdown (3 s) → question → reveal (2.5 s) → top 5 (3 s) → … → podium → play again. The server keeps the clock; each player gets the options in their own order and is timed from when they were sent the question, with the usual round-trip clamp (round trips from WebSocket pings every 15 s, which also keep Heroku from closing the connection)
+- ✅ Host settings: 5/10/15/20 questions, 10/15/20 s, packs, family-safe, the **Wahala Round** (the last 3 harder and worth double) and **host screen mode** (the host's screen shows the game and the host doesn't play). Up to 20 players; at least 2 to start. Kick (no coming back), lock, a big screen for a TV (host only)
+- ✅ Questions spread across the chosen packs, unseen ones first; a player in family mode keeps the room family-safe. The packs must have enough questions, or the host is told to pick more
+- ✅ Reconnection on the same seat token; a dropped player keeps their points and their question. A host gone a minute hands over to whoever has been there longest; a quiet room closes after 10 minutes and its code isn't reused for 10 more (codes reserved in Redis)
+- ✅ The podium ranks by points, then right answers, then the quickest right answer, and names the **MVP of the night** (most right, then quickest). The game is saved (`party_games`, `party_results` with names and how each joined), signed-in players get XP (+10 a right answer, +2 a wrong one, +50 for finishing), and answers feed question stats and calibration
+- ✅ REST: make a room, the public card behind `/r/{CODE}`, take a seat (signed in, or a web guest with a nickname checked like usernames), a game's results. Seat tokens are 12-hour JWTs for one room's socket only
+- ✅ Analytics: `party_room_created`, `party_joined`, `question_answered` (mode party) and `party_game_completed` for signed-in players
+- ✅ Tests: the rules in game-rules (Wahala Round, ranking, MVP, XP); the engine with a hand-moved clock (a whole game with the Wahala Round, two players and enough questions to start, a dropped player and a newcomer, host handover and players leaving the lobby, kick, lock, a full room, repeated names, host screen mode, closing when quiet); the API over a real WebSocket (a host and a web guest play a whole game, saved with XP, results, bad seats, the big screen)
+
 ### Step 2.3 · Random opponents and the Sabi Bot ✅
 TRD FR-DUEL-6, GDD §2.1.
 
@@ -315,7 +328,7 @@ TRD FR-DUEL-6, GDD §2.1.
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
-| 2.2 Party rooms ⬜ | `apps/realtime` (Colyseus), party REST side, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
+| 2.2 Party rooms (2.2a ✅, 2.2b ⬜, 2.2c ⬜) | Party room server (WebSockets in the API), party REST side, the app's party screens, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
 | 2.3 Random opponents ✅ | Rating-window matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
 | 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |

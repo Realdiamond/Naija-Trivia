@@ -16,7 +16,8 @@ export function ulid(nowMs: number = Date.now()): string {
   return timePart + randomPart;
 }
 
-export type IdPrefix = 'u' | 'ai' | 'rt' | 'r' | 'd' | 'req' | 'adm' | 'q' | 'dev';
+/** pr: a party room; pg: one game played in it. */
+export type IdPrefix = 'u' | 'ai' | 'rt' | 'r' | 'd' | 'req' | 'adm' | 'q' | 'dev' | 'pr' | 'pg';
 
 export function newId(prefix: IdPrefix, nowMs?: number): string {
   return `${prefix}_${ulid(nowMs)}`;

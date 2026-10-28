@@ -61,6 +61,13 @@ export const routes = {
   /** The week's board: Daily points added up, Monday to Sunday WAT. */
   weekLeaderboard: (scope: 'global' | 'state' | 'friends') =>
     `${API_PREFIX}/leaderboards/week?scope=${scope}`,
+  /** Party rooms (step 2.2): make one, look one up by its code, take a seat, and the results. */
+  partyRooms: () => `${API_PREFIX}/party/rooms`,
+  partyRoom: (code: string) => `${API_PREFIX}/party/rooms/${encodeURIComponent(code)}`,
+  partyJoin: (code: string) => `${API_PREFIX}/party/rooms/${encodeURIComponent(code)}/join`,
+  partyGame: (gameId: string) => `${API_PREFIX}/party/games/${encodeURIComponent(gameId)}`,
+  /** The room's WebSocket: connect with `?token=` from a seat. */
+  partySocket: () => `${API_PREFIX}/party/socket`,
   invite: (token: string) => `${API_PREFIX}/invites/${encodeURIComponent(token)}`,
   inviteAccept: (token: string) => `${API_PREFIX}/invites/${encodeURIComponent(token)}/accept`,
   /** Share pictures for WhatsApp Status (PNG, 1080×1920), for the players in it only. */

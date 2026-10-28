@@ -57,6 +57,10 @@ export const ErrorCode = {
   ageAlreadySet: 'AGE_ALREADY_SET',
   userUnavailable: 'USER_UNAVAILABLE',
   friendsOnly: 'FRIENDS_ONLY',
+  partyRoomNotFound: 'PARTY_ROOM_NOT_FOUND',
+  partyRoomFull: 'PARTY_ROOM_FULL',
+  nicknameRequired: 'NICKNAME_REQUIRED',
+  nicknameNotAllowed: 'NICKNAME_NOT_ALLOWED',
   internal: 'INTERNAL',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
