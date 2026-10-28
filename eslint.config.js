@@ -11,6 +11,8 @@ const NATIVE_ONLY_MODULES = [
   'expo-haptics',
   'expo-contacts',
   'expo-notifications',
+  'expo-sharing',
+  'expo-file-system',
   'react-native-mmkv',
   'react-native-google-mobile-ads',
   'react-native-purchases',

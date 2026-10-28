@@ -57,6 +57,9 @@ export const routes = {
     `${API_PREFIX}/leaderboards/week?scope=${scope}`,
   invite: (token: string) => `${API_PREFIX}/invites/${encodeURIComponent(token)}`,
   inviteAccept: (token: string) => `${API_PREFIX}/invites/${encodeURIComponent(token)}/accept`,
+  /** Share pictures for WhatsApp Status (PNG, 1080×1920), for the players in it only. */
+  shareDuelCard: (duelId: string) => `${API_PREFIX}/share/duels/${encodeURIComponent(duelId)}/card.png`,
+  shareDailyCard: (dailyId: number) => `${API_PREFIX}/share/daily/${dailyId}/card.png`,
   admin: {
     authGoogle: () => '/admin/auth/google',
     authDev: () => '/admin/auth/dev',

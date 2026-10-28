@@ -4,7 +4,8 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
-import type { DuelView, Me } from '@whosabi/shared-types';
+import { routes, type DuelView, type Me } from '@whosabi/shared-types';
+import { trackEvent } from '../../analytics';
 import { errorMessage } from '../../api';
 import { useT } from '../../i18n';
 import { Avatar, InitialAvatar } from '../../ui/Avatar';
@@ -13,6 +14,7 @@ import { CategoryDot } from '../../ui/game';
 import { Icon } from '../../ui/icons';
 import { Text } from '../../ui/Text';
 import { category, colors, CONTENT_MAX_WIDTH, fonts, radius } from '../../ui/theme';
+import { SharePicture } from '../share/SharePicture';
 import { duelKeys, duels } from './api';
 import { useOpponentName } from './parts';
 
@@ -189,6 +191,15 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
             </Text>
           ) : null}
           <View style={styles.actions}>
+            {played ? (
+              <SharePicture
+                path={routes.shareDuelCard(duel.id)}
+                fileName={`whosabi-duel-${duel.id}.png`}
+                text={t('share.duelText')}
+                onShared={() => trackEvent('invite_shared', { channel: 'status', context: 'duel' })}
+                testID="duel-share-picture"
+              />
+            ) : null}
             {canRematch ? (
               <Button
                 label={t('duel.rematch')}

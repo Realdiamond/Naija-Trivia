@@ -22,6 +22,8 @@ import { profileRoutes } from './profile/routes';
 import { roundRoutes } from './rounds/routes';
 import { rttRoutes } from './rtt';
 import { socialRoutes } from './social/routes';
+import { ShareService } from './share/service';
+import { shareRoutes } from './share/routes';
 import { serveWebApp, webAppPage } from './web';
 
 export interface AppDeps {
@@ -60,7 +62,16 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
     auth: { ...createAuthProviders(options.config, app.log, options.clock.now), ...options.auth },
   };
 
-  registerErrorHandlers(app, options.config.webAppDir ? webAppPage : undefined);
+  const webAppDir = options.config.webAppDir;
+  if (webAppDir) {
+    const pages = new ShareService(deps);
+    registerErrorHandlers(
+      app,
+      webAppPage(webAppDir, (pathname) => pages.pageMeta(pathname), app.log),
+    );
+  } else {
+    registerErrorHandlers(app);
+  }
   await app.register(cors, {
     origin: options.config.corsOrigins,
     credentials: true,
@@ -100,6 +111,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   roundRoutes(app, deps);
   duelRoutes(app, deps);
   dailyRoutes(app, deps);
+  shareRoutes(app, deps);
   adminRoutes(app, deps);
 
   // One process for everything at launch (Heroku, doc 07 §5): the event intake and the web app.
@@ -111,6 +123,6 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
       verifyAccess: async (token) => ({ userId: (await options.tokens.verifyAccess(token)).userId }),
     });
   }
-  if (options.config.webAppDir) await serveWebApp(app, options.config.webAppDir);
+  if (webAppDir) await serveWebApp(app, webAppDir);
   return app;
 }
