@@ -12,6 +12,8 @@ const Env = z.object({
   JWT_PUBLIC_KEY: z.string().optional(),
   /** HMAC key for pseudonymous analytics ids (doc 18 §15). */
   ANALYTICS_KEY: z.string().min(32).optional(),
+  /** Days the worker keeps raw analytics events in Postgres; daily counts are kept for good. */
+  ANALYTICS_RETENTION_DAYS: z.coerce.number().int().min(7).max(400).default(60),
   CORS_ORIGINS: z.string().default('http://localhost:8081,http://localhost:19006'),
   COOKIE_SECURE: z.enum(['true', 'false']).default('true'),
   /** Round-trip estimate used for answer timing until per-session RTT sampling lands. */
@@ -51,6 +53,7 @@ export interface Config {
   jwtPrivateKeyPem?: string;
   jwtPublicKeyPem?: string;
   analyticsKey: string;
+  analyticsRetentionDays: number;
   corsOrigins: string[];
   cookieSecure: boolean;
   defaultRttMs: number;
@@ -100,6 +103,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     jwtPrivateKeyPem: e.JWT_PRIVATE_KEY,
     jwtPublicKeyPem: e.JWT_PUBLIC_KEY,
     analyticsKey: e.ANALYTICS_KEY ?? DEV_ANALYTICS_KEY,
+    analyticsRetentionDays: e.ANALYTICS_RETENTION_DAYS,
     corsOrigins: list(e.CORS_ORIGINS),
     cookieSecure: e.COOKIE_SECURE === 'true',
     defaultRttMs: e.DEFAULT_RTT_MS,

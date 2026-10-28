@@ -106,8 +106,11 @@ interface PlayerTx extends Tx {
 const duelFinished = (detail?: string) => conflict(ErrorCode.duelFinished, 'This duel is over', detail);
 const turnNotYours = (detail?: string) => conflict(ErrorCode.turnNotYours, 'It is not your turn', detail);
 
+/** What the duel engine needs: the API passes its own deps, and the worker builds these itself. */
+export type DuelDeps = Pick<AppDeps, 'config' | 'pool' | 'redis' | 'clock' | 'events' | 'log'>;
+
 export class DuelService {
-  constructor(private readonly deps: AppDeps) {}
+  constructor(private readonly deps: DuelDeps) {}
 
   // ----- Reading -----
 

@@ -88,10 +88,19 @@ Decided on 28 Oct 2026 to keep running costs down before launch.
 - ✅ The [question bank](content/question-bank/README.md): one CSV per category with a source link on every question, an Excel workbook for the team's review, and a checker for the Question Bible rules. Researched sport drafts go in first, and a daily job adds more on the `question-bank` branch
 - ✅ Tests: production settings with and without an SMS provider, both phone steps while phone is off, the methods list, and Sport kept out of the category list
 
-### Step 1.3 · Workers & analytics loader ⬜ (next)
-`apps/workers` (BullMQ): duel expiry at the deadline (calling `DuelService.expireDue`) and reminders at 24 h and 4 h left (push stand-in until step 2.5); flushing `qstat:*` counters to `question_stats`; the event loader from the Redis stream into Postgres for now (raw events kept about 60 days, daily rollups kept), decided on 28 Oct 2026 to save cost. ClickHouse (`schema/analytics.clickhouse.sql`) comes when daily players reach the thousands, and only the loader changes. Docs: [07 §4.3](07-system-architecture.md), [08 §6](08-data-model.md), [18 §15](18-admin-console-and-analytics.md).
+### Step 1.3 · Workers & analytics loader ✅
+Docs: [07 §4.3](07-system-architecture.md), [08 §3, §6](08-data-model.md), [18 §15](18-admin-console-and-analytics.md), [TRD FR-DUEL-3, FR-NOT-1 to 3](06-TRD.md).
 
-### Step 1.4 · The app: Android and web ⬜
+- ✅ A worker process (`apps/api/src/worker.ts`, `pnpm worker`) beside the API, sharing its code. Each job runs on a timer and is safe with several workers at once (locked rows, claimed rows, a Redis lock, a stream consumer group), so no job queue (BullMQ) is needed yet
+- ✅ Duel expiry every 30 s through `DuelService.expireDue`, in batches
+- ✅ Turn reminders at 24 h and 4 h left, once each per turn (`duel_reminders`), never in quiet hours (22:00–07:00 WAT), in English or Pidgin, naming the opponent and saying whether the duel is lost or cancelled. A stand-in writes them to the log until FCM in step 2.5, and only real pushes record `push_sent`
+- ✅ Question stats: `qstat:*` counters added into `question_stats` every minute (plays, right answers, option counts for "Ask Naija", average time), finishing any flush that died halfway
+- ✅ Analytics loader into Postgres, decided on 28 Oct 2026 to save cost: `analytics_events` from the Redis stream through a consumer group, each event stored once, bad rows skipped without blocking the rest, entries another loader dropped taken over; hourly daily counts in `analytics_daily` and raw events dropped after `ANALYTICS_RETENTION_DAYS` (60). ClickHouse (`schema/analytics.clickhouse.sql`) comes when daily players reach the thousands, and only the loader changes
+- ✅ Tests: each job against real Postgres and Redis, including quiet hours, a failed push tried again, two workers flushing at once, and a loader that died mid-batch
+
+Not in this step: reminders during a tie-break (both players answer, so there is no single turn), the 4-a-day cap on non-turn pushes (FR-NOT-2, with real pushes in step 2.5), and difficulty recalibration from the stats (step 2.6).
+
+### Step 1.4 · The app: Android and web ⬜ (next)
 `apps/app` (Expo, Expo Router): design tokens and core components, platform adapters (TRD §5.6), the taste test, sign-in, home with "Your turn" cards, the duel screens, an invite link that opens straight into the turn in the browser, the analytics tracker wired in, web build in CI. Docs: [05 UX](05-UX-and-user-flows.md), [TRD §4.10, §5.6](06-TRD.md), [PRD US-1, US-3, US-4, US-11](02-PRD.md).
 
 ### Step 1.5 · Admin console v0 ⬜

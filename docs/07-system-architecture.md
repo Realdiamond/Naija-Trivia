@@ -24,7 +24,7 @@ flowchart LR
     ALB[Application Load Balancer<br/>HTTP + WebSocket]
     API[Core API<br/>Fastify/TS · incl. admin API]
     RT[Realtime nodes<br/>Colyseus]
-    WRK[Workers<br/>BullMQ jobs · event loader]
+    WRK[Workers<br/>timed jobs · event loader]
     ING[Ingest service<br/>analytics events]
     AUTH[Auth module<br/>OTP · JWT]
     MB[Metabase<br/>internal]
@@ -108,7 +108,7 @@ who-sabi/
 │   ├── api/             # Fastify modular monolith, incl. the admin API
 │   ├── realtime/        # Colyseus server
 │   ├── ingest/          # analytics event intake
-│   └── workers/         # BullMQ processors + event loader
+│   └── workers/         # timed jobs + event loader (for now apps/api/src/worker.ts, sharing the API's code)
 ├── packages/
 │   ├── shared-types/    # Zod schemas → TS types + OpenAPI
 │   ├── game-rules/      # scoring, timing clamp, shuffling, Glicko-2 (pure, 100% tested)
