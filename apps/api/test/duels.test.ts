@@ -158,6 +158,15 @@ describe('a friend duel', () => {
     expect(await getDuel(b, duel.id)).toMatchObject({ you: 'b', your_turn: false, next: { action: 'wait' } });
 
     expect(await playTurn(a, duel.id)).toBe(3);
+    // Each answer also moves its question's item rating (step 2.6b).
+    const answered = await t.pool.query<{ question_id: string }>(
+      'SELECT question_id FROM duel_answers WHERE duel_id = $1 AND user_id = $2',
+      [duel.id, a.id],
+    );
+    expect(answered.rows).toHaveLength(3);
+    for (const { question_id } of answered.rows) {
+      expect(Number(await t.redis.hget(`qstat:${question_id}`, 'd_delta'))).not.toBe(0);
+    }
     let seenByB = await getDuel(b, duel.id);
     expect(seenByB).toMatchObject({
       state: 'wait_b_r1r2',

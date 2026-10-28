@@ -184,8 +184,9 @@ CREATE TABLE question_reports (
   id              bigserial PRIMARY KEY,
   question_id     text NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
   user_id         text REFERENCES users(id) ON DELETE SET NULL,
-  reason          text NOT NULL CHECK (reason IN ('wrong_answer','outdated','offensive','typo','unfair','other')),
+  reason          text NOT NULL CHECK (reason IN ('wrong_answer','outdated','offensive','typo','unfair','other','too_hard','too_easy')),
   note            text,
+  by_numbers      boolean NOT NULL DEFAULT false,      -- filed by the nightly check, not a player (0014)
   resolution      text CHECK (resolution IN ('fixed','rejected','retired')),
   resolved_by     text,
   created_at      timestamptz NOT NULL DEFAULT now(),

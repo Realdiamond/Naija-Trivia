@@ -97,7 +97,7 @@ The CMS is the Content module of the admin console ([doc 18](18-admin-console-an
 
 ## 4. Duplicate & quality controls
 - **Near-duplicate detection:** normalised text plus trigram similarity (> 0.7 flags), and the same correct answer combined with category similarity.
-- **Answer-key sanity:** if the most chosen answer is a distractor at > 50% after 300 answers, the question goes into review.
+- **Answer-key sanity:** if the most chosen answer is a distractor at > 50% after 300 answers, the question comes out of the game and goes into the reports queue for an editor (the nightly check, build plan step 2.6b). Under 5% or over 97% right after 300 answers files a report too, and the question stays in the game.
 - **Report thresholds:** ≥ 5 "wrong answer" reports, or > 3% of plays reported, auto-suspends the question.
 - **Expiry:** a nightly job removes questions with `valid_until < today`.
 

@@ -94,6 +94,9 @@ export default async function QuestionPage({
               <div className="tile">
                 Open reports<b>{q.open_reports}</b>
               </div>
+              <div className="tile" title="Moves with every answer; sets the level from 200 plays">
+                Difficulty rating<b>{Math.round(q.d_rating).toLocaleString('en-NG')}</b>
+              </div>
             </div>
             {totalPicks > 0 ? (
               <div className="split" aria-label="Picks per option">

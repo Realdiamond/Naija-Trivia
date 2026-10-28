@@ -10,9 +10,11 @@ export interface QuestionRow {
   correct_index: number;
   fact: string | null;
   difficulty: number;
+  /** The calibrated item rating (GDD §6.3). */
+  d_rating: number;
 }
 
-const QUESTION_COLUMNS = 'id, category_id, type, text, options, correct_index, fact, difficulty';
+const QUESTION_COLUMNS = 'id, category_id, type, text, options, correct_index, fact, difficulty, d_rating';
 
 /** The first-run taste test: one live, family-safe question each from Slang, Food and Music (PRD US-1). */
 export const TASTE_TEST_CATEGORIES = ['slang', 'food', 'music'] as const;

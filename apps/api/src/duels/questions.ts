@@ -21,6 +21,8 @@ export interface DuelQuestion {
   numeric_answer: number | null;
   fact: string | null;
   difficulty: number;
+  /** The calibrated item rating (GDD §6.3). */
+  d_rating: number;
 }
 
 export interface PickContext {
@@ -37,7 +39,7 @@ const DAY_MS = 86_400_000;
 export async function loadQuestions(db: Db, ids: readonly string[]): Promise<Map<string, DuelQuestion>> {
   if (ids.length === 0) return new Map();
   const result = await db.query<DuelQuestion & { numeric_answer: string | null }>(
-    `SELECT id, category_id, type, text, options, correct_index, numeric_answer, fact, difficulty
+    `SELECT id, category_id, type, text, options, correct_index, numeric_answer, fact, difficulty, d_rating
        FROM questions WHERE id = ANY($1)`,
     [ids],
   );

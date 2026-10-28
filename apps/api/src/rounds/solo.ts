@@ -21,7 +21,7 @@ import {
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
 import { loadQuestion, type QuestionRow } from '../content/questions';
-import { recordQuestionStats } from '../content/stats';
+import { overallRating, recordQuestionStats } from '../content/stats';
 import { ApiError, conflict, notFound } from '../errors';
 import { requestEventContext } from '../events';
 import { rttFor } from '../rtt';
@@ -153,7 +153,10 @@ export async function answerSolo(
   });
 
   if (first) {
-    await recordQuestionStats(deps.redis, deps.log, question.id, answer);
+    await recordQuestionStats(deps.redis, deps.log, question.id, answer, {
+      itemRating: question.d_rating,
+      playerRating: await overallRating(deps.pool, round.userId),
+    });
     await deps.events.emit(
       'question_answered',
       {

@@ -105,7 +105,7 @@ test('a question goes from a writer to live, an import lands, and reports get an
   for (let i = 0; i < 5; i++) await report(request, qid);
   await page.goto('/reports');
   const card = page.getByTestId(`report-${qid}`);
-  await expect(card).toContainText('Suspended by reports');
+  await expect(card).toContainText('Taken out automatically');
   await expect(card).toContainText('Wrong answer: 5');
   await expect(card).toContainText('The answer is Ogbono');
   await page.getByTestId(`keep-${qid}`).click();

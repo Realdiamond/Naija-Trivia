@@ -46,7 +46,7 @@ import {
   type TiebreakAnswerResponse,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
-import { recordQuestionStats } from '../content/stats';
+import { overallRating, recordQuestionStats } from '../content/stats';
 import { withTransaction, type Pool, type PoolClient } from '../db';
 import { ApiError, conflict, notFound } from '../errors';
 import type { EventContext } from '../events';
@@ -480,12 +480,14 @@ export class DuelService {
           idempotencyKey ?? null,
         ],
       );
-      outbox.push(() =>
-        recordQuestionStats(this.deps.redis, this.deps.log, q.id, {
-          correct,
-          acceptedMs: timing.acceptedMs,
-          canonicalIndex: chosen,
-        }),
+      outbox.push(async () =>
+        recordQuestionStats(
+          this.deps.redis,
+          this.deps.log,
+          q.id,
+          { correct, acceptedMs: timing.acceptedMs, canonicalIndex: chosen },
+          { itemRating: q.d_rating, playerRating: await overallRating(this.deps.pool, viewer) },
+        ),
       );
       outbox.push(() =>
         this.deps.events.emit(
