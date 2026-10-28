@@ -62,7 +62,9 @@ test('two players finish a duel through a link, both in the browser', async ({ b
   await finish(chidi, '100');
   await tolu.reload();
   await finish(tolu, '200');
+  // Whoever answered the tie-break last is still on its reveal; a fresh load shows both the result.
   await chidi.reload();
+  await tolu.reload();
 
   const results = [
     await tolu.getByTestId('result-title').textContent(),

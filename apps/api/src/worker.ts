@@ -1,7 +1,7 @@
 /**
- * The worker (build plan steps 1.3 and 2.1): a second process beside the API that ends overdue
- * duels, sends turn reminders, picks the Daily, saves final leaderboard ranks, moves question
- * stats into Postgres and loads analytics events.
+ * The worker (build plan steps 1.3, 2.1 and 2.6): a second process beside the API that ends
+ * overdue duels, sends turn reminders, picks the Daily, saves final leaderboard ranks, retires
+ * expired questions, moves question stats into Postgres and loads analytics events.
  *
  * Every job is safe with several workers running (locked rows, claimed reminder rows, a Redis
  * lock, a stream consumer group), so the worker scales by running more copies and needs no job
@@ -16,6 +16,7 @@ import { createPool } from './db';
 import { DuelService } from './duels/service';
 import { ServerEvents } from './events';
 import { AnalyticsLoader } from './jobs/analyticsLoader';
+import { retireExpiredQuestions } from './jobs/contentExpiry';
 import { expireDueDuels } from './jobs/expiry';
 import { flushQuestionStats } from './jobs/questionStats';
 import { sendTurnReminders } from './jobs/reminders';
@@ -75,6 +76,7 @@ const jobs = [
   every('turn-reminders', MINUTE, () => sendTurnReminders(deps, notifier)),
   every('daily-schedule', 5 * MINUTE, () => daily.schedule()),
   every('leaderboard-snapshot', 10 * MINUTE, () => daily.snapshot()),
+  every('question-expiry', 60 * MINUTE, () => retireExpiredQuestions(deps)),
   every('question-stats', MINUTE, () => flushQuestionStats(deps)),
   every('analytics-upkeep', 60 * MINUTE, () => loader.maintain(config.analyticsRetentionDays)),
   loadEvents(),

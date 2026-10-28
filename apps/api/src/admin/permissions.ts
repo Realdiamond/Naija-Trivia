@@ -11,19 +11,29 @@ const PLAYER_SUPPORT: AdminPermission[] = [
   'pii.reveal',
 ];
 
+// Doc 04 §3: writers draft, a second person fact-checks, editors publish.
+const CONTENT_ALL: AdminPermission[] = [
+  'content.view',
+  'content.write',
+  'content.review',
+  'content.publish',
+  'content.import',
+];
+
 export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
-  owner: [...PLAYER_SUPPORT, 'audit.view', 'staff.manage'],
-  admin: [...PLAYER_SUPPORT, 'audit.view'],
+  owner: [...PLAYER_SUPPORT, 'audit.view', 'staff.manage', ...CONTENT_ALL],
+  admin: [...PLAYER_SUPPORT, 'audit.view', ...CONTENT_ALL],
   dpo: [...PLAYER_SUPPORT, 'audit.view'],
   support: PLAYER_SUPPORT,
   // Moderators see players masked only.
   moderator: ['players.search', 'players.view'],
-  analyst: [],
+  analyst: ['content.view'],
   growth: [],
-  liveops: [],
-  editor: [],
-  fact_checker: [],
-  writer: [],
+  liveops: ['content.view'],
+  editor: CONTENT_ALL,
+  fact_checker: ['content.view', 'content.write', 'content.review'],
+  // Writers see and edit their own questions only.
+  writer: ['content.view', 'content.write'],
   finance: [],
   sponsor_manager: [],
   engineer: [],

@@ -10,13 +10,20 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
   const me = await adminApi<AdminProfile>('/admin/me');
   const links = [
     ...(me.permissions.includes('players.search') ? [{ href: '/players', label: 'Players' }] : []),
+    ...(me.permissions.includes('content.view')
+      ? [
+          { href: '/questions', label: 'Questions' },
+          { href: '/reports', label: 'Reports' },
+        ]
+      : []),
+    ...(me.permissions.includes('content.import') ? [{ href: '/import', label: 'Import' }] : []),
     ...(me.permissions.includes('audit.view') ? [{ href: '/audit', label: 'Audit log' }] : []),
     ...(me.permissions.includes('staff.manage') ? [{ href: '/staff', label: 'Staff and roles' }] : []),
   ];
   return (
     <>
       <header className="topbar">
-        <Link className="brand" href="/players">
+        <Link className="brand" href="/">
           Who Sabi? <span>Admin</span>
         </Link>
         {me.permissions.includes('players.search') ? (

@@ -25,7 +25,8 @@ describe('database', () => {
     const row = (
       await t.pool.query(
         `SELECT count(*)::int AS n, bool_and(d_rating = 1050 + 150 * difficulty) AS ratings_ok,
-                bool_and(id = 'q_' || lower(external_ref)) AS ids_ok FROM questions`,
+                bool_and(id = 'q_' || lower(external_ref)) AS ids_ok FROM questions
+          WHERE external_ref LIKE 'SEED-%'`,
       )
     ).rows[0];
     expect(row).toEqual({ n: 114, ratings_ok: true, ids_ok: true });

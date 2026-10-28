@@ -94,7 +94,7 @@ heroku run --app whosabi-staging \
   "cd apps/api && SEED_LIVE_ALLOWED=yes node dist/scripts/seed.js --live"
 ```
 
-The Daily needs at least 7 live questions, so it appears once this has run. Never set `SEED_LIVE_ALLOWED` on the real production app. Then make yourself the first owner of the admin console, with the Google account you will sign in with:
+The Daily needs at least 7 live questions, so it appears once this has run. Never set `SEED_LIVE_ALLOWED` on the real production app. On production, questions arrive through the admin console instead: **Import** takes a category file from the question bank, a fact-checker approves each question under **Questions**, and an editor publishes them. Then make yourself the first owner of the admin console, with the Google account you will sign in with:
 
 ```sh
 heroku run --app whosabi-staging \
