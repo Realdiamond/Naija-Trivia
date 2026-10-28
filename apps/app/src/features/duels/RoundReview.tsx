@@ -7,6 +7,7 @@ import { Icon } from '../../ui/icons';
 import { Screen } from '../../ui/Screen';
 import { Text } from '../../ui/Text';
 import { category, colors, radius } from '../../ui/theme';
+import { useKeys } from '../play/keys';
 import { useOpponentName } from './parts';
 
 interface Props {
@@ -23,6 +24,11 @@ export function RoundReview({ duel, round, continueLabel, onContinue, busy = fal
   const view = duel.rounds[round - 1];
   const c = category(view?.category_id);
   const picker = view?.picked_by === 'opponent' ? t('duel.theirPick', { name }) : t('duel.yourPick');
+  useKeys((key) => {
+    if (key !== 'Enter' || busy) return false;
+    onContinue();
+    return true;
+  });
 
   return (
     <View style={styles.root}>

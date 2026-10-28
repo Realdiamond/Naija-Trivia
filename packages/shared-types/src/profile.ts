@@ -81,6 +81,41 @@ export const UpdateMeRequest = z
   .strict();
 export type UpdateMeRequest = z.infer<typeof UpdateMeRequest>;
 
+/** What a consent is for (doc 10 §2). Guardian consent has its own flow (step 2.8). */
+export const ConsentPurpose = z.enum([
+  'terms',
+  'privacy',
+  'analytics',
+  'marketing_push',
+  'ads_personalisation',
+  'contacts',
+  'session_replay',
+]);
+export type ConsentPurpose = z.infer<typeof ConsentPurpose>;
+
+/**
+ * Consent choices (doc 09 §2.2, doc 10 §2), kept as a history: every change is a new record
+ * with the policy version it was given under and where it was given.
+ */
+export const ConsentsRequest = z
+  .object({
+    source: z.enum(['onboarding', 'settings', 'web_banner']),
+    consents: z
+      .array(
+        z
+          .object({
+            purpose: ConsentPurpose,
+            granted: z.boolean(),
+            policy_version: z.string().min(1).max(20),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(10),
+  })
+  .strict();
+export type ConsentsRequest = z.infer<typeof ConsentsRequest>;
+
 /** Round-trip sampling (TRD §5.3): ping, then answer straight away. */
 export const PingResponse = z.object({ ping_id: z.string(), server_time: z.iso.datetime() });
 export type PingResponse = z.infer<typeof PingResponse>;

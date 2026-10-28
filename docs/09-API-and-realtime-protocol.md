@@ -47,7 +47,7 @@ A token that is sent but expired is a `401` before the code is used, so the app 
 | GET | `/me` | Profile, settings, age band, level with XP progress, rating and tier. Balances, entitlements and flags join with their steps |
 | PATCH | `/me` | `{username?, avatar_id?, home_state?, language?, data_saver?, family_mode?, discoverable?}`, all optional. The username needs an account and is chosen once (`USERNAME_LOCKED`; support changes it): 3–20 letters, digits or `_`, unique ignoring case (`USERNAME_TAKEN`), and filtered for offensive and official-looking names (`USERNAME_NOT_ALLOWED`). Restricted (13–17) accounts can't turn family mode off or become discoverable |
 | POST | `/me/age` | `{age_band: under_13 | 13_17 | 18_plus}`. One-time (`AGE_ALREADY_SET`; changes go through support). `under_13` is refused (`AGE_NOT_ALLOWED`). `13_17` makes the account restricted (doc 10 §3.3): family mode on, not discoverable; a guest who answers 13–17 becomes a restricted account when they sign up |
-| POST | `/me/consents` | `[{purpose, granted, policy_version}]` |
+| POST | `/me/consents` | `{source: onboarding | settings | web_banner, consents: [{purpose, granted, policy_version}]}`. Purposes: `terms`, `privacy`, `analytics`, `marketing_push`, `ads_personalisation`, `contacts`, `session_replay`. Each change is a new `consent_records` row (the history is kept) and a `consent_changed` event; `204` |
 | POST | `/me/devices` | `{device_id, platform, push_token, model, ram_mb, app_version, browser?}` (web push tokens come from the Firebase JS SDK) |
 | GET | `/me/stats` | Per-category accuracy, best streak, duel W/L |
 | POST | `/me/delete` | Starts erasure (30-day SLA); returns a `dsar_id` |

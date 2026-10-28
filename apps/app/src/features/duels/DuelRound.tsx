@@ -1,5 +1,6 @@
 /** Playing one round of a duel: three questions with the shared question screen (mockup 11). */
 import { useCallback, useEffect, useRef } from 'react';
+import { router } from 'expo-router';
 import { QUESTIONS_PER_ROUND } from '@whosabi/game-rules';
 import type { AnswerRequest, DuelView } from '@whosabi/shared-types';
 import { useT } from '../../i18n';
@@ -40,6 +41,7 @@ export function DuelRound({ duel, round, firstSeq, onDone }: Props) {
       flow={flow}
       overline={t('duel.roundOverline', { round, name })}
       finishLabel={t('duel.continue')}
+      onLeave={() => router.replace('/home')}
     />
   );
 }

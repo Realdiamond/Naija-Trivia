@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Me, Platform, SignInResponse } from '@whosabi/shared-types';
+import { pseudonymousId } from '@whosabi/analytics/server';
 import { checkUsername } from '../src/profile/usernames';
 import { bearer, createTestApp, signInGuest } from './helpers';
 
@@ -134,6 +135,64 @@ describe('me', () => {
       tier: { id: 'sharp', name: 'Sharp Guy / Sharp Babe', badge: '⚡' },
     });
     expect((await t.app.inject({ method: 'GET', url: '/v1/users/nobody_here_123' })).statusCode).toBe(404);
+  });
+});
+
+describe('consents (doc 10 §2)', () => {
+  const postConsents = (access: string | null, payload: object) =>
+    t.app.inject({
+      method: 'POST',
+      url: '/v1/me/consents',
+      headers: access ? bearer(access) : {},
+      payload,
+    });
+
+  it('keeps every choice as a record and reports the change', async () => {
+    const guest = await signInGuest(t.app);
+    const banner = {
+      source: 'web_banner',
+      consents: [{ purpose: 'analytics', granted: true, policy_version: '2026-10' }],
+    };
+    expect((await postConsents(guest.access, banner)).statusCode).toBe(204);
+    const changed = {
+      source: 'settings',
+      consents: [{ purpose: 'analytics', granted: false, policy_version: '2026-10' }],
+    };
+    expect((await postConsents(guest.access, changed)).statusCode).toBe(204);
+
+    const rows = await t.pool.query(
+      'SELECT purpose, granted, policy_version, source FROM consent_records WHERE user_id = $1 ORDER BY id',
+      [guest.user.id],
+    );
+    expect(rows.rows).toEqual([
+      { purpose: 'analytics', granted: true, policy_version: '2026-10', source: 'web_banner' },
+      { purpose: 'analytics', granted: false, policy_version: '2026-10', source: 'settings' },
+    ]);
+
+    const pid = pseudonymousId(guest.user.id, t.config.analyticsKey);
+    const entries = (await t.redis.xrange('ev:stream', '-', '+')) as Array<[string, string[]]>;
+    const events = entries
+      .flatMap(([, fields]) => JSON.parse(fields[1]!) as Array<Record<string, unknown>>)
+      .filter((row) => row.user_pid === pid && row.event === 'consent_changed')
+      .map((row) => JSON.parse(row.props as string));
+    expect(events).toEqual([
+      { purpose: 'analytics', granted: true },
+      { purpose: 'analytics', granted: false },
+    ]);
+  });
+
+  it('refuses unknown purposes and anonymous requests', async () => {
+    const guest = await signInGuest(t.app);
+    const unknown = {
+      source: 'settings',
+      consents: [{ purpose: 'selling_data', granted: true, policy_version: '1' }],
+    };
+    expect((await postConsents(guest.access, unknown)).statusCode).toBe(400);
+    const valid = {
+      source: 'settings',
+      consents: [{ purpose: 'analytics', granted: true, policy_version: '1' }],
+    };
+    expect((await postConsents(null, valid)).statusCode).toBe(401);
   });
 });
 

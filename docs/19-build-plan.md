@@ -24,7 +24,7 @@ Status: ✅ done · 🔨 in progress · ⬜ not started
 | API, first slice | Migrations (schema v1.1) and the seed importer; guest sign-in; ES256 access tokens and rotating refresh tokens with reuse detection, HttpOnly cookie on the web; JWKS; `/v1/me`; `/v1/categories`; the first-run taste test (`/v1/rounds`: one question at a time, server timing, idempotent answers); server analytics events | `apps/api` |
 | Ingest | `POST /v1/events`: token check against the API's JWKS, gzip, tracking-plan and consent checks, quarantine, accept-once batches into the Redis stream | `apps/ingest` |
 
-Doc 15 sprint mapping: S0 is done except the Expo skeleton, OTP, Terraform and the web build in CI; S1 is done except the admin console shell, the content module and the ClickHouse loader. Those items are scheduled in the steps below.
+Doc 15 sprint mapping: S0 is done (the Expo app and the web build in CI came with step 1.4; Terraform gave way to Heroku in step 1.6); S1 is done except the admin console shell and the content module, which are scheduled in the steps below. The ClickHouse loader became a Postgres loader in step 1.3.
 
 ## 3. Milestone M1: "First duel" (doc 15, week 8)
 **Done when:** two internal users complete a duel against staging, one on an Android phone and one in the web app, and the duel shows on both players' admin timelines.
@@ -100,7 +100,7 @@ Docs: [07 §4.3](07-system-architecture.md), [08 §3, §6](08-data-model.md), [1
 
 Not in this step: reminders during a tie-break (both players answer, so there is no single turn), the 4-a-day cap on non-turn pushes (FR-NOT-2, with real pushes in step 2.5), and difficulty recalibration from the stats (step 2.6).
 
-### Step 1.4 · The app: Android and web 🔨
+### Step 1.4 · The app: Android and web ✅
 `apps/app` (Expo SDK 58, Expo Router), built in three pull requests. Docs: [05 UX](05-UX-and-user-flows.md), [TRD §4.10, §5.6](06-TRD.md), [PRD US-1, US-3, US-4, US-11](02-PRD.md), the [screen designs](design/README.md).
 
 **1.4a · Foundation, taste test and sign-in ✅**
@@ -133,7 +133,15 @@ Known gap: the web app's first load is about 460 KB gzipped against the 350 KB b
 
 Left for later on purpose: the profile screen and the tab bar (with leagues and the shop in M2), removing friends and blocking from the app (the API has both), lifelines (step 2.4), push notifications and share cards (step 2.5).
 
-**1.4c · Web polish ⬜ (next):** the desktop layout with side navigation and keyboard play (FR-WEB-4, FR-WEB-5); the cookie and consent banner, which switches on behaviour analytics (FR-WEB-11); the leave-match dialog.
+**1.4c · Web polish ✅**
+- ✅ Computers (from 1024 px): a side navigation (Home, Start a duel, Friends) beside the phone-width column (FR-WEB-4); not on the first-run, sign-in and duel-link pages
+- ✅ Keyboard play (FR-WEB-5): 1–4 or A–D answer, Enter continues (on the round review too), Esc opens the leave dialog; the keys show on the answers with a hint below them. Enter on a focused button is left to that button
+- ✅ A leave dialog on every question screen (the back arrow or Esc), warning that the question on screen keeps its timer
+- ✅ The consent banner on first open (FR-WEB-11): behaviour analytics only with consent. The choice is kept on the device and recorded on the server through the new `POST /v1/me/consents` (doc 09 §2.2): a `consent_records` row per change, so the history stays, and a `consent_changed` event. A new policy version asks again
+- ✅ The welcome screen scrolls on short screens, so the banner never hides "I have an account"
+- ✅ Tests: the consents endpoint (records kept as history, events, unknown purposes and anonymous requests refused), keys, and an end-to-end run on a 1280 px screen (banner, keys, leave dialog, side navigation)
+
+Left for later on purpose: changing the consent in settings (with the profile and settings screens in M2), the privacy policy and terms pages (after the legal review, doc 10), and the installable PWA (step 2.8).
 
 ### Step 1.5 · Admin console v0 ⬜
 `apps/admin` (Next.js): staff sign-in with Google (Google Workspace, or an allow-list of staff Google accounts to save cost), roles, the audit log, player search and User 360 with the activity timeline. Docs: [18 §3, §7, §16](18-admin-console-and-analytics.md), [PRD US-12](02-PRD.md).
