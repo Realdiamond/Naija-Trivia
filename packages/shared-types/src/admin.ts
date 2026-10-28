@@ -99,7 +99,7 @@ export const AdminUserHit = z.object({
   last_seen_at: z.iso.datetime().nullable(),
   created_at: z.iso.datetime(),
   /** How the search found them. */
-  matched: z.enum(['username', 'user_id', 'phone', 'device_id', 'duel_id']),
+  matched: z.enum(['username', 'user_id', 'phone', 'email', 'device_id', 'duel_id']),
 });
 export type AdminUserHit = z.infer<typeof AdminUserHit>;
 
@@ -107,8 +107,8 @@ export const AdminUserSearchResponse = z.object({ users: z.array(AdminUserHit) }
 export type AdminUserSearchResponse = z.infer<typeof AdminUserSearchResponse>;
 
 export const AdminSignInMethod = z.object({
-  provider: z.enum(['phone', 'google', 'apple', 'guest_device']),
-  /** Masked: `+234 80• ••• 4567` for phones; never the full value. */
+  provider: z.enum(['phone', 'email', 'google', 'apple', 'guest_device']),
+  /** Masked: `+234 80• ••• 4567` for phones, `c•••@gmail.com` for email; never the full value. */
   masked: z.string(),
   created_at: z.iso.datetime(),
 });

@@ -1,22 +1,26 @@
 /**
- * Phone sign-in codes (TRD FR-AUTH-2, doc 10 §1). A code exists only in Redis, as an HMAC,
- * for 5 minutes, and works once:
- *   otp:{request_id}              hash {phone, code_hmac, attempts, platform, provider, expires_at}
- *   otp:active:{phone}            the newest request_id: sending a new code retires the old one
- *   otp:cool:{phone}              when the last code went out: 30 s between sends to a number
+ * Sign-in codes, by text message (TRD FR-AUTH-2, doc 10 §1) and by email (build plan step 2.10).
+ * A code exists only in Redis, as an HMAC, and works once. With {p} the channel's prefix (otp for
+ * phones, eotp for email) and {to} the number or address:
+ *   {p}:{request_id}              hash {to, code_hmac, attempts, platform, provider, expires_at}
+ *   {p}:active:{to}               the newest request_id: sending a new code retires the old one
+ *   {p}:cool:{to}                 when the last code went out: 30 s between sends to one address
  * Times are checked against the app's clock (like answer timing); Redis expiry only cleans up.
- *   otp:n:{phone}:{wat date}      codes sent to the number today (max 5)
- *   otp:d:{device}:{wat date}     codes sent from the device today (max 10)
+ *   {p}:n:{to}:{wat date}         codes sent to the address today (max 5)
+ *   {p}:d:{device}:{wat date}     codes sent from the device today (max 10)
  */
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import type { Redis } from 'ioredis';
 import { watDate } from '@whosabi/game-rules';
 import { ErrorCode, type Platform } from '@whosabi/shared-types';
 import { ApiError } from '../errors';
+import type { EmailSender, OutgoingEmail } from './email';
 import type { CaptchaVerifier } from './providers';
 import type { SmsSender } from './sms';
 
 export const OTP_TTL_SECONDS = 300;
+/** Email can take a while to arrive (step 2.10). */
+export const EMAIL_CODE_TTL_SECONDS = 600;
 export const RESEND_AFTER_SECONDS = 30;
 export const MAX_SENDS_PER_NUMBER = 5;
 export const MAX_SENDS_PER_DEVICE = 10;
@@ -25,19 +29,26 @@ export const MAX_ATTEMPTS = 5;
 export const FREE_APP_SENDS = 2;
 const COUNTER_TTL_SECONDS = 26 * 3600;
 
+/** How codes reach people: a text message or an email. */
+export interface CodeChannel {
+  /** Redis key prefix and request id prefix: `otp` for phones, `eotp` for email. */
+  prefix: string;
+  ttlSeconds: number;
+  /** Sends the code and returns the provider that took it; throws if none did. */
+  deliver(to: string, code: string, platform: Platform): Promise<string>;
+}
+
 export interface OtpOptions {
   redis: Redis;
-  sms: SmsSender;
+  channel: CodeChannel;
   captcha: CaptchaVerifier;
   secret: string;
   now: () => number;
-  /** Host for the WebOTP line, e.g. whosabi.ng. */
-  webOtpDomain: string;
-  smsRetrieverAppHash?: string;
 }
 
 export interface SendInput {
-  phone: string;
+  /** An E.164 number or a lower-cased email address. */
+  to: string;
   platform: Platform;
   captchaToken?: string;
   ip: string;
@@ -45,12 +56,12 @@ export interface SendInput {
 }
 
 export interface VerifiedCode {
-  phone: string;
+  to: string;
   platform: Platform;
   provider: string;
 }
 
-/** A failure carries the SMS provider, for the OTP health events (doc 13). */
+/** A failure carries the provider, for the OTP health events (doc 13). */
 export type VerifyResult =
   { ok: true; code: VerifiedCode } | { ok: false; error: ApiError; provider: string };
 
@@ -58,11 +69,12 @@ export class OtpService {
   constructor(private readonly o: OtpOptions) {}
 
   async send(input: SendInput): Promise<{ requestId: string; provider: string }> {
-    const { redis } = this.o;
-    const { phone, platform } = input;
+    const { redis, channel } = this.o;
+    const { to, platform } = input;
+    const p = channel.prefix;
     const date = watDate(this.o.now());
-    const numberKey = `otp:n:${phone}:${date}`;
-    const deviceKey = input.deviceId ? `otp:d:${input.deviceId}:${date}` : null;
+    const numberKey = `${p}:n:${to}:${date}`;
+    const deviceKey = input.deviceId ? `${p}:d:${input.deviceId}:${date}` : null;
 
     const sentToNumber = Number((await redis.get(numberKey)) ?? 0);
     const sentFromDevice = deviceKey ? Number((await redis.get(deviceKey)) ?? 0) : 0;
@@ -90,7 +102,7 @@ export class OtpService {
     }
 
     const now = this.o.now();
-    const coolKey = `otp:cool:${phone}`;
+    const coolKey = `${p}:cool:${to}`;
     const lastSent = Number((await redis.get(coolKey)) ?? 0);
     const waitMs = lastSent + RESEND_AFTER_SECONDS * 1000 - now;
     if (waitMs > 0) {
@@ -104,28 +116,29 @@ export class OtpService {
     }
 
     const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
-    const requestId = `otp_${randomBytes(16).toString('base64url')}`;
+    const requestId = `${p}_${randomBytes(16).toString('base64url')}`;
+    const ttl = channel.ttlSeconds;
     const counters = redis.multi().incr(numberKey).expire(numberKey, COUNTER_TTL_SECONDS);
     if (deviceKey) counters.incr(deviceKey).expire(deviceKey, COUNTER_TTL_SECONDS);
     await counters
-      .hset(`otp:${requestId}`, {
-        phone,
+      .hset(`${p}:${requestId}`, {
+        to,
         code_hmac: this.hmac(requestId, code),
         attempts: 0,
         platform,
-        expires_at: now + OTP_TTL_SECONDS * 1000,
+        expires_at: now + ttl * 1000,
       })
-      .expire(`otp:${requestId}`, OTP_TTL_SECONDS)
-      .set(`otp:active:${phone}`, requestId, 'EX', OTP_TTL_SECONDS)
+      .expire(`${p}:${requestId}`, ttl)
+      .set(`${p}:active:${to}`, requestId, 'EX', ttl)
       .set(coolKey, String(now), 'EX', RESEND_AFTER_SECONDS)
       .exec();
 
     let provider: string;
     try {
-      provider = await this.o.sms.send(phone, this.message(code, platform));
+      provider = await channel.deliver(to, code, platform);
     } catch {
       // Nothing was sent, so nothing counts against the player.
-      const undo = redis.multi().decr(numberKey).del(`otp:${requestId}`, coolKey);
+      const undo = redis.multi().decr(numberKey).del(`${p}:${requestId}`, coolKey);
       if (deviceKey) undo.decr(deviceKey);
       await undo.exec();
       throw new ApiError(
@@ -135,18 +148,19 @@ export class OtpService {
         'Try again shortly.',
       );
     }
-    await redis.hset(`otp:${requestId}`, 'provider', provider);
+    await redis.hset(`${p}:${requestId}`, 'provider', provider);
     return { requestId, provider };
   }
 
   async verify(requestId: string, code: string): Promise<VerifyResult> {
     const { redis } = this.o;
-    const key = `otp:${requestId}`;
+    const p = this.o.channel.prefix;
+    const key = `${p}:${requestId}`;
     const record = await redis.hgetall(key);
     const provider = record.provider ?? 'unknown';
     const fail = (error: ApiError): VerifyResult => ({ ok: false, error, provider });
-    if (!record.phone || Number(record.expires_at) <= this.o.now()) return fail(expired());
-    if ((await redis.get(`otp:active:${record.phone}`)) !== requestId) {
+    if (!record.to || Number(record.expires_at) <= this.o.now()) return fail(expired());
+    if ((await redis.get(`${p}:active:${record.to}`)) !== requestId) {
       await redis.del(key);
       return fail(expired('A newer code was sent. Use the latest one.'));
     }
@@ -157,7 +171,7 @@ export class OtpService {
     if (expected.length !== given.length || !timingSafeEqual(expected, given)) {
       const attempts = await redis.hincrby(key, 'attempts', 1);
       if (attempts >= MAX_ATTEMPTS) {
-        await redis.del(key, `otp:active:${record.phone}`);
+        await redis.del(key, `${p}:active:${record.to}`);
         return fail(tooManyAttempts());
       }
       const left = MAX_ATTEMPTS - attempts;
@@ -172,20 +186,8 @@ export class OtpService {
     }
     // Single use: of two requests racing with the right code, only one deletes the key.
     if ((await redis.del(key)) !== 1) return fail(expired());
-    await redis.del(`otp:active:${record.phone}`);
-    return { ok: true, code: { phone: record.phone, platform: record.platform as Platform, provider } };
-  }
-
-  /**
-   * The text per platform (TRD FR-AUTH-2): Android ends with the SMS Retriever hash so the app
-   * reads the code itself; the web adds the WebOTP line Chrome on Android fills from; iOS and
-   * other browsers offer the code from the message through autocomplete="one-time-code".
-   */
-  message(code: string, platform: Platform): string {
-    const base = `Your Who Sabi? code is ${code}. It expires in 5 minutes. Don't share it with anyone.`;
-    if (platform === 'android' && this.o.smsRetrieverAppHash) return `${base}\n${this.o.smsRetrieverAppHash}`;
-    if (platform === 'web') return `${base}\n\n@${this.o.webOtpDomain} #${code}`;
-    return base;
+    await redis.del(`${p}:active:${record.to}`);
+    return { ok: true, code: { to: record.to, platform: record.platform as Platform, provider } };
   }
 
   private hmac(requestId: string, code: string): string {
@@ -197,3 +199,63 @@ const expired = (detail = 'Request a new code.') =>
   new ApiError(400, ErrorCode.otpExpired, 'This code has expired', detail);
 const tooManyAttempts = () =>
   new ApiError(400, ErrorCode.otpTooManyAttempts, 'Too many wrong tries', 'Request a new code.');
+
+export interface PhoneTextOptions {
+  /** Host for the WebOTP line, e.g. whosabi.ng. */
+  webOtpDomain: string;
+  smsRetrieverAppHash?: string;
+}
+
+export function phoneChannel(sms: SmsSender, options: PhoneTextOptions): CodeChannel {
+  return {
+    prefix: 'otp',
+    ttlSeconds: OTP_TTL_SECONDS,
+    deliver: (to, code, platform) => sms.send(to, phoneCodeText(code, platform, options)),
+  };
+}
+
+/**
+ * The text per platform (TRD FR-AUTH-2): Android ends with the SMS Retriever hash so the app
+ * reads the code itself; the web adds the WebOTP line Chrome on Android fills from; iOS and
+ * other browsers offer the code from the message through autocomplete="one-time-code".
+ */
+export function phoneCodeText(code: string, platform: Platform, options: PhoneTextOptions): string {
+  const base = `Your Who Sabi? code is ${code}. It expires in 5 minutes. Don't share it with anyone.`;
+  if (platform === 'android' && options.smsRetrieverAppHash) return `${base}\n${options.smsRetrieverAppHash}`;
+  if (platform === 'web') return `${base}\n\n@${options.webOtpDomain} #${code}`;
+  return base;
+}
+
+export function emailChannel(email: EmailSender): CodeChannel {
+  return {
+    prefix: 'eotp',
+    ttlSeconds: EMAIL_CODE_TTL_SECONDS,
+    deliver: (to, code) => email.send(codeEmail(to, code)),
+  };
+}
+
+/** The code is in the subject too, so it shows in the phone's notification. */
+export function codeEmail(to: string, code: string): OutgoingEmail {
+  const minutes = EMAIL_CODE_TTL_SECONDS / 60;
+  return {
+    to,
+    subject: `${code} is your Who Sabi? code`,
+    text: [
+      `Your Who Sabi? code is ${code}.`,
+      '',
+      `Type it in the game to sign in. It expires in ${minutes} minutes. Don't share it with anyone.`,
+      '',
+      "If you didn't ask for this code, you can ignore this email.",
+    ].join('\n'),
+    html: `<!doctype html>
+<html><body style="margin:0;padding:24px;background:#FFFDF7;font-family:Arial,Helvetica,sans-serif;color:#14231B">
+<table role="presentation" width="100%" style="max-width:480px;margin:0 auto">
+<tr><td style="font-size:22px;font-weight:bold;color:#008751;padding-bottom:16px">Who Sabi?</td></tr>
+<tr><td style="font-size:16px;padding-bottom:12px">Your sign-in code is</td></tr>
+<tr><td style="font-size:36px;font-weight:bold;letter-spacing:8px;padding:16px;background:#E3F3EA;border-radius:12px;text-align:center">${code}</td></tr>
+<tr><td style="font-size:14px;padding-top:16px">Type it in the game to sign in. It expires in ${minutes} minutes. Don't share it with anyone.</td></tr>
+<tr><td style="font-size:12px;color:#5A6660;padding-top:16px">If you didn't ask for this code, you can ignore this email.</td></tr>
+</table>
+</body></html>`,
+  };
+}

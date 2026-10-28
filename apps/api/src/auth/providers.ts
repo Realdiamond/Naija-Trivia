@@ -1,11 +1,12 @@
 /**
  * The outside services sign-in depends on, behind small interfaces so tests and local
- * development run without accounts or network: SMS, Cloudflare Turnstile, and Google and
+ * development run without accounts or network: SMS, email, Cloudflare Turnstile, and Google and
  * Apple ID-token checks (TRD FR-AUTH-2, FR-AUTH-3, doc 10 §1).
  */
 import type { FastifyBaseLogger } from 'fastify';
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import type { Config } from '../config';
+import { DevEmail, ResendEmail, type EmailSender } from './email';
 import { AfricasTalkingSms, DevSms, FailoverSms, TermiiSms, type SmsSender } from './sms';
 
 export interface CaptchaVerifier {
@@ -29,6 +30,8 @@ export interface IdTokenVerifier {
 export interface AuthProviders {
   /** Null when phone sign-in is off (production without an SMS provider). */
   sms: SmsSender | null;
+  /** Null when email sign-in is off (production without Resend). */
+  email: EmailSender | null;
   captcha: CaptchaVerifier;
   /** Null when the sign-in method is not configured. */
   google: IdTokenVerifier | null;
@@ -100,6 +103,12 @@ export function createAuthProviders(
   const sms =
     senders.length > 0 ? new FailoverSms(senders, log) : config.phoneSignIn ? new DevSms(log) : null;
 
+  const email = config.resend
+    ? new ResendEmail(config.resend)
+    : config.emailSignIn
+      ? new DevEmail(log)
+      : null;
+
   const captcha: CaptchaVerifier = config.turnstileSecret
     ? new TurnstileVerifier(config.turnstileSecret)
     : { verify: async (token) => token.length > 0 };
@@ -107,6 +116,7 @@ export function createAuthProviders(
   const googleKeys = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
   return {
     sms,
+    email,
     captcha,
     google:
       config.googleClientIds.length > 0

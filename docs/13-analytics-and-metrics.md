@@ -35,7 +35,7 @@ Common properties on every event: `event_id`, `ts`, `session_id`, `seq`, `screen
 | `app_foregrounded` / `app_backgrounded` | Client | `foreground_ms`, `screen`, `screen_ms` (on background) | **Time spent comes from these.** On the web: tab visible / hidden or `pagehide` |
 | `screen_viewed` | Client | `screen` (`area.screen`, e.g. `duel.question`), `prev_screen`, `prev_screen_ms` | Time per screen. Re-sent on return to the foreground with an empty `prev_screen` |
 | `taste_test_completed` | Client | `correct_count`, `duration_ms` | FTUE |
-| `signup_completed` | Server | `method` (phone/google/apple), `merged_guest` | |
+| `signup_completed` | Server | `method` (phone/email/google/apple), `merged_guest` | |
 | `otp_sent` / `otp_verified` / `otp_failed` | Server | `provider`, `carrier`, `latency_ms`, `reason` | OTP health |
 | `friend_added` | Server | `source` (contacts/username/opponent/link/qr) | |
 | `invite_shared` | Client | `channel` (whatsapp/status/x/copy/web_share/other), `context` (duel/party/daily/profile) | |

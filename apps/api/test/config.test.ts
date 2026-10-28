@@ -40,6 +40,26 @@ describe('phone sign-in settings', () => {
     expect(createAuthProviders(config, silent, Date.now).sms).not.toBeNull();
   });
 
+  it('turns email sign-in on in production only with a Resend key, which needs the same secrets', () => {
+    const off = loadConfig(production);
+    expect(off.emailSignIn).toBe(false);
+    expect(createAuthProviders(off, silent, Date.now).email).toBeNull();
+    expect(() => loadConfig({ ...production, RESEND_API_KEY: 're_key' })).toThrow(
+      'Missing required production settings: OTP_SECRET, TURNSTILE_SECRET',
+    );
+    const on = loadConfig({
+      ...production,
+      RESEND_API_KEY: 're_key',
+      OTP_SECRET: 'o'.repeat(32),
+      TURNSTILE_SECRET: 'turnstile-secret',
+    });
+    expect(on.resend).toEqual({ apiKey: 're_key', from: 'Who Sabi? <codes@whosabi.ng>' });
+    expect(createAuthProviders(on, silent, Date.now).email).not.toBeNull();
+    // Outside production, codes go to the log.
+    const dev = loadConfig({ DATABASE_URL: production.DATABASE_URL, REDIS_URL: production.REDIS_URL });
+    expect(createAuthProviders(dev, silent, Date.now).email).not.toBeNull();
+  });
+
   it('still refuses production without its signing keys', () => {
     expect(() => loadConfig({ ...production, JWT_PRIVATE_KEY: '' })).toThrow('JWT_PRIVATE_KEY');
   });

@@ -27,6 +27,16 @@ export async function enterPhoneCode(page: Page, phone: string) {
   await page.getByTestId('code').fill((await sentCodes()).at(-1)!);
 }
 
+/** Like a phone code, by email (step 2.10): codes go to the API's log in development too. */
+export async function enterEmailCode(page: Page, email: string) {
+  const before = (await sentCodes()).length;
+  await page.getByTestId('email').fill(email);
+  await page.getByTestId('send-code').click();
+  await expect(page.getByText(/^We sent a 6-digit code to /)).toBeVisible();
+  await expect.poll(async () => (await sentCodes()).length).toBeGreaterThan(before);
+  await page.getByTestId('code').fill((await sentCodes()).at(-1)!);
+}
+
 /** A new account from scratch: phone code, then username and age. */
 export async function signUp(page: Page, phone: string, username: string) {
   await page.goto('/sign-in');

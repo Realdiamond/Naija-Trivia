@@ -49,6 +49,7 @@ This document turns the PRD into technical requirements: the platforms, the stac
 ### 4.1 Identity & accounts
 - **FR-AUTH-1:** Guest account created on first launch (`device_id` + server-issued guest JWT). On the web, the `device_id` is a random browser ID kept in IndexedDB.
 - **FR-AUTH-2:** Phone OTP. E.164 normalisation (+234), 6-digit code, TTL 5 min, max 5 sends/day/number, max 10/day/device, max 5 verify attempts per code. The client sends its platform and the server picks the SMS template: Android adds the SMS Retriever app hash; the web adds the WebOTP line `@whosabi.ng #123456` so Chrome on Android fills the code; iOS and other browsers use `autocomplete="one-time-code"`.
+- **FR-AUTH-2a:** Email codes (build plan step 2.10), for players without Google or a phone code: the same 6-digit code, limits, human check and single use as FR-AUTH-2, a TTL of 10 minutes, sent through Resend. The address is the identity, lower-cased.
 - **FR-AUTH-3:** Google / Apple sign-in using ID-token verification on the server.
 - **FR-AUTH-4:** Guest-to-account merge keeps the guest's stats, coins and duels. Conflict rule: if the phone already has an account, guest progress is merged into it and coins are added.
 - **FR-AUTH-5:** Account deletion completes within 30 days (NDPA right to erasure). Matches are anonymised, not deleted, so opponents' history stays valid.

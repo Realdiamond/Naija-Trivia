@@ -80,7 +80,7 @@ export default async function User360({
           )}
           {others.map((m) => (
             <span key={`${m.provider}-${m.created_at}`} className="muted">
-              · {m.masked}
+              · {m.provider === 'email' ? `Email ${m.masked}` : m.masked}
             </span>
           ))}
         </div>

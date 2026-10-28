@@ -1,6 +1,6 @@
 /**
  * The sign-in buttons that are switched on (GET /v1/auth/methods). At launch phone codes are off
- * to save SMS costs, so players use Google (or Apple on iPhone) or stay guests.
+ * to save SMS costs, so players use Google, an email code (or Apple on iPhone), or stay guests.
  */
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -23,7 +23,7 @@ export function afterSignIn(user: PublicUser): void {
   router.replace(user.username ? '/home' : '/profile-setup');
 }
 
-export function SignInOptions({ showPhone = true }: { showPhone?: boolean }) {
+export function SignInOptions({ showCodes = true }: { showCodes?: boolean }) {
   const t = useT();
   const methods = useAuthMethods();
   const [error, setError] = useState<string | null>(null);
@@ -39,23 +39,32 @@ export function SignInOptions({ showPhone = true }: { showPhone?: boolean }) {
 
   if (methods.isPending) return null;
   const phoneOn = methods.data?.phone === true;
-  const phone = showPhone && phoneOn;
+  const emailOn = methods.data?.email === true;
   const withGoogle = methods.data?.google === true && googleAvailable;
 
   return (
     <View style={styles.wrap}>
-      {phone ? (
+      {showCodes && phoneOn ? (
         <Button
           label={t('signin.phoneButton')}
           icon="phone"
-          onPress={() => router.push('/sign-in')}
+          onPress={() => router.push('/sign-in?with=phone')}
           testID="signin-phone"
         />
       ) : null}
       {withGoogle ? (
         <GoogleButton label={t('signin.google')} onToken={(token) => void google(token)} />
       ) : null}
-      {!phoneOn && !withGoogle ? (
+      {showCodes && emailOn ? (
+        <Button
+          label={t('signin.emailButton')}
+          icon="mail"
+          variant={phoneOn || withGoogle ? 'outline' : 'primary'}
+          onPress={() => router.push('/sign-in?with=email')}
+          testID="signin-email"
+        />
+      ) : null}
+      {!phoneOn && !emailOn && !withGoogle ? (
         <Text variant="bodySoft" testID="signin-none">
           {t('signin.noMethods')}
         </Text>

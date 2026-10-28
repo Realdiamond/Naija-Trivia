@@ -187,6 +187,25 @@ export class ApiClient {
     return res;
   }
 
+  sendEmailCode(email: string, turnstileToken?: string): Promise<OtpSendResponse> {
+    return this.post<OtpSendResponse>(
+      routes.authEmailSend(),
+      { email, platform: this.opts.platform, ...(turnstileToken ? { turnstile_token: turnstileToken } : {}) },
+      { auth: 'optional' },
+    );
+  }
+
+  /** Signs in with an email code and keeps the current guest's progress, like a phone code. */
+  async verifyEmailCode(requestId: string, code: string): Promise<SignInResponse> {
+    const res = await this.post<SignInResponse>(
+      routes.authEmailVerify(),
+      { request_id: requestId, code, merge_guest: true },
+      { auth: 'optional' },
+    );
+    this.adopt(res);
+    return res;
+  }
+
   async signInWithGoogle(idToken: string): Promise<SignInResponse> {
     const res = await this.post<SignInResponse>(
       routes.authGoogle(),

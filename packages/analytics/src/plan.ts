@@ -80,7 +80,7 @@ export const TRACKING_PLAN = {
   signup_completed: spec(
     'server',
     'core',
-    z.object({ method: z.enum(['phone', 'google', 'apple']), merged_guest: z.boolean() }),
+    z.object({ method: z.enum(['phone', 'email', 'google', 'apple']), merged_guest: z.boolean() }),
   ),
   otp_sent: spec(
     'server',

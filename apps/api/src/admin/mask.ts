@@ -1,4 +1,5 @@
 /** Identifiers as staff see them by default (doc 18 §7.2): enough to recognise, not to use. */
+import { maskEmail } from '../auth/email';
 
 /** `+2348034564567` → `+234 80• ••• 4567`. */
 export function maskPhoneForStaff(e164: string): string {
@@ -10,6 +11,8 @@ export function maskSignIn(provider: string, subject: string): string {
   switch (provider) {
     case 'phone':
       return maskPhoneForStaff(subject);
+    case 'email':
+      return maskEmail(subject);
     case 'guest_device':
       return `device ${subject.slice(0, 4)}…`;
     default:
@@ -17,7 +20,7 @@ export function maskSignIn(provider: string, subject: string): string {
   }
 }
 
-/** For the audit log: what was searched for, without a full phone number in it. */
-export function maskSearch(query: string, phone: string | null): string {
-  return phone ? maskPhoneForStaff(phone) : query;
+/** For the audit log: what was searched for, without a full phone number or email in it. */
+export function maskSearch(query: string, phone: string | null, email: string | null = null): string {
+  return phone ? maskPhoneForStaff(phone) : email ? maskEmail(email) : query;
 }

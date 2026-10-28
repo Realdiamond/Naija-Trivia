@@ -8,6 +8,7 @@ const MATCHED = {
   username: 'username',
   user_id: 'user ID',
   phone: 'phone number',
+  email: 'email',
   device_id: 'device ID',
   duel_id: 'player in the duel',
 } as const;
@@ -29,14 +30,18 @@ export default async function Players({ searchParams }: { searchParams: Promise<
       <form action="/players" className="inline" role="search">
         <label style={{ flex: 1 }}>
           Find a player
-          <input name="q" defaultValue={q} placeholder="Username, user ID, phone, device ID or duel ID" />
+          <input
+            name="q"
+            defaultValue={q}
+            placeholder="Username, user ID, phone, email, device ID or duel ID"
+          />
         </label>
         <button className="primary" type="submit">
           Search
         </button>
       </form>
       <p className="muted small">
-        Phone numbers match exactly and are logged. Results never show full numbers.
+        Phone numbers and emails match exactly and are logged. Results never show them in full.
       </p>
       {error ? <p className="error">{error}</p> : null}
       {result ? (

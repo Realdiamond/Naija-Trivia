@@ -45,7 +45,11 @@ const Env = z.object({
     .string()
     .regex(/^[A-Za-z0-9+/]{11}$/)
     .optional(),
-  /** Cloudflare Turnstile secret for OTP sends (required in production when phone sign-in is on). */
+  /** Resend (step 2.10): email sign-in codes are on in production once this is set. */
+  RESEND_API_KEY: z.string().min(1).optional(),
+  /** The sender of sign-in codes, on a domain verified in Resend. */
+  EMAIL_FROM: z.string().min(3).default('Who Sabi? <codes@whosabi.ng>'),
+  /** Cloudflare Turnstile secret for code sends (required in production when phone or email sign-in is on). */
   TURNSTILE_SECRET: z.string().min(1).optional(),
   /** OAuth client ids (Android, iOS, web) whose Google ID tokens we accept; empty turns Google sign-in off. */
   GOOGLE_CLIENT_IDS: z.string().default(''),
@@ -106,6 +110,9 @@ export interface Config {
     africasTalking?: { username: string; apiKey: string; senderId?: string };
   };
   smsRetrieverAppHash?: string;
+  /** Email codes: on outside production (codes go to the log), and in production once Resend is set. */
+  emailSignIn: boolean;
+  resend?: { apiKey: string; from: string };
   turnstileSecret?: string;
   googleClientIds: string[];
   appleAudiences: string[];
@@ -131,8 +138,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const smsProvider = Boolean(e.TERMII_API_KEY || (e.AT_USERNAME && e.AT_API_KEY));
   if (e.NODE_ENV === 'production') {
     const required = ['JWT_PRIVATE_KEY', 'JWT_PUBLIC_KEY', 'ANALYTICS_KEY'];
-    // Phone sign-in stays off until an SMS provider is set; then its secrets are needed too.
-    if (smsProvider) required.push('OTP_SECRET', 'TURNSTILE_SECRET');
+    // Phone and email sign-in stay off until a provider is set; then their secrets are needed too.
+    if (smsProvider || e.RESEND_API_KEY) required.push('OTP_SECRET', 'TURNSTILE_SECRET');
     const missing = required.filter((k) => !env[k]);
     if (missing.length) throw new Error(`Missing required production settings: ${missing.join(', ')}`);
   }
@@ -167,6 +174,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
           : undefined,
     },
     smsRetrieverAppHash: e.SMS_RETRIEVER_APP_HASH,
+    emailSignIn: e.NODE_ENV !== 'production' || Boolean(e.RESEND_API_KEY),
+    resend: e.RESEND_API_KEY ? { apiKey: e.RESEND_API_KEY, from: e.EMAIL_FROM } : undefined,
     turnstileSecret: e.TURNSTILE_SECRET,
     googleClientIds: list(e.GOOGLE_CLIENT_IDS),
     appleAudiences: list(e.APPLE_AUDIENCES),

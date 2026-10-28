@@ -6,6 +6,7 @@ import { inject } from 'vitest';
 import type { AuthResponse, Platform } from '@whosabi/shared-types';
 import { buildApp } from '../src/app';
 import { APPLE_ISSUERS, GOOGLE_ISSUERS, idTokenVerifier, type AuthProviders } from '../src/auth/providers';
+import { DevEmail } from '../src/auth/email';
 import { DevSms } from '../src/auth/sms';
 import { createTokenService } from '../src/auth/tokens';
 import { loadConfig } from '../src/config';
@@ -27,6 +28,22 @@ export class TestSms extends DevSms {
     const message = this.outbox.filter((m) => m.to === phone).at(-1);
     const code = message && /code is (\d{6})/.exec(message.text)?.[1];
     if (!code) throw new Error(`no code sent to ${phone}`);
+    return code;
+  }
+}
+
+/** Keeps every email; `down` makes it fail like Resend refusing (its daily limit, say). */
+export class TestEmail extends DevEmail {
+  down = false;
+  override async send(email: Parameters<DevEmail['send']>[0]): Promise<string> {
+    if (this.down) throw new Error('resend down');
+    return super.send(email);
+  }
+  /** The newest code sent to an address. */
+  codeFor(address: string): string {
+    const email = this.outbox.filter((m) => m.to === address).at(-1);
+    const code = email && /code is (\d{6})/.exec(email.text)?.[1];
+    if (!code) throw new Error(`no code sent to ${address}`);
     return code;
   }
 }
@@ -93,9 +110,11 @@ export async function createTestApp(
   const redis = new Redis(config.redisUrl);
   const tokens = await createTokenService({}, clock.now);
   const sms = new TestSms();
+  const email = new TestEmail();
   const identity = await testIdentityProviders(clock.now);
   const auth: AuthProviders = {
     sms,
+    email,
     // Only the token 'human' passes the Turnstile stand-in.
     captcha: { verify: async (token) => token === 'human' },
     google: identity.google,
@@ -114,6 +133,7 @@ export async function createTestApp(
     tokens,
     auth,
     sms,
+    email,
     signGoogle: identity.signGoogle,
     signApple: identity.signApple,
     signAdminGoogle: identity.signAdminGoogle,

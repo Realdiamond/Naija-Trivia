@@ -1,7 +1,7 @@
 /**
  * Accounts behind sign-in methods (TRD FR-AUTH-3, FR-AUTH-4, FR-AUTH-8).
  *
- * When a phone number, Google or Apple identity signs in, and the request carries the current
+ * When a phone number, email address, Google or Apple identity signs in, and the request carries the current
  * session (`merge_guest`):
  *   - new identity + a guest session      → the guest becomes the account (same id: nothing moves)
  *   - new identity + an account session   → the identity is linked to that account
@@ -16,7 +16,7 @@ import { ApiError } from '../errors';
 import { newId } from '../ids';
 import type { AccessClaims } from './tokens';
 
-export type IdentityProvider = 'phone' | 'google' | 'apple';
+export type IdentityProvider = 'phone' | 'email' | 'google' | 'apple';
 
 export interface AccountRow {
   id: string;

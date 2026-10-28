@@ -1,6 +1,6 @@
 /**
- * Sign-in and sessions (TRD FR-AUTH-1 to FR-AUTH-8, doc 09 §2.1): guests, phone codes,
- * Google and Apple. Apps get the refresh token in the body; the web gets it as an HttpOnly
+ * Sign-in and sessions (TRD FR-AUTH-1 to FR-AUTH-8, doc 09 §2.1): guests, phone and email
+ * codes, Google and Apple. Apps get the refresh token in the body; the web gets it as an HttpOnly
  * cookie that JavaScript can never read.
  */
 import { createHash } from 'node:crypto';
@@ -8,6 +8,8 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import {
   AppleAuthRequest,
   AuthResponse,
+  EmailCodeSendRequest,
+  EmailCodeVerifyRequest,
   ErrorCode,
   GoogleAuthRequest,
   GuestAuthRequest,
@@ -30,7 +32,7 @@ import { eventContextFor } from '../events';
 import { newId } from '../ids';
 import { signInWithIdentity, type IdentityProvider } from './accounts';
 import { sessionFromHeader } from './context';
-import { OtpService, RESEND_AFTER_SECONDS } from './otp';
+import { emailChannel, OtpService, phoneChannel, RESEND_AFTER_SECONDS } from './otp';
 import type { IdTokenVerifier, VerifiedIdToken } from './providers';
 import {
   ACCESS_TTL_SECONDS,
@@ -64,6 +66,7 @@ const PROVIDER_NAMES: Record<IdentityProvider, string> = {
   google: 'Google',
   apple: 'Apple',
   phone: 'a phone code',
+  email: 'an email code',
 };
 const PLATFORM_NAMES: Record<Platform, string> = { android: 'Android', ios: 'iPhone', web: 'the web' };
 
@@ -115,10 +118,11 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
     return reply.code(status).send(body);
   }
 
-  /** Which sign-in buttons the apps show: phone and Google/Apple can each be switched off. */
+  /** Which sign-in buttons the apps show: phone, email and Google/Apple can each be switched off. */
   app.get('/v1/auth/methods', async (): Promise<AuthMethodsResponse> => ({
     guest: true,
     phone: deps.auth.sms !== null,
+    email: deps.auth.email !== null,
     google: deps.auth.google !== null,
     apple: deps.auth.apple !== null,
   }));
@@ -247,16 +251,23 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
     return reply.code(204).send();
   });
 
+  const codeOptions = {
+    redis: deps.redis,
+    captcha: deps.auth.captcha,
+    secret: config.otpSecret,
+    now: clock.now,
+  };
   const otp = deps.auth.sms
     ? new OtpService({
-        redis: deps.redis,
-        sms: deps.auth.sms,
-        captcha: deps.auth.captcha,
-        secret: config.otpSecret,
-        now: clock.now,
-        webOtpDomain: new URL(config.publicWebUrl).hostname,
-        smsRetrieverAppHash: config.smsRetrieverAppHash,
+        ...codeOptions,
+        channel: phoneChannel(deps.auth.sms, {
+          webOtpDomain: new URL(config.publicWebUrl).hostname,
+          smsRetrieverAppHash: config.smsRetrieverAppHash,
+        }),
       })
+    : null;
+  const emailOtp = deps.auth.email
+    ? new OtpService({ ...codeOptions, channel: emailChannel(deps.auth.email) })
     : null;
 
   /** Phone sign-in is off until an SMS provider is set up (production without Termii or Africa's Talking). */
@@ -270,6 +281,19 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
       );
     }
     return otp;
+  }
+
+  /** Email sign-in is off until Resend is set up (production without RESEND_API_KEY). */
+  function emailCodes(): OtpService {
+    if (!emailOtp) {
+      throw new ApiError(
+        503,
+        ErrorCode.providerUnavailable,
+        'Email sign-in is not available',
+        'Sign in with Google, or keep playing as a guest.',
+      );
+    }
+    return emailOtp;
   }
 
   /**
@@ -322,43 +346,40 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
     };
   }
 
-  app.post(
-    '/v1/auth/otp/send',
-    { config: { rateLimit: { max: config.otpSendsPerIpPerHour, timeWindow: '1 hour' } } },
-    async (request): Promise<OtpSendResponse> => {
-      const codes = phoneCodes();
-      const body = parse(OtpSendRequest, request.body);
-      const phone = normalizeNigerianPhone(body.phone);
-      if (!phone) {
-        throw new ApiError(
-          400,
-          ErrorCode.validation,
-          'The request is not valid',
-          'phone: enter a Nigerian mobile number, like 0803 123 4567.',
-        );
-      }
-      const current = await sessionFromHeader(request, tokens);
-      const sent = await codes.send({
-        phone,
-        platform: body.platform,
-        captchaToken: body.turnstile_token,
-        ip: request.ip,
-        deviceId: current ? await deviceOf(current.userId) : null,
-      });
-      if (current) {
-        await deps.events.emit(
-          'otp_sent',
-          { provider: sent.provider },
-          eventContextFor(request, current.userId, current.platform),
-        );
-      }
-      return { request_id: sent.requestId, resend_after_s: RESEND_AFTER_SECONDS };
-    },
-  );
+  /** Sends a sign-in code by text or email; the events show how codes are doing (doc 13). */
+  async function sendCode(
+    request: FastifyRequest,
+    codes: OtpService,
+    to: string,
+    platform: Platform,
+    captchaToken: string | undefined,
+  ): Promise<OtpSendResponse> {
+    const current = await sessionFromHeader(request, tokens);
+    const sent = await codes.send({
+      to,
+      platform,
+      captchaToken,
+      ip: request.ip,
+      deviceId: current ? await deviceOf(current.userId) : null,
+    });
+    if (current) {
+      await deps.events.emit(
+        'otp_sent',
+        { provider: sent.provider },
+        eventContextFor(request, current.userId, current.platform),
+      );
+    }
+    return { request_id: sent.requestId, resend_after_s: RESEND_AFTER_SECONDS };
+  }
 
-  app.post('/v1/auth/otp/verify', async (request, reply) => {
-    const codes = phoneCodes();
-    const body = parse(OtpVerifyRequest, request.body);
+  /** Checks a code, then signs in with the number or address it was sent to. */
+  async function verifyCode(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    codes: OtpService,
+    body: OtpVerifyRequest,
+    identityFor: (to: string) => { provider: IdentityProvider; subject: string; phoneHash?: Buffer },
+  ) {
     // Checked before the code is used up, so a guest is never dropped by an expired token.
     const current = await sessionFromHeader(request, tokens);
     const checked = await codes.verify(body.request_id, body.code);
@@ -372,16 +393,55 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
       }
       throw checked.error;
     }
-    const { phone, platform, provider } = checked.code;
+    const { to, platform, provider } = checked.code;
     const signedIn = await signIn(
       request,
       reply,
-      { provider: 'phone', subject: phone, phoneHash: createHash('sha256').update(phone).digest() },
+      identityFor(to),
       platform,
       body.merge_guest ? current : null,
     );
     await deps.events.emit('otp_verified', { provider }, eventContextFor(request, signedIn.userId, platform));
     return signedIn.reply;
+  }
+
+  const codeSendLimit = { config: { rateLimit: { max: config.otpSendsPerIpPerHour, timeWindow: '1 hour' } } };
+
+  app.post('/v1/auth/otp/send', codeSendLimit, async (request): Promise<OtpSendResponse> => {
+    const codes = phoneCodes();
+    const body = parse(OtpSendRequest, request.body);
+    const phone = normalizeNigerianPhone(body.phone);
+    if (!phone) {
+      throw new ApiError(
+        400,
+        ErrorCode.validation,
+        'The request is not valid',
+        'phone: enter a Nigerian mobile number, like 0803 123 4567.',
+      );
+    }
+    return sendCode(request, codes, phone, body.platform, body.turnstile_token);
+  });
+
+  app.post('/v1/auth/otp/verify', async (request, reply) => {
+    const codes = phoneCodes();
+    const body = parse(OtpVerifyRequest, request.body);
+    return verifyCode(request, reply, codes, body, (phone) => ({
+      provider: 'phone',
+      subject: phone,
+      phoneHash: createHash('sha256').update(phone).digest(),
+    }));
+  });
+
+  app.post('/v1/auth/email/send', codeSendLimit, async (request): Promise<OtpSendResponse> => {
+    const codes = emailCodes();
+    const body = parse(EmailCodeSendRequest, request.body);
+    return sendCode(request, codes, body.email.toLowerCase(), body.platform, body.turnstile_token);
+  });
+
+  app.post('/v1/auth/email/verify', async (request, reply) => {
+    const codes = emailCodes();
+    const body = parse(EmailCodeVerifyRequest, request.body);
+    return verifyCode(request, reply, codes, body, (email) => ({ provider: 'email', subject: email }));
   });
 
   app.post('/v1/auth/google', async (request, reply) => {

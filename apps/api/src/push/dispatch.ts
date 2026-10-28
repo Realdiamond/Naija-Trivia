@@ -37,14 +37,15 @@ export async function sendDuePushes(deps: JobDeps, transport: PushTransport, lim
     `WITH due AS (
        SELECT id FROM push_outbox
         WHERE sent_at IS NULL AND not_before <= $1 AND (locked_until IS NULL OR locked_until <= $1)
-        ORDER BY not_before LIMIT $2 FOR UPDATE SKIP LOCKED
+        ORDER BY not_before, id LIMIT $2 FOR UPDATE SKIP LOCKED
      ), claimed AS (
        UPDATE push_outbox p SET attempts = attempts + 1, locked_until = $3
          FROM due WHERE p.id = due.id
        RETURNING p.id, p.user_id, p.type, p.params, p.collapse_key, p.expires_at, p.attempts
      )
+     -- Oldest first, so the daily cap keeps the pushes queued earliest.
      SELECT c.*, u.language, u.status, u.last_platform
-       FROM claimed c JOIN users u ON u.id = c.user_id`,
+       FROM claimed c JOIN users u ON u.id = c.user_id ORDER BY c.id`,
     [new Date(now), limit, new Date(now + LOCK_MS)],
   );
   let sent = 0;

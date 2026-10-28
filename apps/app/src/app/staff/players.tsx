@@ -37,7 +37,7 @@ function Search() {
           value={text}
           onChangeText={setText}
           onSubmitEditing={() => setQ(text.trim())}
-          placeholder="Username, user ID or duel ID"
+          placeholder="Username, email, phone or an ID"
           placeholderTextColor={colors.inkSoft}
           autoCapitalize="none"
           autoCorrect={false}

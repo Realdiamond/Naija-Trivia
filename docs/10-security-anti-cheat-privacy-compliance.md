@@ -52,6 +52,7 @@ HQ Trivia showed that cheating destroys trivia economies, with bots answering 90
 | Data | Purpose | Lawful basis | Notes |
 |---|---|---|---|
 | Phone number | Login, fraud prevention | Contract | Stored as an E.164 identity. Hash used for discovery |
+| Email address | Login by email code (if chosen) | Contract | Stored as the identity, lower-cased. Masked for staff (`c•••@gmail.com`); sent to Resend only to deliver a code |
 | Google/Apple ID | Login | Contract | Only `sub` and email (if provided) |
 | Username, avatar, home state | Profile, leaderboards | Contract / consent (state optional) | Home state is optional |
 | Age band | Child protection | Legal obligation | Never the exact date of birth |
