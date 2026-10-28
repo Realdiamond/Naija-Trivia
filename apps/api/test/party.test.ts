@@ -124,6 +124,13 @@ describe('party rooms', () => {
     expect(created.statusCode, created.body).toBe(201);
     const { room, seat } = created.json() as CreatePartyResponse;
     expect(room).toMatchObject({ host: 'Tolu', status: 'lobby', players: 0, max_players: 20 });
+    expect(room.link).toBe(`${t.config.publicWebUrl}/r/${room.code}`);
+    const qr = await t.app.inject({ method: 'GET', url: `/v1/party/rooms/${room.code}/qr.svg` });
+    expect([qr.statusCode, qr.headers['content-type'], qr.body.startsWith('<svg')]).toEqual([
+      200,
+      'image/svg+xml',
+      true,
+    ]);
     expect(seat).toMatchObject({ room_id: expect.stringMatching(/^pr_/), socket_path: '/v1/party/socket' });
 
     // The link's card is public; a typed code is tidied up.

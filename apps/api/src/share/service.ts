@@ -100,6 +100,14 @@ export class ShareService {
         image: `${this.base}/og/invite/${invite[1]}.png`,
       };
     }
+    const party = /^\/r\/([A-Za-z0-9]{5})\/?$/.exec(pathname);
+    if (party) {
+      return {
+        ...fallback,
+        title: `Join the party on Who Sabi? Room ${party[1]!.toUpperCase()}`,
+        description: 'Naija trivia with the whole group, live. Play in your browser: no app, no sign-up.',
+      };
+    }
     const daily = /^\/daily\/(\d{1,7})\/?$/.exec(pathname);
     if (daily && (await this.dailyExists(Number(daily[1])))) {
       return {

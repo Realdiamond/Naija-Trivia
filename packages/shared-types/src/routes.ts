@@ -65,6 +65,8 @@ export const routes = {
   partyRooms: () => `${API_PREFIX}/party/rooms`,
   partyRoom: (code: string) => `${API_PREFIX}/party/rooms/${encodeURIComponent(code)}`,
   partyJoin: (code: string) => `${API_PREFIX}/party/rooms/${encodeURIComponent(code)}/join`,
+  /** The room's link as a QR code (SVG), for the lobby. */
+  partyQr: (code: string) => `${API_PREFIX}/party/rooms/${encodeURIComponent(code)}/qr.svg`,
   partyGame: (gameId: string) => `${API_PREFIX}/party/games/${encodeURIComponent(gameId)}`,
   /** The room's WebSocket: connect with `?token=` from a seat. */
   partySocket: () => `${API_PREFIX}/party/socket`,

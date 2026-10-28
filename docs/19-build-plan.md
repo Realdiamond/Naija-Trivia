@@ -315,6 +315,17 @@ GDD §2.2, TRD §4.4, API §2.7 and §3. Split in three: the server (2.2a), the 
 - ✅ Analytics: `party_room_created`, `party_joined`, `question_answered` (mode party) and `party_game_completed` for signed-in players
 - ✅ Tests: the rules in game-rules (Wahala Round, ranking, MVP, XP); the engine with a hand-moved clock (a whole game with the Wahala Round, two players and enough questions to start, a dropped player and a newcomer, host handover and players leaving the lobby, kick, lock, a full room, repeated names, host screen mode, closing when quiet); the API over a real WebSocket (a host and a web guest play a whole game, saved with XP, results, bad seats, the big screen)
 
+### Step 2.2b · Party screens in the app ✅
+UX §2.3, mockups 17–20 and 29.
+
+- ✅ **Party room** on Home opens **New party room** (mockup 17): packs (all to begin with), 5/10/15/20 questions, 10/15/20 s, family-safe, the Wahala Round, and "I play too" (off is host screen mode). A guest with no username gives a nickname. "Have a code? Join a room" takes a typed code
+- ✅ **The link** `whosabi.ng/r/{CODE}` (mockup 29): whose party, who is in, and a nickname for anyone not signed in (no app, no sign-up); a signed-in player joins as themselves. The link preview on WhatsApp says it is a party
+- ✅ **The lobby** (mockup 18): the code big, the link, a QR code (`/party/rooms/{code}/qr.svg`), Share to WhatsApp and Copy link, who is in and how they joined; the host locks the room, removes people and starts once two are in
+- ✅ **The game**: 3-2-1, each question on the room's clock (the app keeps the server's time from a few clock samples), the Wahala Round's orange band and points ×2, "Locked in", then the answer with what everyone picked, your points, the fact and the top 5 with who moved up (mockup 19). A newcomer waits for the next question; a big screen or a host in screen mode sees it all without answering
+- ✅ **The podium** (mockup 20): the top three, the MVP of the night, everyone else, Share the result, and Play again for the host
+- ✅ The room's WebSocket in the app: reconnects after a drop (0.5 s, 1 s, 2 s … for a minute) on the same seat, kept for the session (through a reload on the web); kicked, closed, full or opened elsewhere ends it with a message
+- ✅ Tests: the socket's reconnecting and clock; the browser (a guest host and a web guest with just a nickname play a 5-question game, the Wahala Round included, to the podium and back to the lobby); the API's room link and QR code
+
 ### Step 2.3 · Random opponents and the Sabi Bot ✅
 TRD FR-DUEL-6, GDD §2.1.
 
@@ -328,7 +339,7 @@ TRD FR-DUEL-6, GDD §2.1.
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
-| 2.2 Party rooms (2.2a ✅, 2.2b ⬜, 2.2c ⬜) | Party room server (WebSockets in the API), party REST side, the app's party screens, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
+| 2.2 Party rooms (2.2a ✅, 2.2b ✅, 2.2c ⬜) | Party room server (WebSockets in the API), party REST side, the app's party screens, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
 | 2.3 Random opponents ✅ | Rating-window matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
 | 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |

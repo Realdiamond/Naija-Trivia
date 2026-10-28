@@ -142,6 +142,12 @@ describe('link previews', () => {
     expect(page.body).toContain('<meta name="twitter:card" content="summary_large_image">');
     expect(page.body).toContain('<div id="root">');
 
+    // A party link says what it is, even before anyone looks the room up.
+    const party = await get(null, '/r/k7qxm');
+    expect(party.body).toContain(
+      '<meta property="og:title" content="Join the party on Who Sabi? Room K7QXM">',
+    );
+
     for (const url of ['/', '/home', `/d/${'x'.repeat(22)}`]) {
       const other = await get(null, url);
       expect(other.statusCode, url).toBe(200);

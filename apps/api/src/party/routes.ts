@@ -7,6 +7,7 @@
 import { randomBytes } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import QRCode from 'qrcode';
 import { z } from 'zod';
 import {
   CreatePartyRequest,
@@ -141,6 +142,23 @@ export function partyRoutes(app: FastifyInstance, deps: AppDeps, rooms: PartyRoo
       const room = rooms.byCode(parse(CodeParams, request.params).code);
       if (!room) throw roomGone();
       return room.preview();
+    },
+  );
+
+  // The room's link as a QR code, for the lobby: friends in the same room scan it.
+  app.get(
+    '/v1/party/rooms/:code/qr.svg',
+    { config: { rateLimit: { max: 120, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const room = rooms.byCode(parse(CodeParams, request.params).code);
+      if (!room) throw roomGone();
+      const svg = await QRCode.toString(room.preview().link, {
+        type: 'svg',
+        margin: 1,
+        errorCorrectionLevel: 'M',
+        color: { dark: '#14231B', light: '#FFFFFF' },
+      });
+      return reply.type('image/svg+xml').header('cache-control', 'public, max-age=3600').send(svg);
     },
   );
 
