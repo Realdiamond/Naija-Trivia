@@ -52,7 +52,7 @@ Read **01 → 03** to understand *why* and *what*. Engineers start at **06 → 0
 2. **Live party rooms:** up to 50 players; guests join from a WhatsApp link in the browser, no install needed.
 3. **Daily Sabi Challenge:** a Wordle-style shareable grid.
 
-Categories are Slang & Pidgin, Nollywood, Music, Food and Mixed Naija. The game is built for budget Android phones and tight data plans: under 25 MB download, under 1 MB per match, and a Data Saver mode. It runs on **Android, iOS and a full web app** from one codebase, so any invite link can be played without installing. An **admin console** shows the team everything players do, including time spent, with privacy controls built in.
+Categories are Slang & Pidgin, Nollywood, Music, Food, Sport and Mixed Naija. The game is built for budget Android phones and tight data plans: under 25 MB download, under 1 MB per match, and a Data Saver mode. It runs on **Android, iOS and a full web app** from one codebase, so any invite link can be played without installing. An **admin console** shows the team everything players do, including time spent, with privacy controls built in.
 
 **Business.** Revenue comes from rewarded ads, coins and cosmetics, the Sabi Pass subscription (₦1,200/month), and **brand-sponsored packs**, which carry the most upside. At about 250k MAU the modelled revenue is about ₦22M a month, around break-even for a 6-person team **if sponsorship works**.
 
