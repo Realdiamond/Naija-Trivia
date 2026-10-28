@@ -13,6 +13,8 @@ const NATIVE_ONLY_MODULES = [
   'expo-notifications',
   'expo-sharing',
   'expo-file-system',
+  'expo-local-authentication',
+  '@react-native-google-signin/google-signin',
   'react-native-mmkv',
   'react-native-google-mobile-ads',
   'react-native-purchases',

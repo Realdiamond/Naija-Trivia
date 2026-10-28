@@ -38,6 +38,7 @@ export const en = {
   'signin.sendCode': 'Send code',
   'signin.or': 'or',
   'signin.google': 'Continue with Google',
+  'signin.googleFailed': 'Google sign-in did not work on this phone. Try again, or use another way in.',
   'signin.apple': 'Continue with Apple',
   'signin.phoneButton': 'Continue with phone number',
   'signin.noMethods':
@@ -339,6 +340,7 @@ export const pcm: Record<MessageKey, string> = {
   'signin.sendCode': 'Send code',
   'signin.or': 'or',
   'signin.google': 'Continue with Google',
+  'signin.googleFailed': 'Google sign-in no work for this phone. Try again, or use another way.',
   'signin.apple': 'Continue with Apple',
   'signin.phoneButton': 'Continue with phone number',
   'signin.noMethods': 'Sign-in never start yet. Dey play as guest; your progress dey this device.',

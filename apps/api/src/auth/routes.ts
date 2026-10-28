@@ -22,6 +22,7 @@ import {
   type SignInResponse,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
+import { linkStaffPlayer } from '../admin/phones';
 import { withTransaction, type PoolClient } from '../db';
 import { ApiError, conflict, parse, unauthorized } from '../errors';
 import { eventContextFor } from '../events';
@@ -138,20 +139,23 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
         const isNew = !row;
         if (!row) {
           const inserted = await client.query<UserRow>(
-            `INSERT INTO users (id, status, signup_platform, last_platform, last_seen_at, acquisition_source)
-             VALUES ($1, 'guest', $2, $2, now(), 'organic')
+            `INSERT INTO users (id, status, signup_platform, last_platform, last_seen_at, acquisition_source,
+                                created_at, updated_at)
+             VALUES ($1, 'guest', $2, $2, $3, 'organic', $3, $3)
              RETURNING id, username, status, level, xp`,
-            [newId('u'), platform],
+            [newId('u'), platform, new Date(deps.clock.now())],
           );
           row = inserted.rows[0]!;
           await client.query(
-            `INSERT INTO auth_identities (id, user_id, provider, subject) VALUES ($1, $2, 'guest_device', $3)`,
-            [newId('ai'), row.id, deviceId],
+            `INSERT INTO auth_identities (id, user_id, provider, subject, created_at)
+             VALUES ($1, $2, 'guest_device', $3, $4)`,
+            [newId('ai'), row.id, deviceId, new Date(deps.clock.now())],
           );
         } else {
-          await client.query('UPDATE users SET last_platform = $2, last_seen_at = now() WHERE id = $1', [
+          await client.query('UPDATE users SET last_platform = $2, last_seen_at = $3 WHERE id = $1', [
             row.id,
             platform,
+            new Date(deps.clock.now()),
           ]);
           // One live session per device: signing in again replaces the old one.
           await client.query(
@@ -364,15 +368,20 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
     const body = parse(GoogleAuthRequest, request.body);
     const current = await sessionFromHeader(request, tokens);
     const identity = await checkIdToken(deps.auth.google, 'Google', body.id_token);
-    return (
-      await signIn(
-        request,
-        reply,
-        { provider: 'google', subject: identity.subject },
-        body.platform,
-        body.merge_guest ? current : null,
-      )
-    ).reply;
+    const signedIn = await signIn(
+      request,
+      reply,
+      { provider: 'google', subject: identity.subject },
+      body.platform,
+      body.merge_guest ? current : null,
+    );
+    // Staff who play with their staff Google account get the Staff tab in the app (step 2.9a).
+    const domainOk =
+      !deps.config.adminGoogleDomain || identity.hostedDomain === deps.config.adminGoogleDomain;
+    if (identity.email && identity.emailVerified && domainOk) {
+      await linkStaffPlayer(deps.pool, identity.email.toLowerCase(), signedIn.userId);
+    }
+    return signedIn.reply;
   });
 
   app.post('/v1/auth/apple', async (request, reply) => {

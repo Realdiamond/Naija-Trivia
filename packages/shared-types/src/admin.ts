@@ -50,6 +50,8 @@ export const AdminPermission = z.enum([
   'content.publish',
   /** Import questions from a CSV file. */
   'content.import',
+  /** Live numbers: players online, sign-ups, games and Daily players today, work waiting. */
+  'overview.view',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 
@@ -65,6 +67,18 @@ export type AdminProfile = z.infer<typeof AdminProfile>;
 export const AdminGoogleSignIn = z.object({ id_token: z.string().min(20).max(8192) });
 /** Development and tests only: the API refuses it in production. */
 export const AdminDevSignIn = z.object({ email: z.email() });
+
+/**
+ * Staff tools on a phone (step 2.9a): a Google ID token from the app's own sign-in, and a name
+ * for the phone so the console can list it. Owners and admins only, for now.
+ */
+export const AdminPhoneSignIn = z
+  .object({ id_token: z.string().min(20).max(8192), label: z.string().trim().min(1).max(60) })
+  .strict();
+/** Development and tests only: the API refuses it in production. */
+export const AdminPhoneDevSignIn = z
+  .object({ email: z.email(), label: z.string().trim().min(1).max(60) })
+  .strict();
 
 export const AdminSessionResponse = z.object({
   token: z.string(),
@@ -237,3 +251,47 @@ export const AdminGrantRole = z
     reason: z.string().trim().min(5).max(500),
   })
   .strict();
+
+// ----- Staff phones (step 2.9a) -----
+
+export const AdminPhone = z.object({
+  id: z.string(),
+  admin_id: z.string(),
+  admin_name: z.string(),
+  label: z.string(),
+  created_at: z.iso.datetime(),
+  last_used_at: z.iso.datetime(),
+  expires_at: z.iso.datetime(),
+  /** The phone making this request. */
+  current: z.boolean(),
+});
+export type AdminPhone = z.infer<typeof AdminPhone>;
+
+export const AdminPhonesResponse = z.object({ phones: z.array(AdminPhone) });
+export type AdminPhonesResponse = z.infer<typeof AdminPhonesResponse>;
+
+// ----- Live numbers (step 2.9a; the console's Overview grows from it in 2.7) -----
+
+/** Today so far (WAT) against yesterday up to the same time. */
+export const AdminCount = z.object({ today: z.number().int(), yesterday: z.number().int() });
+export type AdminCount = z.infer<typeof AdminCount>;
+
+export const AdminOverview = z.object({
+  at: z.iso.datetime(),
+  /** Players seen in the last 10 minutes. */
+  online_now: z.number().int(),
+  /** Guests made accounts (Google or phone). */
+  signups: AdminCount,
+  /** New players, guests included. */
+  new_players: AdminCount,
+  duels_started: AdminCount,
+  duels_finished: AdminCount,
+  daily_players: AdminCount,
+  /** Work waiting: questions with open player reports, in review, and approved but not live. */
+  waiting: z.object({
+    reported_questions: z.number().int(),
+    in_review: z.number().int(),
+    approved: z.number().int(),
+  }),
+});
+export type AdminOverview = z.infer<typeof AdminOverview>;

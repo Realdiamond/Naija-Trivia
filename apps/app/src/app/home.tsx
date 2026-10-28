@@ -15,6 +15,7 @@ import { DailyBanner } from '../features/daily/DailyBanner';
 import { useDuelList } from '../features/duels/api';
 import { currentRound, isUrgent, playerName, timeLeft } from '../features/duels/format';
 import { useT } from '../i18n';
+import { staffToolsHere } from '../platform/staffLock';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
 import { Icon, type IconName } from '../ui/icons';
@@ -78,6 +79,17 @@ export default function Home() {
         >
           <Icon name="trophy" size={26} />
         </Pressable>
+        {me.data?.staff && staffToolsHere ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Staff tools"
+            hitSlop={8}
+            onPress={() => router.push('/staff')}
+            testID="open-staff"
+          >
+            <Icon name="shield" size={26} color={colors.primaryInk} />
+          </Pressable>
+        ) : null}
         {status === 'account' ? (
           <Pressable
             accessibilityRole="button"

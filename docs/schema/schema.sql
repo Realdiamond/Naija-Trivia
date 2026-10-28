@@ -564,8 +564,27 @@ CREATE TABLE admin_users (
   name            text NOT NULL,
   status          text NOT NULL DEFAULT 'active' CHECK (status IN ('active','suspended','removed')),
   last_login_at   timestamptz,
-  created_at      timestamptz NOT NULL DEFAULT now()
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  -- The player account they use in the app, linked when they sign in there with this Google email
+  -- (migration 0010): owners and admins then get the Staff tab.
+  player_id       text REFERENCES users(id) ON DELETE SET NULL
 );
+CREATE UNIQUE INDEX admin_users_player_key ON admin_users (player_id) WHERE player_id IS NOT NULL;
+
+-- Staff tools on a phone (migration 0010, build plan step 2.9a): a 30-day session, opened with
+-- the phone's fingerprint or PIN, listed in the console and signed out there.
+CREATE TABLE admin_phone_sessions (
+  id              text PRIMARY KEY,
+  admin_id        text NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+  token_hash      text NOT NULL UNIQUE,
+  label           text NOT NULL,                       -- the phone, e.g. 'samsung SM-A145F'
+  created_at      timestamptz NOT NULL,
+  expires_at      timestamptz NOT NULL,
+  last_used_at    timestamptz NOT NULL,
+  revoked_at      timestamptz,
+  revoked_by      text
+);
+CREATE INDEX admin_phone_sessions_admin_idx ON admin_phone_sessions (admin_id, created_at DESC);
 
 CREATE TABLE admin_role_grants (
   admin_id        text NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,

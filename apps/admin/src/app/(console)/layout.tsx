@@ -19,6 +19,7 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
     ...(me.permissions.includes('content.import') ? [{ href: '/import', label: 'Import' }] : []),
     ...(me.permissions.includes('audit.view') ? [{ href: '/audit', label: 'Audit log' }] : []),
     ...(me.permissions.includes('staff.manage') ? [{ href: '/staff', label: 'Staff and roles' }] : []),
+    { href: '/phones', label: 'Staff phones' },
   ];
   return (
     <>

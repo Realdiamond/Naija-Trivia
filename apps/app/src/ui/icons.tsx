@@ -26,7 +26,9 @@ export type IconName =
   | 'link'
   | 'calendar'
   | 'flame'
-  | 'chevron-right';
+  | 'chevron-right'
+  | 'shield'
+  | 'search';
 
 interface IconProps {
   name: IconName;
@@ -118,6 +120,15 @@ function paths(name: IconName, s: Stroke) {
         <>
           <Circle cx={12} cy={8} r={4} {...s} />
           <Path d="M4.5 20.5c1.2-3.8 4-5.5 7.5-5.5s6.3 1.7 7.5 5.5" {...s} />
+        </>
+      );
+    case 'shield':
+      return <Path d="M12 3l7.5 3v5.5c0 4.5-3.2 8.2-7.5 9.5-4.3-1.3-7.5-5-7.5-9.5V6zM9 12l2 2 4-4" {...s} />;
+    case 'search':
+      return (
+        <>
+          <Circle cx={11} cy={11} r={6.5} {...s} />
+          <Path d="M16 16l4.5 4.5" {...s} />
         </>
       );
     case 'bell':

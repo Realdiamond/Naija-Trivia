@@ -65,6 +65,9 @@ export const routes = {
   admin: {
     authGoogle: () => '/admin/auth/google',
     authDev: () => '/admin/auth/dev',
+    /** Staff tools on a phone: a 30-day session (step 2.9a). */
+    authPhone: () => '/admin/auth/phone',
+    authPhoneDev: () => '/admin/auth/phone/dev',
     authLogout: () => '/admin/auth/logout',
     me: () => '/admin/me',
     users: (q: string) => `/admin/users?q=${encodeURIComponent(q)}`,
@@ -85,6 +88,9 @@ export const routes = {
     questionsPublish: () => '/admin/questions/publish',
     questionsImport: () => '/admin/questions/import',
     reports: () => '/admin/reports',
+    overview: () => '/admin/overview',
+    phones: () => '/admin/phones',
+    revokePhone: (id: string) => `/admin/phones/${encodeURIComponent(id)}/revoke`,
     resolveReports: (id: string) => `/admin/questions/${encodeURIComponent(id)}/reports/resolve`,
   },
   /** Served by the ingest service, routed by the load balancer (doc 09 §2.11). */
