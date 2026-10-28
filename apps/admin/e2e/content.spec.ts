@@ -61,6 +61,7 @@ test('a question goes from a writer to live, an import lands, and reports get an
     await page.getByTestId(`field-option${i}`).fill(option);
   }
   await page.getByTestId('field-source').fill('https://example.com/e2e-dish');
+  await page.getByTestId('trending').check();
   await page.getByTestId('save-question').click();
   await expect(page).toHaveURL(/\/questions\/q_[0-9A-Z]+\?saved=1/);
   const questionUrl = page.url().replace(/\?.*$/, '');
@@ -78,6 +79,10 @@ test('a question goes from a writer to live, an import lands, and reports get an
   await expect(page.getByTestId('question-status')).toHaveText('Approved');
   await page.getByTestId('action-publish').click();
   await expect(page.getByTestId('question-status')).toHaveText('Live');
+  // Trending: 90 days in the game from going live, and the editor can renew it.
+  await expect(page.getByTestId('trending-badge')).toContainText('Trending · in the game until');
+  await page.getByTestId('renew').click();
+  await expect(page.getByText('Renewed for 90 days.')).toBeVisible();
   await expect(page.getByTestId('history')).toContainText('Published');
   await expect(page.getByTestId('history')).toContainText('Sent for review');
 

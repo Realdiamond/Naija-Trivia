@@ -101,6 +101,7 @@ function toInput(row: CsvRow): AdminQuestionInput | string {
     region_tag: (region || null) as AdminQuestionInput['region_tag'],
     valid_until: value('valid_until') || null,
     source_url: value('source_url') || null,
+    trending: false,
   };
 }
 

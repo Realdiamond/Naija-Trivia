@@ -1,6 +1,8 @@
 /**
- * Question difficulty calibration and quality thresholds (GDD §6.3, content doc §4).
+ * Question difficulty calibration and quality thresholds (GDD §6.3, content doc §4), and how
+ * long trending questions stay in the game (GDD §6.2).
  */
+import { addDays } from './calendar';
 
 export type DifficultyLevel = 1 | 2 | 3 | 4 | 5;
 
@@ -67,4 +69,13 @@ export interface ReportCounts {
 export function shouldAutoSuspend(counts: ReportCounts, minPlays = 100): boolean {
   if (counts.wrongAnswerReports >= 5) return true;
   return counts.plays >= minPlays && counts.totalReports / counts.plays > 0.03;
+}
+
+/** GDD §6.2: a trending question leaves the game this long after going live, unless renewed. */
+export const TRENDING_DAYS = 90;
+
+/** The last day a trending question live from `today` may stay: its own date if that is sooner. */
+export function trendingValidUntil(validUntil: string | null, today: string): string {
+  const cap = addDays(today, TRENDING_DAYS);
+  return validUntil !== null && validUntil < cap ? validUntil : cap;
 }

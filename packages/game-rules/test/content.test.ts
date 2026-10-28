@@ -6,6 +6,7 @@ import {
   initialItemRating,
   levelsByQuintile,
   shouldAutoSuspend,
+  trendingValidUntil,
   updateItemRating,
 } from '../src/content';
 
@@ -50,5 +51,13 @@ describe('quality flags', () => {
     expect(shouldAutoSuspend({ plays: 1000, wrongAnswerReports: 0, totalReports: 31 })).toBe(true);
     expect(shouldAutoSuspend({ plays: 1000, wrongAnswerReports: 0, totalReports: 30 })).toBe(false);
     expect(shouldAutoSuspend({ plays: 20, wrongAnswerReports: 1, totalReports: 1 })).toBe(false);
+  });
+});
+
+describe('trending questions (GDD §6.2)', () => {
+  it('stay 90 days from going live, or less when they already end sooner', () => {
+    expect(trendingValidUntil(null, '2026-11-02')).toBe('2027-01-31');
+    expect(trendingValidUntil('2026-11-20', '2026-11-02')).toBe('2026-11-20');
+    expect(trendingValidUntil('2027-06-01', '2026-11-02')).toBe('2027-01-31');
   });
 });

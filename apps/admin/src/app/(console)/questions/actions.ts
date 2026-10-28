@@ -44,6 +44,7 @@ function inputFrom(form: FormData): AdminQuestionInput {
     region_tag: (text(form, 'region_tag') || null) as AdminQuestionInput['region_tag'],
     valid_until: text(form, 'valid_until') || null,
     source_url: text(form, 'source_url') || null,
+    trending: form.get('trending') === 'on',
   };
 }
 
@@ -129,4 +130,15 @@ export async function resolveReports(
   revalidatePath('/reports');
   revalidatePath(`/questions/${id}`);
   return { message: 'Reports closed.', error: false };
+}
+
+/** Another 90 days in the game for a trending question. */
+export async function renewQuestion(id: string): Promise<FormState> {
+  try {
+    await adminApi(`/admin/questions/${encodeURIComponent(id)}/renew`, { method: 'POST' });
+  } catch (e) {
+    return failed(e);
+  }
+  revalidatePath(`/questions/${id}`);
+  return { message: 'Renewed for 90 days.', error: false };
 }

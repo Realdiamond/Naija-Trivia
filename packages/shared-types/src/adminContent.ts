@@ -30,6 +30,8 @@ export const AdminQuestionInput = z
     region_tag: RegionTag.nullable().default(null),
     valid_until: z.iso.date().nullable().default(null),
     source_url: z.string().trim().max(500).nullable().default(null),
+    /** Leaves the game 90 days after going live unless renewed (GDD §6.2, step 2.6b-3). */
+    trending: z.boolean().default(false),
   })
   .strict();
 export type AdminQuestionInput = z.infer<typeof AdminQuestionInput>;

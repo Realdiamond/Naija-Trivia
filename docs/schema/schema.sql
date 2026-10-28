@@ -152,6 +152,7 @@ CREATE TABLE questions (
   valid_from      date,
   valid_until     date,
   source_url      text,
+  trending        boolean NOT NULL DEFAULT false,      -- leaves the game 90 days after going live unless renewed (0016)
   status          question_status NOT NULL DEFAULT 'draft',
   author_id       text,                                -- staff or user (Question Factory)
   reviewed_by     text,
