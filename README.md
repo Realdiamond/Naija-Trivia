@@ -45,6 +45,10 @@ pnpm --filter @whosabi/admin dev            # the console on http://localhost:30
 
 Sign-in codes are not texted in development: the API writes them to its log. To try the app on an Android phone with Expo Go, copy `apps/app/.env.example` to `apps/app/.env`, set `EXPO_PUBLIC_API_URL` to your computer's address on the Wi-Fi (like `http://192.168.1.20:3000`), run `pnpm --filter @whosabi/app dev` and scan the QR code.
 
+## Deploying
+
+Staging runs on Heroku: two apps from this repository (the game and the admin console). The step-by-step guide is [docs/deploy/heroku.md](docs/deploy/heroku.md).
+
 ## Checks
 
 CI runs the same commands on every pull request:

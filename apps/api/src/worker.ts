@@ -7,7 +7,6 @@
  * queue yet. A failed run is logged and tried again on the next tick.
  */
 import { setTimeout as sleep } from 'node:timers/promises';
-import { Redis } from 'ioredis';
 import { pino } from 'pino';
 import { systemClock } from './clock';
 import { loadConfig } from './config';
@@ -20,6 +19,7 @@ import { flushQuestionStats } from './jobs/questionStats';
 import { sendTurnReminders } from './jobs/reminders';
 import { migrate } from './migrate';
 import { LogNotifier } from './notify';
+import { createRedis } from './redis';
 
 const SECOND = 1_000;
 const MINUTE = 60 * SECOND;
@@ -27,9 +27,9 @@ const MINUTE = 60 * SECOND;
 const config = loadConfig();
 const log = pino({ level: config.logLevel, base: { service: 'worker' } });
 const pool = createPool(config.databaseUrl);
-const redis = new Redis(config.redisUrl, { maxRetriesPerRequest: 2 });
+const redis = createRedis(config, { maxRetriesPerRequest: 2 });
 // A blocking stream read holds its connection, so the loader gets one of its own.
-const streamRedis = new Redis(config.redisUrl, { maxRetriesPerRequest: null });
+const streamRedis = createRedis(config, { maxRetriesPerRequest: null });
 const events = new ServerEvents(redis, config.analyticsKey, systemClock, log);
 const deps = { config, pool, redis, clock: systemClock, events, log };
 const duels = new DuelService(deps);

@@ -7,6 +7,7 @@ export default defineConfig({
     'src/scripts/migrate.ts',
     'src/scripts/seed.ts',
     'src/scripts/admin-add.ts',
+    'src/scripts/keys.ts',
   ],
   format: ['esm'],
   target: 'node22',

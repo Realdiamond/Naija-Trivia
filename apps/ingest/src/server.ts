@@ -10,6 +10,8 @@ const env = z
     PORT: z.coerce.number().int().default(3001),
     LOG_LEVEL: z.string().default('info'),
     REDIS_URL: z.string().min(1),
+    /** As in the API: false for Heroku Key-Value Store's self-signed certificates. */
+    REDIS_TLS_VERIFY: z.enum(['true', 'false']).default('true'),
     API_JWKS_URL: z.string().url().default('http://localhost:3000/.well-known/jwks.json'),
     ANALYTICS_KEY: z.string().min(32).optional(),
     CORS_ORIGINS: z.string().default('http://localhost:8081,http://localhost:19006'),
@@ -22,7 +24,12 @@ if (env.NODE_ENV === 'production' && !env.ANALYTICS_KEY)
 // Must match the API's key so client and server events share player ids.
 const analyticsKey = env.ANALYTICS_KEY ?? 'dev-only-analytics-key-not-for-production-use';
 const jwks = createRemoteJWKSet(new URL(env.API_JWKS_URL));
-const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: 2 });
+const redis = new Redis(env.REDIS_URL, {
+  maxRetriesPerRequest: 2,
+  ...(env.REDIS_URL.startsWith('rediss://')
+    ? { tls: { rejectUnauthorized: env.REDIS_TLS_VERIFY === 'true' } }
+    : {}),
+});
 
 const app = await buildIngestApp({
   redis,

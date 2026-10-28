@@ -7,6 +7,15 @@ const Env = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
+  /**
+   * Check the Redis server's TLS certificate (rediss:// URLs). Heroku Key-Value Store uses
+   * self-signed certificates, so it runs with false. Postgres reads PGSSLMODE the same way.
+   */
+  REDIS_TLS_VERIFY: z.enum(['true', 'false']).default('true'),
+  /** The web app's export (apps/app/web-build) to serve from this origin, e.g. on Heroku. */
+  WEB_APP_DIR: z.string().min(1).optional(),
+  /** Serve the event intake (POST /v1/events) in this process instead of the ingest service. */
+  EVENTS_IN_API: z.enum(['true', 'false']).default('false'),
   /** ES256 keys as PEM (PKCS#8 private, SPKI public). Generated per process outside production. */
   JWT_PRIVATE_KEY: z.string().optional(),
   JWT_PUBLIC_KEY: z.string().optional(),
@@ -54,6 +63,9 @@ export interface Config {
   logLevel: string;
   databaseUrl: string;
   redisUrl: string;
+  redisTlsVerify: boolean;
+  webAppDir?: string;
+  eventsInApi: boolean;
   jwtPrivateKeyPem?: string;
   jwtPublicKeyPem?: string;
   analyticsKey: string;
@@ -106,8 +118,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     logLevel: e.LOG_LEVEL,
     databaseUrl: e.DATABASE_URL,
     redisUrl: e.REDIS_URL,
-    jwtPrivateKeyPem: e.JWT_PRIVATE_KEY,
-    jwtPublicKeyPem: e.JWT_PUBLIC_KEY,
+    redisTlsVerify: e.REDIS_TLS_VERIFY === 'true',
+    webAppDir: e.WEB_APP_DIR,
+    eventsInApi: e.EVENTS_IN_API === 'true',
+    // Hosts that take one-line settings may have the PEM's line breaks as "\n".
+    jwtPrivateKeyPem: e.JWT_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    jwtPublicKeyPem: e.JWT_PUBLIC_KEY?.replace(/\\n/g, '\n'),
     analyticsKey: e.ANALYTICS_KEY ?? DEV_ANALYTICS_KEY,
     analyticsRetentionDays: e.ANALYTICS_RETENTION_DAYS,
     corsOrigins: list(e.CORS_ORIGINS),

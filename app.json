@@ -1,0 +1,52 @@
+{
+  "name": "Who Sabi?",
+  "description": "Naija trivia with friends: the API, the web app and the worker (the game app). The admin console is a second app from this repository; see docs/deploy/heroku.md.",
+  "repository": "https://github.com/Realdiamond/Naija-Trivia",
+  "keywords": ["node", "fastify", "expo", "trivia"],
+  "stack": "heroku-24",
+  "buildpacks": [{ "url": "heroku/nodejs" }],
+  "formation": {
+    "web": { "quantity": 1, "size": "basic" },
+    "worker": { "quantity": 1, "size": "basic" }
+  },
+  "addons": [{ "plan": "heroku-postgresql:essential-0" }, { "plan": "heroku-redis:mini" }],
+  "env": {
+    "WHOSABI_APP": { "description": "Which app this is: game (this one) or admin.", "value": "game" },
+    "NODE_ENV": { "value": "production" },
+    "PGSSLMODE": {
+      "description": "Heroku Postgres needs TLS with a certificate Node can't check.",
+      "value": "no-verify"
+    },
+    "REDIS_TLS_VERIFY": {
+      "description": "Heroku Key-Value Store uses a self-signed certificate.",
+      "value": "false"
+    },
+    "EVENTS_IN_API": {
+      "description": "The API takes analytics events itself (no ingest app).",
+      "value": "true"
+    },
+    "ANALYTICS_KEY": { "description": "Key for pseudonymous analytics ids.", "generator": "secret" },
+    "JWT_PRIVATE_KEY": {
+      "description": "ES256 private key (PEM) that signs sessions. Make it with: pnpm --filter @whosabi/api keys",
+      "required": true
+    },
+    "JWT_PUBLIC_KEY": { "description": "The matching public key (PEM).", "required": true },
+    "PUBLIC_WEB_URL": {
+      "description": "This app's address, e.g. https://whosabi-staging-xxxx.herokuapp.com (duel links use it).",
+      "required": true
+    },
+    "CORS_ORIGINS": { "description": "The same address as PUBLIC_WEB_URL.", "required": true },
+    "GOOGLE_CLIENT_IDS": {
+      "description": "Google sign-in for players: OAuth client ids, comma-separated. Empty turns it off.",
+      "required": false
+    },
+    "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": {
+      "description": "The web client id for the Google button, built into the web app.",
+      "required": false
+    },
+    "ADMIN_GOOGLE_CLIENT_IDS": {
+      "description": "The admin console's Google OAuth client id, for staff sign-in.",
+      "required": false
+    }
+  }
+}
