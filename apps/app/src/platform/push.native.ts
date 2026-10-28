@@ -83,6 +83,32 @@ export async function syncPush(): Promise<void> {
   await register();
 }
 
+/**
+ * Staff alerts on this phone (step 2.9b): their own channel, made only on staff phones so players
+ * never see it in Settings. Asks for permission if need be; the token, or null without it.
+ */
+export async function staffPushToken(): Promise<string | null> {
+  if (!pushSupported) return null;
+  await ensureChannels();
+  await Notifications.setNotificationChannelAsync('staff', {
+    name: 'Staff alerts',
+    description: 'Problems, sign-ups and payments, for the team',
+    importance: Notifications.AndroidImportance.HIGH,
+    lightColor: '#008751',
+  });
+  const status =
+    (await pushPermission()) === 'granted'
+      ? 'granted'
+      : (await Notifications.requestPermissionsAsync()).status;
+  if (status !== 'granted') return null;
+  try {
+    const token = (await Notifications.getDevicePushTokenAsync()).data;
+    return typeof token === 'string' ? token : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Before signing out: this phone stops getting the player's pushes. */
 export async function forgetPush(): Promise<void> {
   if (!registered) return;

@@ -134,7 +134,7 @@ export function fcmMessage(token: string, push: OutgoingPush) {
     notification: { title: push.title, body: push.body },
     data: { ...push.data, type: push.type, url: push.url },
     android: {
-      priority: push.type === 'your_turn' ? 'HIGH' : 'NORMAL',
+      priority: push.type === 'your_turn' || push.type === 'staff_alert' ? 'HIGH' : 'NORMAL',
       ttl: `${Math.max(0, Math.floor(push.ttlSeconds))}s`,
       ...(push.collapseKey ? { collapse_key: push.collapseKey } : {}),
       notification: {

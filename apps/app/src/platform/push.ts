@@ -20,6 +20,10 @@ export async function syncPush(): Promise<void> {}
 
 export async function forgetPush(): Promise<void> {}
 
+export async function staffPushToken(): Promise<string | null> {
+  return null;
+}
+
 export function usePushHandlers(_handlers: {
   open(target: PushTarget): void;
   received(target: PushTarget): void;

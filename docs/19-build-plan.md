@@ -252,8 +252,11 @@ doc 18 §16, owner's decisions above.
 - ✅ Fix: guest sign-in now uses the app's clock like every other sign-in (only tests could tell)
 - ✅ Tests: the API (7: who gets the tab, phone sign-in and refusals, 30 days, suspension, demotion and sign-out from the console or the phone, the phone list, live numbers today against yesterday, the permission); end to end in the console, an owner signs a phone out
 
-### Step 2.9b · Staff on the phone: staff alerts ⬜
-Problems (a question suspended by player reports, no Daily for tomorrow, a worker job failing again and again), every sign-up, and the payment journey (switched on by the shop in 2.4), pushed to staff phones at once, day or night; an alerts list and a switch for each kind in the Staff tab, all on to start.
+### Step 2.9b · Staff on the phone: staff alerts ✅
+- ✅ Kinds, as the owner asked, all on to start and each switchable in the Staff tab: **problems** (a question suspended by player reports; no Daily for today or tomorrow, once per date; a worker job failing three runs in a row, once per job every 6 hours), **every sign-up** (how they signed up and on what, opening the player), and the **payment journey** (opened the payment screen, started paying, paid), ready for the shop to raise in step 2.4
+- ✅ Raised in the same transaction as what caused them, pushed by the worker within seconds to the phones of owners and admins, day or night, on their own Android channel ("Staff alerts", made only on staff phones). Four or more of one kind at once go as one push ("5 new sign-ups 🎉"). Nobody gets a kind they switched off; signed-out, ended and demoted phones get nothing; dead tokens are forgotten and a busy push service is tried again
+- ✅ The Staff tab: **Alerts** with the unread count on the button, the list newest first (opening it marks them seen; a sign-up opens the player), and **Alert settings** with a switch for each kind. A tapped alert opens the Staff tab, behind the fingerprint as always
+- ✅ Tests: the API (8: a sign-up reaching owners and admins once, grouping, switched-off kinds and phones that may not get alerts, dead tokens and retries, a question suspended by reports, no Daily, the list with unread and seen, the settings, who may use them); the push routing in the app
 
 ### Step 2.10 · Email sign-in codes ⬜
 A 6-digit code by email (FR-AUTH), like phone codes: hashed, 10 minutes, 5 tries, limits per address and IP, Turnstile on the web. Sent through Resend (free: 100 a day, 3,000 a month); `RESEND_API_KEY` and a sending domain. A guest keeps their progress, as with every sign-in.
@@ -271,7 +274,7 @@ Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly
 | 2.6 Content tools: 2.6a ✅, 2.6b ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
-| 2.9 Staff on the phone: 2.9a ✅, 2.9b ⬜ | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
+| 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ⬜ | Codes by email through Resend | TRD §4.1 |
 
 ## 5. Milestone M3: "Beta" (doc 15, week 14)

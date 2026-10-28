@@ -9,6 +9,7 @@ import { routes, type AdminProfile, type AdminSessionResponse } from '@whosabi/s
 import { ApiError } from '../../api/client';
 import { googleIdToken } from '../../auth/GoogleButton';
 import { API_URL } from '../../config';
+import { staffPushToken } from '../../platform/push';
 import { phoneHasLock, staffToolsHere, unlockStaff } from '../../platform/staffLock';
 import { staffToken } from '../../platform/staffToken';
 
@@ -37,7 +38,9 @@ export async function loadStaff(): Promise<void> {
       if (state !== 'active') useStaff.setState({ unlocked: false });
     });
   }
-  useStaff.setState({ loaded: true, session: await savedSession(), unlocked: false });
+  const session = await savedSession();
+  useStaff.setState({ loaded: true, session, unlocked: false });
+  if (session) void registerStaffPush();
 }
 
 /** The saved session, unless it has run out or can't be read. */
@@ -74,6 +77,7 @@ export async function staffSignIn(): Promise<SignInOutcome> {
   await staffToken.set(JSON.stringify(session));
   // They just proved who they are with Google: no need to unlock straight away.
   useStaff.setState({ session, unlocked: true });
+  void registerStaffPush();
   return 'ok';
 }
 
@@ -100,12 +104,28 @@ async function forget(): Promise<void> {
   useStaff.setState({ session: null, unlocked: false });
 }
 
+/** Staff alerts come to this phone: its push token, sent on every start (it can change). */
+async function registerStaffPush(): Promise<void> {
+  const token = await staffPushToken();
+  if (token) await staffSend('POST', routes.admin.phonePush(), { push_token: token }).catch(() => undefined);
+}
+
 /** A call to the admin API with this phone's staff session. A refused session signs the phone out. */
-export async function staffGet<T>(path: string): Promise<T> {
+export function staffGet<T>(path: string): Promise<T> {
+  return staffSend<T>('GET', path);
+}
+
+export async function staffSend<T>(method: 'GET' | 'POST' | 'PUT', path: string, body?: unknown): Promise<T> {
   const token = useStaff.getState().session?.token;
   if (!token) throw new ApiError(401, 'UNAUTHORIZED', 'Signed out of staff tools');
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+    method,
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: 'application/json',
+      ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   // Ended, signed out from the console, or no longer an owner or admin.
   if (res.status === 401 || res.status === 403) await forget();

@@ -9,6 +9,10 @@ describe('pushTarget', () => {
     });
     expect(pushTarget({ type: 'daily_live', url: '/daily/play' }).url).toBe('/daily/play');
     expect(pushTarget({ type: 'friend_joined', url: '/friends' }).url).toBe('/friends');
+    expect(pushTarget({ type: 'staff_alert', url: '/staff/player/u_01ABC' }).url).toBe(
+      '/staff/player/u_01ABC',
+    );
+    expect(pushTarget({ type: 'staff_alert', url: '/staff/alerts' }).url).toBe('/staff/alerts');
   });
 
   it('reads the data wherever the phone put it', () => {

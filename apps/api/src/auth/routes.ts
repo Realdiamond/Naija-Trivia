@@ -22,6 +22,7 @@ import {
   type SignInResponse,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
+import { raiseStaffAlert } from '../admin/alerts';
 import { linkStaffPlayer } from '../admin/phones';
 import { withTransaction, type PoolClient } from '../db';
 import { ApiError, conflict, parse, unauthorized } from '../errors';
@@ -57,6 +58,14 @@ const toPublicUser = (u: UserRow): PublicUser => ({
   level: u.level,
   xp: Number(u.xp),
 });
+
+/** For staff alerts about sign-ups. */
+const PROVIDER_NAMES: Record<IdentityProvider, string> = {
+  google: 'Google',
+  apple: 'Apple',
+  phone: 'a phone code',
+};
+const PLATFORM_NAMES: Record<Platform, string> = { android: 'Android', ios: 'iPhone', web: 'the web' };
 
 export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
   const { pool, tokens, config, clock } = deps;
@@ -284,6 +293,17 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
         );
       }
       const session = await startSession(client, signedIn.user, platform, signedIn.deviceId);
+      if (signedIn.isNew) {
+        await raiseStaffAlert(client, {
+          kind: 'signup',
+          title: 'New sign-up 🎉',
+          body: `Signed up with ${PROVIDER_NAMES[identity.provider]} on ${PLATFORM_NAMES[platform]}${
+            signedIn.mergedGuest ? ', keeping what they played as a guest' : ''
+          }.`,
+          url: `/staff/player/${signedIn.user.id}`,
+          now: clock.now(),
+        });
+      }
       return { ...signedIn, session };
     });
     if (result.isNew) {

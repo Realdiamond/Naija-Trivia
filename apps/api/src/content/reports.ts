@@ -12,6 +12,7 @@ import {
   type QuestionStatus,
   type ReportReason,
 } from '@whosabi/shared-types';
+import { raiseStaffAlert } from '../admin/alerts';
 import { writeAudit } from '../admin/audit';
 import { withTransaction, type Pool } from '../db';
 import { ApiError, notFound } from '../errors';
@@ -79,6 +80,12 @@ export async function reportQuestion(
       entity: 'question',
       entityId: row.id,
       reason: note,
+    });
+    await raiseStaffAlert(client, {
+      kind: 'problem',
+      title: 'Question taken out by player reports',
+      body: `“${row.text}” ${note}. Check it in the console.`,
+      now: report.now,
     });
     return { recorded: true, suspended: true };
   });

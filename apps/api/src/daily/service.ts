@@ -34,6 +34,7 @@ import {
   type LeaderboardScope,
   type ServedQuestion,
 } from '@whosabi/shared-types';
+import { raiseStaffAlert } from '../admin/alerts';
 import type { AppDeps } from '../app';
 import { withTransaction } from '../db';
 import { ApiError, conflict, notFound } from '../errors';
@@ -547,10 +548,25 @@ export class DailyService {
     const now = clock.now();
     const today = watDate(now);
     let made = 0;
-    if (!(await dailyByDate(pool, today)) && (await ensureDaily(pool, log, today))) made++;
+    // No Daily could be picked (too few live questions): staff hear about it once per date.
+    const missing = (date: string, when: string) =>
+      raiseStaffAlert(pool, {
+        kind: 'problem',
+        title: `No Daily for ${when}`,
+        body: `Too few live questions to pick the Daily for ${date}. Publish more questions in the console.`,
+        dedupeKey: `daily_missing:${date}`,
+        now,
+      });
+    if (!(await dailyByDate(pool, today))) {
+      if (await ensureDaily(pool, log, today)) made++;
+      else await missing(today, 'today');
+    }
     if (new Date(now + HOUR).getUTCHours() >= 23) {
       const tomorrow = addDays(today, 1);
-      if (!(await dailyByDate(pool, tomorrow)) && (await ensureDaily(pool, log, tomorrow))) made++;
+      if (!(await dailyByDate(pool, tomorrow))) {
+        if (await ensureDaily(pool, log, tomorrow)) made++;
+        else await missing(tomorrow, 'tomorrow');
+      }
       await pool.query('UPDATE daily_challenges SET locked = true WHERE play_date = $1 AND NOT locked', [
         tomorrow,
       ]);

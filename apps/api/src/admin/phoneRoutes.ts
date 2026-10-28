@@ -1,7 +1,7 @@
 /**
- * The admin API for the Staff tab on phones (build plan step 2.9a): signing a phone in with the
- * app's own Google sign-in, the console's list of signed-in phones and signing one out, and the
- * live numbers the tab opens on.
+ * The admin API for the Staff tab on phones (build plan step 2.9): signing a phone in with the
+ * app's own Google sign-in, the console's list of signed-in phones and signing one out, the live
+ * numbers the tab opens on, and staff alerts with their settings.
  */
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
@@ -9,14 +9,22 @@ import {
   AdminPhoneDevSignIn,
   AdminPhoneSignIn,
   ErrorCode,
+  StaffAlertsQuery,
+  StaffAlertsSeen,
+  StaffPhonePush,
+  UpdateStaffAlertSetting,
   type AdminOverview,
   type AdminPhonesResponse,
   type AdminSessionResponse,
+  type StaffAlertKind,
+  type StaffAlertSettingsResponse,
+  type StaffAlertsResponse,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
 import { ApiError, notFound, parse, unauthorized } from '../errors';
+import { alertSettings } from './alerts';
 import { writeAudit } from './audit';
-import { loadAdmin, requireAdmin, type AdminDeps } from './context';
+import { loadAdmin, requireAdmin, type AdminContext, type AdminDeps } from './context';
 import { liveNumbers } from './overview';
 import { canUsePhone, createPhoneSession, revokePhoneSession } from './phones';
 import { SYSTEM_ADMIN_ID } from './permissions';
@@ -164,5 +172,101 @@ export function adminPhoneRoutes(app: FastifyInstance, deps: AppDeps, ctx: Admin
   app.get('/admin/overview', async (request): Promise<AdminOverview> => {
     await requireAdmin(request, ctx, 'overview.view');
     return liveNumbers(pool, clock.now());
+  });
+
+  // ----- Staff alerts (step 2.9b): owners and admins, like staff tools on the phone -----
+
+  async function alertsAdmin(request: FastifyRequest): Promise<AdminContext> {
+    const admin = await requireAdmin(request, ctx);
+    if (!canUsePhone(admin)) {
+      throw new ApiError(403, ErrorCode.forbidden, 'Not allowed', 'Staff alerts are for owners and admins.');
+    }
+    return admin;
+  }
+
+  // The phone sends its push token after signing in, and again when it changes.
+  app.post('/admin/phones/push', async (request, reply) => {
+    const admin = await alertsAdmin(request);
+    if (!admin.phoneSessionId) {
+      throw new ApiError(403, ErrorCode.forbidden, 'Not allowed', 'Only a phone signed in to staff tools.');
+    }
+    const { push_token: token } = parse(StaffPhonePush, request.body);
+    // A token belongs to one phone session: an older session on the same phone lets it go.
+    await pool.query('UPDATE admin_phone_sessions SET push_token = NULL WHERE push_token = $1 AND id <> $2', [
+      token,
+      admin.phoneSessionId,
+    ]);
+    await pool.query('UPDATE admin_phone_sessions SET push_token = $2 WHERE id = $1', [
+      admin.phoneSessionId,
+      token,
+    ]);
+    return reply.code(204).send();
+  });
+
+  app.get('/admin/alerts', async (request): Promise<StaffAlertsResponse> => {
+    const admin = await alertsAdmin(request);
+    const { before } = parse(StaffAlertsQuery, request.query);
+    const limit = 50;
+    const [rows, seen] = await Promise.all([
+      pool.query<{
+        id: string;
+        kind: StaffAlertKind;
+        title: string;
+        body: string;
+        url: string | null;
+        created_at: Date;
+      }>(
+        `SELECT id, kind, title, body, url, created_at FROM staff_alerts
+          WHERE ($1::bigint IS NULL OR id < $1) ORDER BY id DESC LIMIT $2`,
+        [before ?? null, limit + 1],
+      ),
+      pool.query<{ seen: string; unread: number }>(
+        `SELECT a.alerts_seen_id AS seen,
+                (SELECT count(*)::int FROM staff_alerts s WHERE s.id > a.alerts_seen_id) AS unread
+           FROM admin_users a WHERE a.id = $1`,
+        [admin.id],
+      ),
+    ]);
+    const seenId = BigInt(seen.rows[0]?.seen ?? '0');
+    const page = rows.rows.slice(0, limit);
+    return {
+      alerts: page.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        title: r.title,
+        body: r.body,
+        url: r.url,
+        created_at: r.created_at.toISOString(),
+        unread: BigInt(r.id) > seenId,
+      })),
+      unread: seen.rows[0]?.unread ?? 0,
+      next_before: rows.rows.length > limit ? page.at(-1)!.id : null,
+    };
+  });
+
+  app.post('/admin/alerts/seen', async (request, reply) => {
+    const admin = await alertsAdmin(request);
+    const { up_to: upTo } = parse(StaffAlertsSeen, request.body);
+    await pool.query('UPDATE admin_users SET alerts_seen_id = GREATEST(alerts_seen_id, $2) WHERE id = $1', [
+      admin.id,
+      upTo,
+    ]);
+    return reply.code(204).send();
+  });
+
+  app.get('/admin/alerts/settings', async (request): Promise<StaffAlertSettingsResponse> => {
+    const admin = await alertsAdmin(request);
+    return { settings: await alertSettings(pool, admin.id) };
+  });
+
+  app.put('/admin/alerts/settings', async (request): Promise<StaffAlertSettingsResponse> => {
+    const admin = await alertsAdmin(request);
+    const { kind, enabled } = parse(UpdateStaffAlertSetting, request.body);
+    await pool.query(
+      `INSERT INTO admin_alert_prefs (admin_id, kind, enabled) VALUES ($1, $2, $3)
+       ON CONFLICT (admin_id, kind) DO UPDATE SET enabled = EXCLUDED.enabled`,
+      [admin.id, kind, enabled],
+    );
+    return { settings: await alertSettings(pool, admin.id) };
   });
 }
