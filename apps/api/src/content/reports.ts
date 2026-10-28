@@ -1,5 +1,7 @@
 /**
  * Player reports (PRD US-9, FR-CON-4): a report in two taps, kept once per player and question.
+ * The nightly content check files reports "from the numbers" into the same queue (`by_numbers`,
+ * jobs/calibration.ts); only players' reports count toward auto-suspension here.
  * Five "wrong answer" reports, or reports on more than 3% of plays (from 100 plays), take the
  * question out of rotation at once (`shouldAutoSuspend` in game-rules). Editors work through the
  * queue in the admin console: fix the question, keep it as it is, or retire it.
@@ -51,7 +53,7 @@ export async function reportQuestion(
       await client.query<{ total: number; wrong: number; plays: string | null }>(
         `SELECT count(*)::int AS total, count(*) FILTER (WHERE reason = 'wrong_answer')::int AS wrong,
                 (SELECT plays FROM question_stats WHERE question_id = $1) AS plays
-           FROM question_reports WHERE question_id = $1 AND resolution IS NULL`,
+           FROM question_reports WHERE question_id = $1 AND resolution IS NULL AND NOT by_numbers`,
         [row.id],
       )
     ).rows[0]!;
@@ -116,7 +118,7 @@ export async function reportQueue(pool: Pool): Promise<AdminReportsResponse> {
             min(r.created_at) AS first_at, max(r.created_at) AS last_at,
             q.status = 'suspended' AND (
               SELECT action FROM question_history h WHERE h.question_id = q.id ORDER BY h.id DESC LIMIT 1
-            ) = 'auto_suspended' AS auto_suspended
+            ) IN ('auto_suspended', 'suspended_by_numbers') AS auto_suspended
        FROM question_reports r
        JOIN questions q ON q.id = r.question_id
        LEFT JOIN question_stats s ON s.question_id = q.id

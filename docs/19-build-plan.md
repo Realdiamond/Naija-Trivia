@@ -274,8 +274,17 @@ doc 18 §16, owner's decisions above.
 - ✅ Staff: email sign-ins show masked (`c•••@gmail.com`); the console and the Staff tab find a player by their exact address, for roles that may search by phone number, and the audit log keeps it masked
 - ✅ Tests: the API (8: sign-up and sign-in again, a guest keeping progress, expiry and tries and phone codes kept apart, pacing and limits and the human check and refused sends, addresses only, email switched off, staff search, the Resend call) and config; an end-to-end sign-up by email in the browser
 
-### Step 2.6b · Calibration and re-scoring ⬜
-Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly re-bucketing into levels 1–5; flags for questions that are too hard, too easy or whose most-picked answer is a distractor (doc 04 §4); re-scoring the last 14 days of games when a live question's answer is corrected, and telling the players (FR-CON-7): those who picked the new right answer get its points, nobody loses any, and a duel's result changes only if the totals flip; "trending" questions expiring after 90 days unless renewed (GDD §6.2).
+### Step 2.6b-1 · Difficulty calibration and quality flags ✅
+GDD §6.3, content doc §4, TRD FR-CON-5.
+
+- ✅ Every answer in a duel, a Daily or the taste test moves the question's item rating (`d_rating`): `K × (expected − correct)` with K = 8, against the player's overall rating (guests and new players count as 1500). The change waits in the question's Redis counters and the stats flush applies it, in one transaction with the counts, kept between 800 and 2200. Tie-breaks have no right answer and don't count
+- ✅ Once a night from 03:00 WAT (`question-calibration`, once however many workers): a live question with 200 plays or more gets its level 1–5 from its rating's quintile among those questions, once there are at least 50 of them; each change is in its history ("Level 3 → 1 from 250 plays")
+- ✅ Flags from 300 plays go into the console's reports queue as reports "from the numbers" (`question_reports.by_numbers`): fewer than 5% right (too hard) or more than 97% (too easy) stay in the game; over half of players picking one wrong option points at a wrong answer key, so that question also comes out of the game, with a staff alert. Each kind is filed once per question, so a question an editor keeps isn't flagged again. Only players' reports count toward auto-suspension
+- ✅ The console: the new reasons and history entries, "Taken out automatically" in the queue, and the difficulty rating on the question page
+- ✅ Tests: the API (a right answer lowering the rating through the taste test, duel answers recording theirs, levels by quintile once a night and only from 200 plays, the three flags filed once with only the wrong key taken out, an editor keeping it)
+
+### Step 2.6b-2 · Re-scoring and trending expiry ⬜
+Re-scoring the last 14 days of games when a live question's answer is corrected, and telling the players (FR-CON-7): those who picked the new right answer get its points, nobody loses any, and a duel's result changes only if the totals flip. Each Daily answer is then kept with the result, since the round's answers only stay in Redis for two days. "Trending" questions expiring after 90 days unless renewed (GDD §6.2).
 
 | Step | Scope | Main docs |
 |---|---|---|
@@ -284,7 +293,7 @@ Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly
 | 2.3 Random opponents ⬜ | Rating-bucket matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
 | 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
-| 2.6 Content tools: 2.6a ✅, 2.6b ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
+| 2.6 Content tools: 2.6a ✅, 2.6b-1 ✅, 2.6b-2 ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |

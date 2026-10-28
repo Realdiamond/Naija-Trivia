@@ -49,6 +49,9 @@ const HISTORY_LABEL: Record<string, string> = {
   reports_fixed: 'Reports closed: fixed',
   reports_rejected: 'Reports closed: nothing wrong',
   reports_retired: 'Reports closed: retired',
+  recalibrated: 'Level set by the numbers',
+  flagged: 'Flagged by the numbers',
+  suspended_by_numbers: 'Suspended: most players pick another answer',
 };
 
 export function historyLabel(action: string): string {
@@ -71,6 +74,8 @@ export const REASON_LABEL: Record<string, string> = {
   typo: 'Typo',
   unfair: 'Too hard or unfair',
   other: 'Other',
+  too_hard: 'Too hard (from the numbers)',
+  too_easy: 'Too easy (from the numbers)',
 };
 
 export const DIFFICULTY_LABEL = ['', '1 · easy', '2', '3 · medium', '4', '5 · expert'] as const;

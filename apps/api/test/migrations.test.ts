@@ -22,9 +22,13 @@ describe('database', () => {
   });
 
   it('holds the 114 seed questions with the importer rules (q_ ids, d_rating = 1050 + 150 × level)', async () => {
+    // Answers move the rating (step 2.6b), so the starting rule holds for questions nobody played yet.
     const row = (
       await t.pool.query(
-        `SELECT count(*)::int AS n, bool_and(d_rating = 1050 + 150 * difficulty) AS ratings_ok,
+        `SELECT count(*)::int AS n,
+                coalesce(bool_and(d_rating = 1050 + 150 * difficulty) FILTER (
+                  WHERE NOT EXISTS (SELECT 1 FROM question_stats s WHERE s.question_id = questions.id)), true)
+                  AS ratings_ok,
                 bool_and(id = 'q_' || lower(external_ref)) AS ids_ok FROM questions
           WHERE external_ref LIKE 'SEED-%'`,
       )

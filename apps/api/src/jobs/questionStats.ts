@@ -1,12 +1,14 @@
 /**
  * Moves the hot per-question counters (`qstat:{qid}` in Redis, content/stats.ts) into
- * `question_stats`, which "Ask Naija" and difficulty calibration read (doc 08 §3).
+ * `question_stats`, which "Ask Naija" and difficulty calibration read (doc 08 §3), and applies
+ * the answers' item-rating changes to `questions.d_rating` (GDD §6.3).
  *
  * Each counter is renamed to `qstatf:{qid}` before it is read, so answers keep counting into a
  * fresh key while it is written to Postgres, and a flush that dies halfway is finished by the
  * next one. A Redis lock keeps two workers from adding the same counter twice.
  */
 import { randomUUID } from 'node:crypto';
+import { withTransaction } from '../db';
 import type { JobDeps } from './deps';
 
 const LOCK_KEY = 'lock:qstat-flush';
@@ -14,6 +16,9 @@ const LOCK_MS = 120_000;
 const LIVE = 'qstat:';
 const FLUSHING = 'qstatf:';
 const OPTIONS = 4; // question_stats.option_counts, canonical order
+/** Item ratings stay in a sane band, whatever a run of answers does. */
+const MIN_ITEM_RATING = 800;
+const MAX_ITEM_RATING = 2200;
 
 // Release the lock only if it is still ours.
 const RELEASE = `if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0`;
@@ -57,21 +62,31 @@ async function flushKey(deps: JobDeps, key: string): Promise<number> {
   if (plays > 0) {
     const options = Array.from({ length: OPTIONS }, (_, i) => n(`option_${i}`));
     try {
-      await deps.pool.query(
-        `INSERT INTO question_stats (question_id, plays, correct, option_counts, avg_elapsed_ms, updated_at)
-         VALUES ($1, $2::bigint, $3::bigint, $4::int[], round($5::numeric / $2::bigint), $6)
-         ON CONFLICT (question_id) DO UPDATE SET
-           plays = question_stats.plays + EXCLUDED.plays,
-           correct = question_stats.correct + EXCLUDED.correct,
-           option_counts = ARRAY(
-             SELECT coalesce(old, 0) + coalesce(new, 0)
-               FROM unnest(question_stats.option_counts, EXCLUDED.option_counts) AS x(old, new)),
-           avg_elapsed_ms = round(
-             (coalesce(question_stats.avg_elapsed_ms, 0)::numeric * question_stats.plays + $5)
-             / (question_stats.plays + EXCLUDED.plays)),
-           updated_at = EXCLUDED.updated_at`,
-        [qid, plays, n('correct'), options, n('elapsed_ms_sum'), new Date(deps.clock.now())],
-      );
+      // Both or neither: a flush that fails is tried again, and must not count anything twice.
+      await withTransaction(deps.pool, async (client) => {
+        await client.query(
+          `INSERT INTO question_stats (question_id, plays, correct, option_counts, avg_elapsed_ms, updated_at)
+           VALUES ($1, $2::bigint, $3::bigint, $4::int[], round($5::numeric / $2::bigint), $6)
+           ON CONFLICT (question_id) DO UPDATE SET
+             plays = question_stats.plays + EXCLUDED.plays,
+             correct = question_stats.correct + EXCLUDED.correct,
+             option_counts = ARRAY(
+               SELECT coalesce(old, 0) + coalesce(new, 0)
+                 FROM unnest(question_stats.option_counts, EXCLUDED.option_counts) AS x(old, new)),
+             avg_elapsed_ms = round(
+               (coalesce(question_stats.avg_elapsed_ms, 0)::numeric * question_stats.plays + $5)
+               / (question_stats.plays + EXCLUDED.plays)),
+             updated_at = EXCLUDED.updated_at`,
+          [qid, plays, n('correct'), options, n('elapsed_ms_sum'), new Date(deps.clock.now())],
+        );
+        const delta = Number.parseFloat(h.d_delta ?? '0') || 0;
+        if (delta !== 0) {
+          await client.query(
+            'UPDATE questions SET d_rating = least($3, greatest($2, d_rating + $4)) WHERE id = $1',
+            [qid, MIN_ITEM_RATING, MAX_ITEM_RATING, delta],
+          );
+        }
+      });
     } catch (err) {
       // A question deleted since it was answered has nowhere to go; anything else is retried.
       if ((err as { code?: string }).code !== '23503') throw err;

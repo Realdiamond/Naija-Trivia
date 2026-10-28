@@ -1,6 +1,7 @@
 /**
- * Player reports (PRD US-9, doc 04 §3): questions with open reports, the ones the reports already
- * took out of the game first. An editor answers within 24 hours.
+ * Player reports (PRD US-9, doc 04 §3): questions with open reports, the ones already taken out
+ * of the game first. The nightly check adds its own from the numbers (step 2.6b). An editor
+ * answers within 24 hours.
  */
 import Link from 'next/link';
 import type { AdminProfile, AdminReportsResponse } from '@whosabi/shared-types';
@@ -20,14 +21,16 @@ export default async function Reports() {
       <h1>Player reports</h1>
       <p className="muted">
         Five &quot;wrong answer&quot; reports, or reports on more than 3% of plays (from 100 plays), take a
-        question out of the game until someone here decides.
+        question out of the game until someone here decides. Each night the numbers add their own: from 300
+        plays, fewer than 5% or more than 97% right, and most players picking the same wrong option, which
+        also takes the question out.
       </p>
       {groups.length === 0 ? <p className="ok">No open reports.</p> : null}
       {groups.map((g) => (
         <div key={g.question.id} className="card stack" data-testid={`report-${g.question.id}`}>
           <div className="row">
             <span className={`badge ${STATUS_TONE[g.question.status]}`}>
-              {g.auto_suspended ? 'Suspended by reports' : STATUS_LABEL[g.question.status]}
+              {g.auto_suspended ? 'Taken out automatically' : STATUS_LABEL[g.question.status]}
             </span>
             <span className="muted small">
               {CATEGORY_NAME[g.question.category_id] ?? g.question.category_id} ·{' '}
