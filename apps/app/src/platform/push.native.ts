@@ -13,6 +13,9 @@ import { pushTarget, type PushTarget } from '../features/push/target';
 
 export const pushSupported = Platform.OS === 'android';
 
+/** Only Safari on iPhone needs the game on the Home Screen first (see push.ts). */
+export const needsHomeScreen = false;
+
 export type PushPermission = 'granted' | 'denied' | 'undetermined' | 'unsupported';
 
 /** The server's channels (push/messages.ts), as Android shows them in Settings. */

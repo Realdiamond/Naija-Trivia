@@ -90,6 +90,15 @@ export default function Home() {
             <Icon name="shield" size={26} color={colors.primaryInk} />
           </Pressable>
         ) : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('nav.notifications')}
+          hitSlop={8}
+          onPress={() => router.push('/notifications')}
+          testID="open-notifications"
+        >
+          <Icon name="bell" size={26} />
+        </Pressable>
         {status === 'account' ? (
           <Pressable
             accessibilityRole="button"

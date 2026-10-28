@@ -1,7 +1,7 @@
 /**
- * Getting a push to a phone. Android goes through Firebase Cloud Messaging (the HTTP v1 API,
- * signed in with the Firebase project's service account); until that is set up, a stand-in writes
- * each message to the log. Web push joins in step 2.5c.
+ * Getting a push to a phone or browser. Android goes through Firebase Cloud Messaging (the HTTP v1
+ * API, signed in with the Firebase project's service account), browsers through web push
+ * (webpush.ts). Until one is set up, a stand-in writes its messages to the log.
  */
 import type { FastifyBaseLogger } from 'fastify';
 import { importPKCS8, SignJWT } from 'jose';
@@ -11,7 +11,10 @@ import type { RenderedPush } from './messages';
 export interface DeviceToken {
   id: string;
   platform: 'android' | 'ios' | 'web';
+  /** The FCM token, or a browser's push endpoint. */
   token: string;
+  /** A browser's encryption keys (web only). */
+  keys?: { p256dh: string; auth: string } | null;
 }
 
 export interface OutgoingPush extends RenderedPush {
@@ -28,25 +31,44 @@ export const INVALID_TOKEN = 'invalid_token';
 export class PushRejected extends Error {}
 
 export interface PushTransport {
-  /** False for the stand-in, whose messages only reach the log (and are not counted as sent). */
+  /** False when every message only reaches the log. */
   readonly real: boolean;
   /**
-   * 'delivered' once the push service has the message, or INVALID_TOKEN. Throws PushRejected
-   * for a refused message, and anything else for a failure worth trying again.
+   * 'delivered' once the push service has the message, 'logged' when the stand-in wrote it to the
+   * log instead (not counted as sent), or INVALID_TOKEN. Throws PushRejected for a refused
+   * message, and anything else for a failure worth trying again.
    */
-  send(device: DeviceToken, push: OutgoingPush): Promise<'delivered' | typeof INVALID_TOKEN>;
+  send(device: DeviceToken, push: OutgoingPush): Promise<'delivered' | 'logged' | typeof INVALID_TOKEN>;
 }
 
 export class LogTransport implements PushTransport {
   readonly real = false;
-  constructor(private readonly log: FastifyBaseLogger) {}
+  constructor(
+    private readonly log: FastifyBaseLogger,
+    private readonly missing = 'FIREBASE_SERVICE_ACCOUNT',
+  ) {}
 
-  async send(device: DeviceToken, push: OutgoingPush): Promise<'delivered'> {
+  async send(device: DeviceToken, push: OutgoingPush): Promise<'logged'> {
     this.log.info(
       { device: device.id, push: { type: push.type, title: push.title, body: push.body, url: push.url } },
-      'push not sent (no FIREBASE_SERVICE_ACCOUNT yet): here is the message',
+      `push not sent (no ${this.missing} yet): here is the message`,
     );
-    return 'delivered';
+    return 'logged';
+  }
+}
+
+/** Each device through its own push service: FCM for Android, web push for browsers. */
+export class PushRouter implements PushTransport {
+  readonly real: boolean;
+  constructor(
+    private readonly byPlatform: Partial<Record<DeviceToken['platform'], PushTransport>>,
+    private readonly otherwise: PushTransport,
+  ) {
+    this.real = Object.values(byPlatform).some((t) => t.real);
+  }
+
+  send(device: DeviceToken, push: OutgoingPush) {
+    return (this.byPlatform[device.platform] ?? this.otherwise).send(device, push);
   }
 }
 

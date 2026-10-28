@@ -5,7 +5,7 @@
  * "Not now" waits a week before asking again.
  */
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useT } from '../../i18n';
 import { enablePush, pushPermission, pushSupported } from '../../platform/push';
 import { storage } from '../../platform/storage';
@@ -57,7 +57,7 @@ export function PushPrompt({ reason, name }: { reason: 'duel' | 'daily'; name?: 
         </Text>
       </View>
       {state === 'denied' ? (
-        <Text variant="bodySoft">{t('push.denied')}</Text>
+        <Text variant="bodySoft">{t(Platform.OS === 'web' ? 'push.deniedWeb' : 'push.denied')}</Text>
       ) : (
         <>
           <Text variant="bodySoft">

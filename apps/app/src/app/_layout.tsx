@@ -58,10 +58,11 @@ export default function RootLayout() {
   });
   useEffect(() => {
     if (signedIn && pushUrl) {
-      router.push(pushUrl as Parameters<typeof router.push>[0]);
+      // Already there (a browser window a push just opened): nothing to stack.
+      if (pushUrl !== pathname) router.push(pushUrl as Parameters<typeof router.push>[0]);
       setPushUrl(null);
     }
-  }, [signedIn, pushUrl]);
+  }, [signedIn, pushUrl, pathname]);
   useEffect(() => {
     if (signedIn) void syncPush();
   }, [signedIn]);

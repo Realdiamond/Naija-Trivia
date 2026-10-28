@@ -22,6 +22,7 @@ CREATE TABLE users (
   family_mode     boolean NOT NULL DEFAULT false,
   data_saver      boolean NOT NULL DEFAULT false,
   discoverable    boolean NOT NULL DEFAULT true,
+  push_off        text[] NOT NULL DEFAULT '{}',        -- kinds switched off: 'duels','friends','daily' (0013)
   level           int NOT NULL DEFAULT 1,
   xp              bigint NOT NULL DEFAULT 0,
   signup_platform text CHECK (signup_platform IN ('android','ios','web')),
@@ -60,7 +61,8 @@ CREATE TABLE devices (
   id              text PRIMARY KEY,
   user_id         text REFERENCES users(id) ON DELETE CASCADE,
   platform        text NOT NULL CHECK (platform IN ('android','ios','web')),
-  push_token      text,                                -- FCM token (Android, iOS via APNs, web push)
+  push_token      text,                                -- FCM token (Android, iOS via APNs), or a browser's push endpoint
+  web_keys        jsonb,                               -- web push: {p256dh, auth} (migration 0013)
   app_version     text,
   model           text,
   browser         text,                                -- web only, e.g. 'chrome_android', 'safari_ios'
@@ -753,7 +755,7 @@ CREATE TABLE push_outbox (
   attempts        int NOT NULL DEFAULT 0,
   locked_until    timestamptz,                         -- claimed by a worker until then
   sent_at         timestamptz,
-  outcome         text CHECK (outcome IN ('sent','logged','no_device','capped','expired','failed')),
+  outcome         text CHECK (outcome IN ('sent','logged','no_device','capped','expired','failed','muted')),
   CHECK ((sent_at IS NULL) = (outcome IS NULL))
 );
 CREATE UNIQUE INDEX push_outbox_waiting_key ON push_outbox (user_id, collapse_key)

@@ -25,7 +25,8 @@ import { queueDailyReminders } from './jobs/dailyReminder';
 import { queueTurnReminders } from './jobs/reminders';
 import { migrate } from './migrate';
 import { prunePushes, sendDuePushes } from './push/dispatch';
-import { FcmTransport, LogTransport } from './push/transport';
+import { FcmTransport, LogTransport, PushRouter } from './push/transport';
+import { WebPushTransport } from './push/webpush';
 import { createRedis } from './redis';
 
 const SECOND = 1_000;
@@ -41,10 +42,16 @@ const events = new ServerEvents(redis, config.analyticsKey, systemClock, log);
 const deps = { config, pool, redis, clock: systemClock, events, log };
 const duels = new DuelService(deps);
 const daily = new DailyService(deps);
-// Real pushes once the Firebase key is set; until then they go to the log.
-const transport = config.firebaseServiceAccount
-  ? new FcmTransport(config.firebaseServiceAccount)
-  : new LogTransport(log);
+// Real pushes once each service is set up; until then they go to the log.
+const transport = new PushRouter(
+  {
+    android: config.firebaseServiceAccount
+      ? new FcmTransport(config.firebaseServiceAccount)
+      : new LogTransport(log),
+    web: config.webPush ? new WebPushTransport(config.webPush) : new LogTransport(log, 'VAPID_PRIVATE_KEY'),
+  },
+  new LogTransport(log, 'iOS build'),
+);
 const loader = new AnalyticsLoader({ ...deps, redis: streamRedis });
 
 if (config.env !== 'production') await migrate(pool);

@@ -1,0 +1,14 @@
+{
+  "name": "Who Sabi?",
+  "short_name": "Who Sabi?",
+  "description": "Naija trivia with your own people. Settle the argument.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFFDF7",
+  "theme_color": "#008751",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

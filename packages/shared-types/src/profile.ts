@@ -42,6 +42,13 @@ export const ProfileCard = z.object({
 });
 export type ProfileCard = z.infer<typeof ProfileCard>;
 
+/**
+ * The kinds of push a player can switch off (like Android's notification channels): duels (your
+ * turn, time running out, results), friends (requests) and the Daily reminder.
+ */
+export const PushKind = z.enum(['duels', 'friends', 'daily']);
+export type PushKind = z.infer<typeof PushKind>;
+
 export const Me = z.object({
   id: z.string(),
   username: z.string().nullable(),
@@ -62,6 +69,8 @@ export const Me = z.object({
   created_at: z.iso.datetime(),
   /** On the staff list as an owner or admin: the app shows the Staff tab (step 2.9a). */
   staff: z.boolean(),
+  /** Kinds of push switched off in the app (step 2.5c). */
+  push_off: z.array(PushKind),
 });
 export type Me = z.infer<typeof Me>;
 
@@ -78,6 +87,7 @@ export const UpdateMeRequest = z
     data_saver: z.boolean(),
     family_mode: z.boolean(),
     discoverable: z.boolean(),
+    push_off: z.array(PushKind).max(3),
   })
   .partial()
   .strict();
@@ -132,21 +142,46 @@ const PushToken = z
   .max(4096)
   .regex(/^[A-Za-z0-9:_-]+$/);
 
+/** A browser's push endpoint (web push, step 2.5c): an https address at its push service. */
+const PushEndpoint = z.url({ protocol: /^https$/ }).max(1024);
+const Base64Url = z.string().regex(/^[A-Za-z0-9_-]+=*$/);
+
+/** What `PushSubscription.toJSON()` gives in the browser. */
+export const WebPushSubscription = z.object({
+  endpoint: PushEndpoint,
+  keys: z.object({ p256dh: Base64Url.min(86).max(90), auth: Base64Url.min(22).max(24) }),
+});
+export type WebPushSubscription = z.infer<typeof WebPushSubscription>;
+
 /**
- * Turn pushes on for this phone (doc 09 §2.2, FR-NOT-1). Sent on every start, since the token can
- * change; the token moves to whoever is signed in on the phone. Android only until web push
- * (step 2.5c) and the iOS build (step 2.8).
+ * Turn pushes on for this phone or browser (doc 09 §2.2, FR-NOT-1). Sent on every start, since the
+ * token can change; it moves to whoever is signed in there. iOS joins with its build (step 2.8).
  */
-export const RegisterDeviceRequest = z
-  .object({
-    platform: z.literal('android'),
-    push_token: PushToken,
-    app_version: z.string().max(20).optional(),
-    model: z.string().max(60).optional(),
-  })
-  .strict();
+export const RegisterDeviceRequest = z.discriminatedUnion('platform', [
+  z
+    .object({
+      platform: z.literal('android'),
+      push_token: PushToken,
+      app_version: z.string().max(20).optional(),
+      model: z.string().max(60).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      platform: z.literal('web'),
+      subscription: WebPushSubscription,
+      app_version: z.string().max(20).optional(),
+      /** e.g. chrome_android, safari_ios. */
+      browser: z.string().max(40).optional(),
+    })
+    .strict(),
+]);
 export type RegisterDeviceRequest = z.infer<typeof RegisterDeviceRequest>;
 
-/** Turn pushes off for this phone: on sign-out, or when the player switches them off. */
-export const ForgetDeviceRequest = z.object({ push_token: PushToken }).strict();
+/** Turn pushes off for this phone or browser (its token or endpoint): on sign-out. */
+export const ForgetDeviceRequest = z.object({ push_token: PushToken.or(PushEndpoint) }).strict();
 export type ForgetDeviceRequest = z.infer<typeof ForgetDeviceRequest>;
+
+/** The key browsers subscribe with; null while web push is off. */
+export const WebPushKeyResponse = z.object({ public_key: z.string().nullable() });
+export type WebPushKeyResponse = z.infer<typeof WebPushKeyResponse>;

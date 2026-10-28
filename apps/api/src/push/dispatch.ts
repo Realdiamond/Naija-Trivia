@@ -26,9 +26,11 @@ interface Claimed {
   language: string;
   status: string;
   last_platform: Platform | null;
+  /** Kinds the player switched off in the app. */
+  push_off: string[];
 }
 
-type Outcome = 'sent' | 'logged' | 'no_device' | 'capped' | 'expired' | 'failed';
+type Outcome = 'sent' | 'logged' | 'no_device' | 'capped' | 'expired' | 'failed' | 'muted';
 
 export async function sendDuePushes(deps: JobDeps, transport: PushTransport, limit = 100): Promise<number> {
   const { pool, clock } = deps;
@@ -44,7 +46,7 @@ export async function sendDuePushes(deps: JobDeps, transport: PushTransport, lim
        RETURNING p.id, p.user_id, p.type, p.params, p.collapse_key, p.expires_at, p.attempts
      )
      -- Oldest first, so the daily cap keeps the pushes queued earliest.
-     SELECT c.*, u.language, u.status, u.last_platform
+     SELECT c.*, u.language, u.status, u.last_platform, u.push_off
        FROM claimed c JOIN users u ON u.id = c.user_id ORDER BY c.id`,
     [new Date(now), limit, new Date(now + LOCK_MS)],
   );
@@ -86,17 +88,19 @@ async function sendOne(
   // Queued just before 22:00 and picked up just after: it waits for the morning too.
   if (inQuietHours(now)) return later(nextSendTime(now));
   if (row.status === 'banned' || row.status === 'deleted') return finish('no_device');
+  const rendered = renderPush({ type: row.type, ...row.params } as PushParams, row.language);
+  if (row.push_off.includes(rendered.channel)) return finish('muted');
 
   const devices = (
     await pool.query<DeviceToken>(
-      `SELECT id, platform, push_token AS token FROM devices
+      `SELECT id, platform, push_token AS token, web_keys AS keys FROM devices
         WHERE user_id = $1 AND push_token IS NOT NULL ORDER BY token_updated_at DESC NULLS LAST LIMIT 10`,
       [row.user_id],
     )
   ).rows;
   if (devices.length === 0) {
     if (!transport.real) {
-      const { title, body } = renderPush({ type: row.type, ...row.params } as PushParams, row.language);
+      const { title, body } = rendered;
       log.debug(
         { to: row.user_id, push: { type: row.type, title, body } },
         'push for a player with no phone',
@@ -114,22 +118,25 @@ async function sendOne(
     if (today.rows[0]!.n >= DAILY_CAP) return finish('capped');
   }
 
-  const rendered = renderPush({ type: row.type, ...row.params } as PushParams, row.language);
   const push = {
     ...rendered,
     collapseKey: row.collapse_key,
     ttlSeconds: (row.expires_at.getTime() - now) / 1000,
   };
   let delivered = 0;
+  let logged = 0;
   let retry = false;
   let refused = false;
   for (const device of devices) {
     try {
-      if ((await transport.send(device, push)) === INVALID_TOKEN) {
+      const result = await transport.send(device, push);
+      if (result === INVALID_TOKEN) {
         await pool.query('UPDATE devices SET push_token = NULL WHERE id = $1 AND push_token = $2', [
           device.id,
           device.token,
         ]);
+      } else if (result === 'logged') {
+        logged++;
       } else {
         delivered++;
       }
@@ -145,7 +152,6 @@ async function sendOne(
   }
 
   if (delivered > 0) {
-    if (!transport.real) return finish('logged');
     await deps.events.emit(
       'push_sent',
       { type: row.type },
@@ -153,6 +159,7 @@ async function sendOne(
     );
     return finish('sent');
   }
+  if (logged > 0) return finish('logged');
   if (retry && row.attempts < MAX_ATTEMPTS) return later(now + 30_000 * 2 ** row.attempts);
   // Every token was dead, or the push service refused the message.
   return finish(retry || refused ? 'failed' : 'no_device');
