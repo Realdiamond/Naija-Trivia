@@ -28,12 +28,13 @@ export const colors = {
 /** Category colours (doc 05 §7); a dot or band, never behind text. */
 export const categoryColors: Record<
   string,
-  { color: string; tint: string; name: string; emoji: string; blurb: string }
+  { color: string; tint: string; name: string; short: string; emoji: string; blurb: string }
 > = {
   slang: {
     color: '#8E44AD',
     tint: '#F2E8F7',
     name: 'Slang & Pidgin',
+    short: 'Slang',
     emoji: '💬',
     blurb: 'Pidgin, slang, street talk',
   },
@@ -41,6 +42,7 @@ export const categoryColors: Record<
     color: '#E67E22',
     tint: '#FCEBDB',
     name: 'Nollywood',
+    short: 'Nolly',
     emoji: '🎬',
     blurb: 'Films, stars, famous lines',
   },
@@ -48,6 +50,7 @@ export const categoryColors: Record<
     color: '#2980B9',
     tint: '#E4EEF8',
     name: 'Music',
+    short: 'Music',
     emoji: '🎵',
     blurb: 'Afrobeats, hooks, legends',
   },
@@ -55,6 +58,7 @@ export const categoryColors: Record<
     color: '#C0392B',
     tint: '#FBE6E3',
     name: 'Food',
+    short: 'Food',
     emoji: '🍲',
     blurb: 'Swallow, soups, street food',
   },
@@ -62,6 +66,7 @@ export const categoryColors: Record<
     color: '#B8860B',
     tint: '#F8EFD6',
     name: 'Sport',
+    short: 'Sport',
     emoji: '⚽',
     blurb: 'Football, athletes, big moments',
   },
@@ -69,6 +74,7 @@ export const categoryColors: Record<
     color: '#16A085',
     tint: '#DFF3EE',
     name: 'Mixed Naija',
+    short: 'Mixed',
     emoji: '⭐',
     blurb: 'History, places, a bit of everything',
   },
@@ -79,6 +85,7 @@ export const category = (id: string | null | undefined) =>
     color: colors.muted,
     tint: colors.sand,
     name: id ?? '',
+    short: id ?? '',
     emoji: '❓',
     blurb: '',
   };

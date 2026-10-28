@@ -11,6 +11,7 @@ import type { TokenService } from './auth/tokens';
 import type { Clock } from './clock';
 import type { Config } from './config';
 import { contentRoutes } from './content/routes';
+import { dailyRoutes } from './daily/routes';
 import { duelRoutes } from './duels/routes';
 import type { Pool } from './db';
 import { registerErrorHandlers } from './errors';
@@ -98,6 +99,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   rttRoutes(app, deps);
   roundRoutes(app, deps);
   duelRoutes(app, deps);
+  dailyRoutes(app, deps);
   adminRoutes(app, deps);
 
   // One process for everything at launch (Heroku, doc 07 §5): the event intake and the web app.

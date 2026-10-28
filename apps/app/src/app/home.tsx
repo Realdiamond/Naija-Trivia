@@ -1,6 +1,6 @@
 /**
- * Home (mockup 08): your turns first, then a new challenge, the duels waiting on the other
- * player and recent results. The Daily, coins and the tab bar arrive with their features (M2).
+ * Home (mockup 08): the Daily, your turns, then a new challenge, the duels waiting on the other
+ * player and recent results. Coins and the tab bar arrive with their features (M2).
  */
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -10,6 +10,8 @@ import { routes, type DuelSummary, type Me } from '@whosabi/shared-types';
 import { api } from '../api';
 import { signOut, useSession } from '../auth/session';
 import { SignInOptions } from '../features/auth/SignInOptions';
+import { useDailyToday } from '../features/daily/api';
+import { DailyBanner } from '../features/daily/DailyBanner';
 import { useDuelList } from '../features/duels/api';
 import { currentRound, isUrgent, playerName, timeLeft } from '../features/duels/format';
 import { useT } from '../i18n';
@@ -28,16 +30,19 @@ export default function Home() {
   const me = useQuery({ queryKey: ['me'], queryFn: () => api.get<Me>(routes.me()), enabled: signedIn });
   const active = useDuelList('active', signedIn);
   const done = useDuelList('done', signedIn);
+  const daily = useDailyToday(signedIn);
 
-  // Coming back from a duel: show the new state at once.
+  // Coming back from a duel or the Daily: show the new state at once.
   const { refetch: refetchActive } = active;
   const { refetch: refetchDone } = done;
+  const { refetch: refetchDaily } = daily;
   useFocusEffect(
     useCallback(() => {
       if (!signedIn) return;
       void refetchActive();
       void refetchDone();
-    }, [signedIn, refetchActive, refetchDone]),
+      void refetchDaily();
+    }, [signedIn, refetchActive, refetchDone, refetchDaily]),
   );
 
   if (status === 'signed_out') return <Redirect href="/welcome" />;
@@ -64,6 +69,15 @@ export default function Home() {
             {me.data ? ` · ${me.data.tier.name} · ${Math.round(me.data.rating).toLocaleString('en-NG')}` : ''}
           </Text>
         </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('nav.leaderboards')}
+          hitSlop={8}
+          onPress={() => router.push('/leaderboards')}
+          testID="open-leaderboards"
+        >
+          <Icon name="trophy" size={26} />
+        </Pressable>
         {status === 'account' ? (
           <Pressable
             accessibilityRole="button"
@@ -76,6 +90,8 @@ export default function Home() {
           </Pressable>
         ) : null}
       </View>
+
+      {daily.data ? <DailyBanner today={daily.data} /> : null}
 
       {yourTurn.length > 0 ? (
         <>

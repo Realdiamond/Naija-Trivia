@@ -52,6 +52,13 @@ describe('format', () => {
     expect(
       describeEvent({ event: 'app_backgrounded', platform: 'android', props: { foreground_ms: 372_000 } }),
     ).toBe('Left the app · 6 min 12 s in view');
+    expect(
+      describeEvent({
+        event: 'daily_completed',
+        platform: 'web',
+        props: { daily_id: 142, score: 1310, streak: 12 },
+      }),
+    ).toBe('Finished Daily #142 · 1310 points · 12-day streak');
     expect(describeEvent({ event: 'something_new', platform: 'web', props: { a: 1 } })).toBe(
       'something_new {"a":1}',
     );

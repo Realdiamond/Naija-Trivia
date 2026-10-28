@@ -23,7 +23,10 @@ export type IconName =
   | 'shuffle'
   | 'timer'
   | 'logout'
-  | 'link';
+  | 'link'
+  | 'calendar'
+  | 'flame'
+  | 'chevron-right';
 
 interface IconProps {
   name: IconName;
@@ -152,5 +155,21 @@ function paths(name: IconName, s: Stroke) {
       );
     case 'logout':
       return <Path d="M14 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h9" {...s} />;
+    case 'calendar':
+      return (
+        <>
+          <Rect x={3.5} y={5} width={17} height={15.5} rx={2.5} {...s} />
+          <Path d="M3.5 10h17M8 3v4M16 3v4" {...s} />
+        </>
+      );
+    case 'flame':
+      return (
+        <Path
+          d="M12 3c.6 3.4 5 5.3 5 10.3a5 5 0 0 1-10 0c0-2.4 1.1-4 2.4-5 .2 1.7 1 2.8 2 3.3C10.9 8.6 11.1 5.4 12 3z"
+          {...s}
+        />
+      );
+    case 'chevron-right':
+      return <Path d="M9 5l7 7-7 7" {...s} />;
   }
 }

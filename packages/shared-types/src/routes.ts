@@ -45,6 +45,15 @@ export const routes = {
   duelDecline: (duelId: string) => `${API_PREFIX}/duels/${encodeURIComponent(duelId)}/decline`,
   duelCancel: (duelId: string) => `${API_PREFIX}/duels/${encodeURIComponent(duelId)}/cancel`,
   duelRematch: (duelId: string) => `${API_PREFIX}/duels/${encodeURIComponent(duelId)}/rematch`,
+  dailyToday: () => `${API_PREFIX}/daily/today`,
+  dailyServe: (dailyId: number, seq: number) => `${API_PREFIX}/daily/${dailyId}/questions/${seq}/serve`,
+  dailyAnswer: (dailyId: number, seq: number) => `${API_PREFIX}/daily/${dailyId}/questions/${seq}/answer`,
+  dailyResult: (dailyId: number) => `${API_PREFIX}/daily/${dailyId}/result`,
+  dailyLeaderboard: (dailyId: number, scope: 'global' | 'state' | 'friends') =>
+    `${API_PREFIX}/daily/${dailyId}/leaderboard?scope=${scope}`,
+  /** The week's board: Daily points added up, Monday to Sunday WAT. */
+  weekLeaderboard: (scope: 'global' | 'state' | 'friends') =>
+    `${API_PREFIX}/leaderboards/week?scope=${scope}`,
   invite: (token: string) => `${API_PREFIX}/invites/${encodeURIComponent(token)}`,
   inviteAccept: (token: string) => `${API_PREFIX}/invites/${encodeURIComponent(token)}/accept`,
   admin: {

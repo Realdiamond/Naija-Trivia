@@ -1,6 +1,7 @@
 export * from './calendar';
 export * from './config';
 export * from './content';
+export * from './daily';
 export * from './duel';
 export * from './hash';
 export * from './progression';
