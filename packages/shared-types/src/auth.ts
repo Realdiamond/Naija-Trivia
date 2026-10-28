@@ -47,6 +47,8 @@ export type RefreshRequest = z.infer<typeof RefreshRequest>;
 export const AuthMethodsResponse = z.object({
   guest: z.literal(true),
   phone: z.boolean(),
+  /** Codes by email (step 2.10). */
+  email: z.boolean(),
   google: z.boolean(),
   apple: z.boolean(),
 });
@@ -69,6 +71,15 @@ export const OtpSendResponse = z.object({
 });
 export type OtpSendResponse = z.infer<typeof OtpSendResponse>;
 
+/** Email sign-in, step 1 (step 2.10): the same limits and human check as phone codes. */
+export const EmailCodeSendRequest = z.object({
+  /** Spaces around it are dropped; the server keeps it lower-cased. */
+  email: z.string().trim().pipe(z.email().max(254)),
+  platform: Platform,
+  turnstile_token: z.string().min(1).max(4096).optional(),
+});
+export type EmailCodeSendRequest = z.infer<typeof EmailCodeSendRequest>;
+
 /**
  * Sign-in requests take `merge_guest` (default true): send the current session's access token
  * with it, and a guest keeps their progress (FR-AUTH-4) while an account gets the new
@@ -80,6 +91,10 @@ export const OtpVerifyRequest = z.object({
   merge_guest: z.boolean().default(true),
 });
 export type OtpVerifyRequest = z.infer<typeof OtpVerifyRequest>;
+
+/** Email sign-in, step 2: the same shape as a phone code. */
+export const EmailCodeVerifyRequest = OtpVerifyRequest;
+export type EmailCodeVerifyRequest = OtpVerifyRequest;
 
 export const GoogleAuthRequest = z.object({
   id_token: z.string().min(20).max(8192),

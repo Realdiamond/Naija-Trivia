@@ -41,6 +41,11 @@ export const en = {
   'signin.googleFailed': 'Google sign-in did not work on this phone. Try again, or use another way in.',
   'signin.apple': 'Continue with Apple',
   'signin.phoneButton': 'Continue with phone number',
+  'signin.email': 'Email address',
+  'signin.emailHint': 'We email you a 6-digit code.',
+  'signin.emailButton': 'Continue with email',
+  'signin.useEmail': 'Use email instead',
+  'signin.usePhone': 'Use phone number instead',
   'signin.noMethods':
     'Sign-in is not switched on yet. Keep playing as a guest; your progress stays on this device.',
   'signin.terms':
@@ -52,6 +57,8 @@ export const en = {
   'signin.resend': 'Send again',
   'signin.resendIn': 'Send again in {seconds}s',
   'signin.changeNumber': 'Change number',
+  'signin.codeSentEmail': "We sent a 6-digit code to {email}. Can't see it? Check your spam folder.",
+  'signin.changeEmail': 'Change email',
   'signin.deviceTaken': 'This device belongs to an account. Sign in to continue.',
   'signin.captchaNative':
     'That is enough codes on this phone for today. Sign in with Google, or try again tomorrow.',
@@ -343,6 +350,11 @@ export const pcm: Record<MessageKey, string> = {
   'signin.googleFailed': 'Google sign-in no work for this phone. Try again, or use another way.',
   'signin.apple': 'Continue with Apple',
   'signin.phoneButton': 'Continue with phone number',
+  'signin.email': 'Email address',
+  'signin.emailHint': 'We go email you 6-digit code.',
+  'signin.emailButton': 'Continue with email',
+  'signin.useEmail': 'Use email instead',
+  'signin.usePhone': 'Use phone number instead',
   'signin.noMethods': 'Sign-in never start yet. Dey play as guest; your progress dey this device.',
   'signin.terms':
     'If you continue, you agree to the Terms and Privacy Policy. No cash, no wallet: Who Sabi? na free.',
@@ -353,6 +365,8 @@ export const pcm: Record<MessageKey, string> = {
   'signin.resend': 'Send am again',
   'signin.resendIn': 'Send again in {seconds}s',
   'signin.changeNumber': 'Change number',
+  'signin.codeSentEmail': 'We don send 6-digit code to {email}. You no see am? Check your spam.',
+  'signin.changeEmail': 'Change email',
   'signin.deviceTaken': 'This device get account already. Sign in to continue.',
   'signin.captchaNative': 'Codes don reach for this phone today. Use Google sign in, or try again tomorrow.',
 

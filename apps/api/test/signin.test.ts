@@ -393,7 +393,7 @@ describe('Google and Apple sign-in', () => {
 describe('switching sign-in methods off', () => {
   it('lists the methods that are on, so the apps show only those buttons', async () => {
     const res = await t.app.inject({ method: 'GET', url: '/v1/auth/methods' });
-    expect(res.json()).toEqual({ guest: true, phone: true, google: true, apple: true });
+    expect(res.json()).toEqual({ guest: true, phone: true, email: true, google: true, apple: true });
   });
 
   it('answers 503 on both phone steps when there is no SMS provider', async () => {
@@ -403,7 +403,7 @@ describe('switching sign-in methods off', () => {
     );
     try {
       const methods = await bare.app.inject({ method: 'GET', url: '/v1/auth/methods' });
-      expect(methods.json()).toEqual({ guest: true, phone: false, google: true, apple: false });
+      expect(methods.json()).toEqual({ guest: true, phone: false, email: true, google: true, apple: false });
       const send = await bare.app.inject({
         method: 'POST',
         url: '/v1/auth/otp/send',

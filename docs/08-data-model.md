@@ -61,7 +61,7 @@ erDiagram
 | Entity | Key design choices |
 |---|---|
 | `users` | One row for guests and registered users. `status` drives restrictions. `age_band` is set at signup, and `13_17` forces `restricted` behaviour in the app layer. `home_state` uses 2-letter Nigerian state codes for state leaderboards. `signup_platform`, `last_platform`, `last_seen_at` and `acquisition_source` feed the admin console; `last_seen_at` is written at most every 5 minutes per user |
-| `auth_identities` | Several login methods per user. `phone_hash` (SHA-256 of E.164) is indexed on its 3-byte prefix for k-anonymity contact discovery (TRD FR-SOC-2) |
+| `auth_identities` | Several login methods per user: `phone` (E.164), `email` (the address, lower-cased; step 2.10), `google`, `apple` and `guest_device`. `phone_hash` (SHA-256 of E.164) is indexed on its 3-byte prefix for k-anonymity contact discovery (TRD FR-SOC-2) |
 | `friendships` | One row per pair (`user_a < user_b`): `pending`, `accepted` or `blocked`; `requested_by` is the asker or the blocker, `source` how the request started (for `friend_added`). Friends and blocks need an account |
 | `user_merges` | One row per guest merged into an existing account (FR-AUTH-4): the guest is retired (`status = 'deleted'`) and its progress moved. The dimension sync copies these to `analytics.user_aliases`, so a person keeps one timeline |
 | `questions` | Options stored as a JSONB array in canonical order, plus `correct_index`. Shuffling happens at serve time. `d_rating` is the calibrated difficulty. `version` increments on edit, and answers record the question at play time (via `question_id` plus nightly re-score jobs) |

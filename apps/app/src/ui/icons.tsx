@@ -12,6 +12,7 @@ export type IconName =
   | 'check'
   | 'cross'
   | 'phone'
+  | 'mail'
   | 'home'
   | 'play'
   | 'trophy'
@@ -95,6 +96,13 @@ function paths(name: IconName, s: Stroke) {
         <>
           <Rect x={7} y={2.5} width={10} height={19} rx={2.5} {...s} />
           <Path d="M11 18h2" {...s} />
+        </>
+      );
+    case 'mail':
+      return (
+        <>
+          <Rect x={3} y={5} width={18} height={14} rx={2.5} {...s} />
+          <Path d="M4 7.5l8 6 8-6" {...s} />
         </>
       );
     case 'home':

@@ -36,8 +36,8 @@ CREATE TABLE users (
 CREATE TABLE auth_identities (
   id              text PRIMARY KEY,
   user_id         text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  provider        text NOT NULL CHECK (provider IN ('phone','google','apple','guest_device')),
-  subject         text NOT NULL,                       -- E.164 phone, Google sub, Apple sub, device id
+  provider        text NOT NULL CHECK (provider IN ('phone','google','apple','guest_device','email')),
+  subject         text NOT NULL,                       -- E.164 phone, email (lower-cased), Google sub, Apple sub, device id
   phone_hash      bytea,                               -- SHA-256(E.164) for contact discovery
   verified_at     timestamptz,
   created_at      timestamptz NOT NULL DEFAULT now(),

@@ -258,8 +258,13 @@ doc 18 §16, owner's decisions above.
 - ✅ The Staff tab: **Alerts** with the unread count on the button, the list newest first (opening it marks them seen; a sign-up opens the player), and **Alert settings** with a switch for each kind. A tapped alert opens the Staff tab, behind the fingerprint as always
 - ✅ Tests: the API (8: a sign-up reaching owners and admins once, grouping, switched-off kinds and phones that may not get alerts, dead tokens and retries, a question suspended by reports, no Daily, the list with unread and seen, the settings, who may use them); the push routing in the app
 
-### Step 2.10 · Email sign-in codes ⬜
-A 6-digit code by email (FR-AUTH), like phone codes: hashed, 10 minutes, 5 tries, limits per address and IP, Turnstile on the web. Sent through Resend (free: 100 a day, 3,000 a month); `RESEND_API_KEY` and a sending domain. A guest keeps their progress, as with every sign-in.
+### Step 2.10 · Email sign-in codes ✅
+- ✅ A 6-digit code by email (TRD FR-AUTH-2a), run by the same code service as phone codes: kept only as an HMAC in Redis, 10 minutes, 5 tries, single use, a newer code retires the older one, 30 s between codes, 5 a day per address and 10 per device, the per-IP cap, Turnstile on the web and in the apps from an address's third code of the day. Phone and email codes are kept apart. A code Resend could not send is not counted
+- ✅ Sent through Resend (free: 100 a day, 3,000 a month), with the code in the subject so it shows in the notification. On in development (codes go to the log); in production once `RESEND_API_KEY` is set, which then needs `OTP_SECRET` and `TURNSTILE_SECRET` too. `EMAIL_FROM` names the sender
+- ✅ An email address is an identity like a phone number (migration 0012): a guest keeps their progress, an account can add it, and a new one raises the "new sign-up" staff alert
+- ✅ The app: "Continue with email" wherever the sign-in buttons are, and on the sign-in screen an email form, with a link to switch to the phone number when both are on
+- ✅ Staff: email sign-ins show masked (`c•••@gmail.com`); the console and the Staff tab find a player by their exact address, for roles that may search by phone number, and the audit log keeps it masked
+- ✅ Tests: the API (8: sign-up and sign-in again, a guest keeping progress, expiry and tries and phone codes kept apart, pacing and limits and the human check and refused sends, addresses only, email switched off, staff search, the Resend call) and config; an end-to-end sign-up by email in the browser
 
 ### Step 2.6b · Calibration and re-scoring ⬜
 Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly re-bucketing into levels 1–5; flags for questions that are too hard, too easy or whose most-picked answer is a distractor (doc 04 §4); re-scoring the last 14 days of games when a live question's answer is corrected, and telling the players (FR-CON-7): those who picked the new right answer get its points, nobody loses any, and a duel's result changes only if the totals flip; "trending" questions expiring after 90 days unless renewed (GDD §6.2).
@@ -275,7 +280,7 @@ Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
-| 2.10 Email sign-in codes ⬜ | Codes by email through Resend | TRD §4.1 |
+| 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |
 
 ## 5. Milestone M3: "Beta" (doc 15, week 14)
 Load tests (doc 14 §5), pen-test fixes, the device and browser matrix including the WhatsApp in-app browser, performance budgets (PRD §8), KPI reconciliation (admin numbers within ±1% of the database), closed track and invite-only web build. Detailed when M2 is close.
@@ -287,7 +292,7 @@ These are for the team, not pull requests, and some steps wait on them.
 |---|---|---|
 | **3,600 approved questions** (≥ 600 in each of the six categories) | M2 (2,000), launch (3,600) | The critical path (doc 15 §5). Today: 114 drafts in the seed file, plus researched drafts in the [question bank](content/question-bank/README.md), none fact-checked yet. A daily job adds drafts; the team checks them in the workbook |
 | Google OAuth client IDs (Android, web) | 1.4, and 2.9a for sign-in on Android | Free in Google Cloud Console. A **web** client (its id goes in `GOOGLE_CLIENT_IDS` on the API and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in the app builds) and an **Android** client for package `ng.whosabi.app` with the SHA-1 of the app-signing certificate (Play Console → App integrity), plus one for the upload key while testing. Client ids are not secrets |
-| Resend account and a sending domain | 2.10 | Free plan. Add the domain's DNS records Resend shows; the API key is a secret and goes into Heroku as `RESEND_API_KEY` |
+| Resend account and a sending domain, Turnstile keys | To switch email sign-in on (2.10 is built) | Free plans. Add the domain's DNS records Resend shows; the API key is a secret and goes into Heroku as `RESEND_API_KEY`. Turnstile (Cloudflare) gives a public site key for the web build and a secret for the API ([deploy guide](deploy/heroku.md#later)) |
 | Apple Developer Program and Apple sign-in ids | iOS build (2.8) | US$99 a year; `APPLE_AUDIENCES`. Not needed for Android or the web |
 | Expo account (EAS Build) | 1.4 | The free tier builds the Android app; its token goes in CI |
 | Heroku account and the two staging apps | 1.6 | Europe region, about US$29 a month; follow [deploy/heroku.md](deploy/heroku.md). ClickHouse waits until daily players reach the thousands |

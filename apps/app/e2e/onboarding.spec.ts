@@ -3,7 +3,7 @@
  * picking a username, and staying signed in after a reload.
  */
 import { expect, test } from '@playwright/test';
-import { enterPhoneCode, playTasteTest, randomPhone } from './helpers';
+import { enterEmailCode, enterPhoneCode, playTasteTest, randomPhone } from './helpers';
 
 test('a guest plays the taste test, signs up with a phone code and keeps their progress', async ({
   page,
@@ -41,6 +41,27 @@ test('a guest plays the taste test, signs up with a phone code and keeps their p
 
   // The refresh cookie brings the same player back after a reload.
   await page.reload();
+  await expect(page.getByTestId('greeting')).toHaveText(`Hi, ${username}`);
+});
+
+test('a guest signs up with a code by email instead', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('start').click();
+  await playTasteTest(page);
+
+  await page.getByTestId('signin-email').click();
+  await expect(page).toHaveURL(/\/sign-in\?with=email$/);
+  // Both kinds of code are on in development, so the player can switch.
+  await page.getByTestId('switch-channel').click();
+  await expect(page.getByTestId('phone')).toBeVisible();
+  await page.getByTestId('switch-channel').click();
+  await enterEmailCode(page, `e2e.${Date.now().toString(36)}@example.com`);
+
+  await expect(page).toHaveURL(/\/profile-setup$/);
+  const username = `em_${Date.now().toString(36)}`;
+  await page.getByTestId('username').fill(username);
+  await page.getByTestId('age-18_plus').click();
+  await page.getByTestId('profile-continue').click();
   await expect(page.getByTestId('greeting')).toHaveText(`Hi, ${username}`);
 });
 

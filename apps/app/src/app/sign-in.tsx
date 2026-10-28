@@ -1,6 +1,7 @@
 /**
  * Sign in or sign up (mockups 04 and 05). A guest who signs in keeps their progress
- * (FR-AUTH-4). The phone part only shows when phone codes are switched on.
+ * (FR-AUTH-4). A code goes by text or by email (step 2.10), whichever are switched on; with both
+ * on, the player can switch (`?with=email` opens on email).
  */
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -17,28 +18,45 @@ import { Screen } from '../ui/Screen';
 import { Text } from '../ui/Text';
 import { colors } from '../ui/theme';
 
-type Step = { kind: 'phone' } | { kind: 'code'; requestId: string; phone: string; resendAt: number };
+type Channel = 'phone' | 'email';
+type Step =
+  { kind: 'enter' } | { kind: 'code'; channel: Channel; requestId: string; to: string; resendAt: number };
+
+const looksLikeEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
 export default function SignIn() {
   const t = useT();
-  const { reason } = useLocalSearchParams<{ reason?: string }>();
+  const { reason, with: wanted } = useLocalSearchParams<{ reason?: string; with?: string }>();
   const methods = useAuthMethods();
-  const [step, setStep] = useState<Step>({ kind: 'phone' });
+  const [step, setStep] = useState<Step>({ kind: 'enter' });
+  const [picked, setPicked] = useState<Channel | null>(
+    wanted === 'email' || wanted === 'phone' ? wanted : null,
+  );
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const now = useNow(step.kind === 'code');
 
-  const sendCode = async () => {
+  const phoneOn = methods.data?.phone === true;
+  const emailOn = methods.data?.email === true;
+  // The one asked for when it is on, else phone, else email.
+  const channel: Channel | null =
+    picked === 'email' && emailOn ? 'email' : phoneOn ? 'phone' : emailOn ? 'email' : null;
+
+  const sendCode = async (via: Channel) => {
     setBusy(true);
     setError(null);
     try {
-      const sent = await api.sendPhoneCode(phone, await captchaToken());
+      const to = via === 'phone' ? phone : email.trim();
+      const token = await captchaToken();
+      const sent = via === 'phone' ? await api.sendPhoneCode(to, token) : await api.sendEmailCode(to, token);
       setStep({
         kind: 'code',
+        channel: via,
         requestId: sent.request_id,
-        phone,
+        to,
         resendAt: Date.now() + sent.resend_after_s * 1000,
       });
       setCode('');
@@ -56,14 +74,16 @@ export default function SignIn() {
     setBusy(true);
     setError(null);
     try {
-      afterSignIn((await api.verifyPhoneCode(step.requestId, value)).user);
+      const signedIn =
+        step.channel === 'phone'
+          ? await api.verifyPhoneCode(step.requestId, value)
+          : await api.verifyEmailCode(step.requestId, value);
+      afterSignIn(signedIn.user);
     } catch (e) {
       setError(errorMessage(e, t('error.network')));
       setBusy(false);
     }
   };
-
-  const phoneOn = methods.data?.phone === true;
 
   if (step.kind === 'code') {
     const wait = Math.max(0, Math.ceil((step.resendAt - now) / 1000));
@@ -73,7 +93,11 @@ export default function SignIn() {
           <Text variant="display" accessibilityRole="header">
             {t('signin.codeTitle')}
           </Text>
-          <Text variant="bodySoft">{t('signin.codeSent', { phone: step.phone })}</Text>
+          <Text variant="bodySoft">
+            {step.channel === 'phone'
+              ? t('signin.codeSent', { phone: step.to })
+              : t('signin.codeSentEmail', { email: step.to })}
+          </Text>
           <Field
             label={t('signin.code')}
             value={code}
@@ -100,12 +124,15 @@ export default function SignIn() {
             label={wait > 0 ? t('signin.resendIn', { seconds: wait }) : t('signin.resend')}
             variant="link"
             disabled={wait > 0 || busy}
-            onPress={() => void sendCode()}
+            onPress={() => void sendCode(step.channel)}
           />
           <Button
-            label={t('signin.changeNumber')}
+            label={step.channel === 'phone' ? t('signin.changeNumber') : t('signin.changeEmail')}
             variant="link"
-            onPress={() => setStep({ kind: 'phone' })}
+            onPress={() => {
+              setError(null);
+              setStep({ kind: 'enter' });
+            }}
           />
         </View>
       </Screen>
@@ -132,7 +159,7 @@ export default function SignIn() {
           </Text>
         ) : null}
 
-        {phoneOn ? (
+        {channel === 'phone' ? (
           <>
             <Field
               label={t('signin.phone')}
@@ -151,21 +178,57 @@ export default function SignIn() {
               label={t('signin.sendCode')}
               loading={busy}
               disabled={phone.replace(/\D/g, '').length < 10}
-              onPress={() => void sendCode()}
+              onPress={() => void sendCode('phone')}
               testID="send-code"
             />
-            {methods.data?.google && googleAvailable ? (
-              <View style={styles.divider}>
-                <View style={styles.line} />
-                <Text variant="caption">{t('signin.or')}</Text>
-                <View style={styles.line} />
-              </View>
-            ) : null}
           </>
         ) : null}
+        {channel === 'email' ? (
+          <>
+            <Field
+              label={t('signin.email')}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect={false}
+              hint={t('signin.emailHint')}
+              error={error}
+              testID="email"
+            />
+            <Button
+              label={t('signin.sendCode')}
+              loading={busy}
+              disabled={!looksLikeEmail(email)}
+              onPress={() => void sendCode('email')}
+              testID="send-code"
+            />
+          </>
+        ) : null}
+        {phoneOn && emailOn ? (
+          <Button
+            label={channel === 'phone' ? t('signin.useEmail') : t('signin.usePhone')}
+            variant="link"
+            onPress={() => {
+              setError(null);
+              setPicked(channel === 'phone' ? 'email' : 'phone');
+            }}
+            testID="switch-channel"
+          />
+        ) : null}
+        {channel && methods.data?.google && googleAvailable ? (
+          <View style={styles.divider}>
+            <View style={styles.line} />
+            <Text variant="caption">{t('signin.or')}</Text>
+            <View style={styles.line} />
+          </View>
+        ) : null}
 
-        <SignInOptions showPhone={false} />
-        {!phoneOn ? (
+        <SignInOptions showCodes={false} />
+        {!channel ? (
           <Button label={t('taste.result.later')} variant="link" onPress={() => router.replace('/')} />
         ) : null}
       </View>

@@ -30,7 +30,14 @@ import { maskSearch, maskSignIn } from './mask';
 
 const UserParams = z.object({ id: z.string().min(3).max(40) });
 const SEARCH_LIMIT = 20;
-const MATCH_ORDER: AdminUserHit['matched'][] = ['user_id', 'duel_id', 'phone', 'device_id', 'username'];
+const MATCH_ORDER: AdminUserHit['matched'][] = [
+  'user_id',
+  'duel_id',
+  'phone',
+  'email',
+  'device_id',
+  'username',
+];
 
 interface UserRow {
   id: string;
@@ -105,6 +112,14 @@ export function adminPlayerRoutes(app: FastifyInstance, deps: AppDeps, ctx: Admi
       }
       add(await identityOwners('phone', phone), 'phone');
     }
+    // An email address someone signs in with: exact match, like a phone number.
+    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(q) ? q.toLowerCase() : null;
+    if (email) {
+      if (!admin.permissions.includes('players.search_phone')) {
+        throw new ApiError(403, ErrorCode.forbidden, 'Not allowed', "Your roles can't search by email.");
+      }
+      add(await identityOwners('email', email), 'email');
+    }
     if (/^[A-Za-z0-9_-]{22,128}$/.test(q)) add(await identityOwners('guest_device', q), 'device_id');
     if (/^[A-Za-z0-9_]{2,20}$/.test(q)) {
       const byName = await pool.query<{ id: string }>(
@@ -146,13 +161,16 @@ export function adminPlayerRoutes(app: FastifyInstance, deps: AppDeps, ctx: Admi
       actor: admin.id,
       action: 'search_users',
       entity: 'user_search',
-      after: { q: maskSearch(q, phone), results: users.length },
+      after: { q: maskSearch(q, phone, email), results: users.length },
       ip: request.ip,
     });
     return { users };
   });
 
-  async function identityOwners(provider: 'phone' | 'guest_device', subject: string): Promise<string[]> {
+  async function identityOwners(
+    provider: 'phone' | 'email' | 'guest_device',
+    subject: string,
+  ): Promise<string[]> {
     const found = await pool.query<{ user_id: string }>(
       'SELECT user_id FROM auth_identities WHERE provider = $1 AND subject = $2',
       [provider, subject],
