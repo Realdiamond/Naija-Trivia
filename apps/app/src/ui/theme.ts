@@ -26,17 +26,62 @@ export const colors = {
 } as const;
 
 /** Category colours (doc 05 §7); a dot or band, never behind text. */
-export const categoryColors: Record<string, { color: string; tint: string; name: string }> = {
-  slang: { color: '#8E44AD', tint: '#F2E8F7', name: 'Slang & Pidgin' },
-  nollywood: { color: '#E67E22', tint: '#FCEBDB', name: 'Nollywood' },
-  music: { color: '#2980B9', tint: '#E4EEF8', name: 'Music' },
-  food: { color: '#C0392B', tint: '#FBE6E3', name: 'Food' },
-  sport: { color: '#B8860B', tint: '#F8EFD6', name: 'Sport' },
-  mixed: { color: '#16A085', tint: '#DFF3EE', name: 'Mixed Naija' },
+export const categoryColors: Record<
+  string,
+  { color: string; tint: string; name: string; emoji: string; blurb: string }
+> = {
+  slang: {
+    color: '#8E44AD',
+    tint: '#F2E8F7',
+    name: 'Slang & Pidgin',
+    emoji: '💬',
+    blurb: 'Pidgin, slang, street talk',
+  },
+  nollywood: {
+    color: '#E67E22',
+    tint: '#FCEBDB',
+    name: 'Nollywood',
+    emoji: '🎬',
+    blurb: 'Films, stars, famous lines',
+  },
+  music: {
+    color: '#2980B9',
+    tint: '#E4EEF8',
+    name: 'Music',
+    emoji: '🎵',
+    blurb: 'Afrobeats, hooks, legends',
+  },
+  food: {
+    color: '#C0392B',
+    tint: '#FBE6E3',
+    name: 'Food',
+    emoji: '🍲',
+    blurb: 'Swallow, soups, street food',
+  },
+  sport: {
+    color: '#B8860B',
+    tint: '#F8EFD6',
+    name: 'Sport',
+    emoji: '⚽',
+    blurb: 'Football, athletes, big moments',
+  },
+  mixed: {
+    color: '#16A085',
+    tint: '#DFF3EE',
+    name: 'Mixed Naija',
+    emoji: '⭐',
+    blurb: 'History, places, a bit of everything',
+  },
 };
 
 export const category = (id: string | null | undefined) =>
-  categoryColors[id ?? ''] ?? { color: colors.muted, tint: colors.sand, name: id ?? '' };
+  categoryColors[id ?? ''] ?? {
+    color: colors.muted,
+    tint: colors.sand,
+    name: id ?? '',
+    emoji: '❓',
+    blurb: '',
+  };
 
 export const fonts = {
   regular: 'Nunito_400Regular',

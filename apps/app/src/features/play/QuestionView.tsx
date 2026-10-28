@@ -11,11 +11,13 @@ import type { QuestionFlow } from './useQuestionFlow';
 
 interface Props {
   flow: QuestionFlow;
-  /** Small caps over the counter, e.g. "Taste test" or "Round 2 vs Ngozi". */
+  /** Small caps over the counter, e.g. "Taste test" or "Round 2 of 3 · vs Ngozi". */
   overline: string;
+  /** The button after the last question; "See my result" by default. */
+  finishLabel?: string;
 }
 
-export function QuestionView({ flow, overline }: Props) {
+export function QuestionView({ flow, overline, finishLabel }: Props) {
   const t = useT();
   const { phase, question, chosen, result, seq, total } = flow;
   const done = phase === 'revealed' || phase === 'finished' ? seq : seq - 1;
@@ -31,7 +33,7 @@ export function QuestionView({ flow, overline }: Props) {
   const footer =
     phase === 'revealed' ? (
       <Button
-        label={seq >= total ? t('question.finish') : t('question.next')}
+        label={seq >= total ? (finishLabel ?? t('question.finish')) : t('question.next')}
         trailingIcon="arrow-right"
         onPress={flow.next}
         testID="next"

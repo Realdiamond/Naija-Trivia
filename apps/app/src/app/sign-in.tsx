@@ -8,6 +8,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ErrorCode } from '@whosabi/shared-types';
 import { api, ApiError, errorMessage } from '../api';
 import { captchaAvailable, captchaToken } from '../auth/captcha';
+import { googleAvailable } from '../auth/GoogleButton';
 import { afterSignIn, SignInOptions, useAuthMethods } from '../features/auth/SignInOptions';
 import { useT } from '../i18n';
 import { Button } from '../ui/Button';
@@ -153,11 +154,13 @@ export default function SignIn() {
               onPress={() => void sendCode()}
               testID="send-code"
             />
-            <View style={styles.divider}>
-              <View style={styles.line} />
-              <Text variant="caption">{t('signin.or')}</Text>
-              <View style={styles.line} />
-            </View>
+            {methods.data?.google && googleAvailable ? (
+              <View style={styles.divider}>
+                <View style={styles.line} />
+                <Text variant="caption">{t('signin.or')}</Text>
+                <View style={styles.line} />
+              </View>
+            ) : null}
           </>
         ) : null}
 

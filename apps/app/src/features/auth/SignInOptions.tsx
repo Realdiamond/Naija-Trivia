@@ -38,7 +38,8 @@ export function SignInOptions({ showPhone = true }: { showPhone?: boolean }) {
   };
 
   if (methods.isPending) return null;
-  const phone = showPhone && methods.data?.phone === true;
+  const phoneOn = methods.data?.phone === true;
+  const phone = showPhone && phoneOn;
   const withGoogle = methods.data?.google === true && googleAvailable;
 
   return (
@@ -54,7 +55,7 @@ export function SignInOptions({ showPhone = true }: { showPhone?: boolean }) {
       {withGoogle ? (
         <GoogleButton label={t('signin.google')} onToken={(token) => void google(token)} />
       ) : null}
-      {!phone && !withGoogle ? (
+      {!phoneOn && !withGoogle ? (
         <Text variant="bodySoft" testID="signin-none">
           {t('signin.noMethods')}
         </Text>

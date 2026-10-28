@@ -11,7 +11,7 @@ interface Props {
   footer?: ReactNode;
   /** Shows a back arrow that goes back, or to `backTo` when there is no history (a fresh web tab). */
   back?: boolean;
-  backTo?: '/' | '/home' | '/welcome';
+  backTo?: string;
   background?: string;
   scroll?: boolean;
   contentStyle?: StyleProp<ViewStyle>;
