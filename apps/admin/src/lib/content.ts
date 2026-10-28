@@ -52,6 +52,7 @@ const HISTORY_LABEL: Record<string, string> = {
   recalibrated: 'Level set by the numbers',
   flagged: 'Flagged by the numbers',
   suspended_by_numbers: 'Suspended: most players pick another answer',
+  rescored: 'Games re-scored',
 };
 
 export function historyLabel(action: string): string {

@@ -179,6 +179,17 @@ describe("today's Daily", () => {
     expect(r.review.map((x) => x.correct)).toEqual([true, true, true, false, true, true, true]);
     expect(r.review[0]!.answer.length).toBeGreaterThan(0);
     expect(await xpOf(p.id)).toBe(xpBefore + 112);
+    // Each answer is kept with the result, for re-scoring a corrected question (step 2.6b-2).
+    const kept = await t.pool.query<{ answers: Array<{ qid: string; correct: boolean; points: number }> }>(
+      'SELECT answers FROM daily_results WHERE daily_id = 1 AND user_id = $1',
+      [p.id],
+    );
+    const ids = (
+      await t.pool.query<{ question_ids: string[] }>('SELECT question_ids FROM daily_challenges WHERE id = 1')
+    ).rows[0]!.question_ids;
+    expect(kept.rows[0]!.answers.map((a) => a.qid)).toEqual(ids);
+    expect(kept.rows[0]!.answers.map((a) => a.correct)).toEqual([true, true, true, false, true, true, true]);
+    expect(kept.rows[0]!.answers.reduce((sum, a) => sum + a.points, 0)).toBe(r.score);
 
     // Once a day: no second go, and a retried last answer changes nothing.
     const again = await post(p, '/v1/daily/1/questions/1/serve');

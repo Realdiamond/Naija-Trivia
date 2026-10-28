@@ -34,7 +34,19 @@ export type PushParams =
       them: number;
     }
   | { type: 'friend_joined'; kind: 'request' | 'accepted'; user_id: string; name: string | null }
-  | { type: 'daily_live'; daily_id: number; streak: number };
+  | { type: 'daily_live'; daily_id: number; streak: number }
+  | {
+      /** A question was corrected and this player's games were re-scored (FR-CON-7, step 2.6b-2). */
+      type: 'content_correction';
+      /** Points gained, over every game. */
+      points: number;
+      games: number;
+      /** A duel whose result changed for this player, or the one game when there is only one. */
+      duel_id: string | null;
+      daily_id: number | null;
+      result: 'won' | 'lost' | null;
+      opponent: string | null;
+    };
 
 /** Android notification channels: players can switch each one off in the phone's settings. */
 export type PushChannel = 'duels' | 'friends' | 'daily' | 'staff';
@@ -133,6 +145,68 @@ export function renderPush(p: PushParams, language: string): RenderedPush {
             ? [`${name} don accept your friend request`, 'Oya, challenge am!']
             : [`${name} accepted your friend request`, 'Challenge them now.'];
       return { type: p.type, title, body, url: '/friends', channel: 'friends', data: { user_id: p.user_id } };
+    }
+    case 'content_correction': {
+      const name = p.opponent ?? (pcm ? 'your person' : 'your opponent');
+      const plus = `+${p.points.toLocaleString('en-NG')}`;
+      let words: [string, string];
+      if (p.result === 'won') {
+        words = pcm
+          ? [
+              `You don win the duel with ${name}! 🎉`,
+              `One question get correction, and the points now fall your side (${plus}).`,
+            ]
+          : [
+              `You won your duel vs ${name}! 🎉`,
+              `A question was corrected and the points now go your way (${plus}).`,
+            ];
+      } else if (p.result === 'lost') {
+        words = pcm
+          ? [
+              `Your duel with ${name} don change`,
+              `One question get correction, and ${name} now get more points. No vex.`,
+            ]
+          : [
+              `Your duel vs ${name} changed`,
+              `A question was corrected and ${name} now has more points. Sorry about that.`,
+            ];
+      } else if (p.games === 1 && p.duel_id) {
+        words = pcm
+          ? [
+              `${plus} points for your duel with ${name}`,
+              'One question get correction: your answer correct after all.',
+            ]
+          : [
+              `${plus} points in your duel vs ${name}`,
+              'A question was corrected: your answer was right after all.',
+            ];
+      } else if (p.games === 1 && p.daily_id !== null) {
+        words = pcm
+          ? [
+              `${plus} points for Daily #${p.daily_id}`,
+              'One question get correction: your answer correct after all.',
+            ]
+          : [
+              `${plus} points in Daily #${p.daily_id}`,
+              'A question was corrected: your answer was right after all.',
+            ];
+      } else {
+        words = pcm
+          ? [`${plus} points from one correction`, `Your answer correct after all, for ${p.games} games.`]
+          : [
+              `${plus} points from a corrected question`,
+              `Your answer was right after all, in ${p.games} games.`,
+            ];
+      }
+      if (p.duel_id) return duelPush(p.type, p.duel_id, words);
+      return {
+        type: p.type,
+        title: words[0],
+        body: words[1],
+        url: '/home',
+        channel: p.daily_id !== null && p.games === 1 ? 'daily' : 'duels',
+        data: p.daily_id !== null ? { daily_id: String(p.daily_id) } : {},
+      };
     }
     case 'daily_live': {
       const [title, body] = pcm

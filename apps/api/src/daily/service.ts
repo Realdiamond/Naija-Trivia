@@ -57,6 +57,7 @@ import {
   dailyResultFor,
   ensureDaily,
   loadStreak,
+  rankDaily,
   saveStreak,
   type DailyRow,
 } from './repo';
@@ -211,8 +212,9 @@ export class DailyService {
       ).rows[0];
       if (!user) return null;
       const inserted = await client.query(
-        `INSERT INTO daily_results (daily_id, user_id, correct_count, score, total_ms, grid, home_state, completed_at, xp)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT DO NOTHING RETURNING daily_id`,
+        `INSERT INTO daily_results (daily_id, user_id, correct_count, score, total_ms, grid, home_state, completed_at, xp,
+                                    answers)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT DO NOTHING RETURNING daily_id`,
         [
           daily.id,
           userId,
@@ -223,6 +225,16 @@ export class DailyService {
           user.home_state,
           new Date(now),
           xp,
+          // Kept for re-scoring a corrected question (step 2.6b-2).
+          JSON.stringify(
+            answers.map((a) => ({
+              qid: a.qid,
+              picked: a.canonicalIndex,
+              ms: a.acceptedMs,
+              correct: a.correct,
+              points: a.points,
+            })),
+          ),
         ],
       );
       if (inserted.rowCount === 0) return null;
@@ -594,16 +606,7 @@ export class DailyService {
           [id],
         );
         if (claimed.rowCount === 0) return false;
-        await client.query(
-          `UPDATE daily_results dr SET rank = r.rank, state_rank = r.state_rank
-             FROM (SELECT user_id,
-                          row_number() OVER (ORDER BY score DESC, total_ms, user_id) AS rank,
-                          CASE WHEN home_state IS NULL THEN NULL ELSE
-                            row_number() OVER (PARTITION BY home_state ORDER BY score DESC, total_ms, user_id) END AS state_rank
-                     FROM daily_results WHERE daily_id = $1) r
-            WHERE dr.daily_id = $1 AND dr.user_id = r.user_id`,
-          [id],
-        );
+        await rankDaily(client, id);
         await client.query('UPDATE daily_challenges SET snapshot_at = $2 WHERE id = $1', [id, new Date(now)]);
         return true;
       });

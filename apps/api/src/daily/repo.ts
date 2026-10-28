@@ -155,3 +155,31 @@ export async function saveStreak(db: Db, userId: string, s: StreakState): Promis
     [userId, s.current, s.best, s.lastPlayDate, s.freezesLeft, s.freezeWeek],
   );
 }
+
+/** A Daily's final ranks, overall and per state: points first, then the faster total time. */
+export async function rankDaily(db: Db, dailyId: number): Promise<void> {
+  await db.query(
+    `UPDATE daily_results dr SET rank = r.rank, state_rank = r.state_rank
+       FROM (SELECT user_id,
+                    row_number() OVER (ORDER BY score DESC, total_ms, user_id) AS rank,
+                    CASE WHEN home_state IS NULL THEN NULL ELSE
+                      row_number() OVER (PARTITION BY home_state ORDER BY score DESC, total_ms, user_id) END AS state_rank
+               FROM daily_results WHERE daily_id = $1) r
+      WHERE dr.daily_id = $1 AND dr.user_id = r.user_id`,
+    [dailyId],
+  );
+}
+
+/** A finished week's ranks again, after its scores changed (re-scoring, step 2.6b-2). */
+export async function rankWeek(db: Db, week: string): Promise<void> {
+  await db.query(
+    `UPDATE weekly_standings ws SET rank = r.rank, state_rank = r.state_rank
+       FROM (SELECT user_id,
+                    row_number() OVER (ORDER BY score DESC, user_id) AS rank,
+                    CASE WHEN home_state IS NULL THEN NULL ELSE
+                      row_number() OVER (PARTITION BY home_state ORDER BY score DESC, user_id) END AS state_rank
+               FROM weekly_standings WHERE iso_week = $1) r
+      WHERE ws.iso_week = $1 AND ws.user_id = r.user_id`,
+    [week],
+  );
+}

@@ -279,8 +279,9 @@ on (all answered) or (now >= endsAt): score all, phase = REVEAL (2.5 s) → LEAD
 | `duel_result` | A duel ends, by points or by time | Each player who didn't end it | `duels`, `/duel/{id}` |
 | `friend_joined` | A friend request arrives, or yours is accepted | The other player | `friends`, `/friends` |
 | `daily_live` | 09:00 WAT | Players who played a Daily in the last week and not yet today (with their streak) | `daily`, `/daily/play` |
+| `content_correction` | A played question's answer was corrected and the player's games from the last 14 days were re-scored (step 2.6b-2): "+173 points in your duel vs Tolu", "You won your duel vs Tolu! 🎉", "Your duel vs Tolu changed", or "+340 points from a corrected question" over several games. One push per player and correction | Each player who gained points, and both players of a duel whose result changed | `duels` (or `daily` for one Daily); the duel, else Home |
 
-`league_recap`, `party_invite` and `content_correction` come with leagues, party rooms and re-scoring. A player's waiting push about a duel is dropped once they act in it.
+`league_recap` and `party_invite` come with leagues and party rooms. A player's waiting push about a duel is dropped once they act in it.
 
 **Browsers (Web Push, step 2.5c).** The worker POSTs to the subscription's endpoint: the JSON `{title, body, url, type, tag}` encrypted for that browser (`Content-Encoding: aes128gcm`, RFC 8291), `Authorization: vapid t=<ES256 JWT for the push service's origin>, k=<public key>` (RFC 8292), `TTL` (the push's lifetime), `Urgency` (`high` for turns) and `Topic` (from the collapse key, so a newer push about the same duel replaces a waiting one). `404`/`410` ends the subscription; `429` and `5xx` are tried again. The service worker (`/sw.js`) shows it with `tag` and opens `url`, in an open game window when there is one.
 

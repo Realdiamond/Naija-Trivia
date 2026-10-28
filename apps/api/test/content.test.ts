@@ -266,7 +266,11 @@ describe('the question workflow', () => {
       })
     ).json() as AdminQuestion;
     expect(changed).toMatchObject({ status: 'live', version: 2, correct_index: 1 });
-    expect(changed.history[0]).toMatchObject({ action: 'edited', note: 'The answer changed.' });
+    // Live, so played: its games are re-scored (step 2.6b-2).
+    expect(changed.history[0]).toMatchObject({
+      action: 'edited',
+      note: 'The answer changed: games from the last 14 days are being re-scored.',
+    });
     const snapshot = await t.pool.query<{ snapshot: AdminQuestionInput }>(
       "SELECT snapshot FROM question_history WHERE question_id = $1 AND action = 'edited'",
       [q.id],

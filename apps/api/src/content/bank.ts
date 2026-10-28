@@ -394,6 +394,16 @@ export class QuestionBank {
         before.numeric_answer !== input.numeric_answer;
       // Until real plays calibrate it, the item rating follows the writer's difficulty.
       const unplayed = row.status === 'draft' || row.status === 'in_review' || row.status === 'approved';
+      // A played question given a different right answer among the same options: its games from
+      // the last 14 days are re-scored (step 2.6b-2). New options can't be matched to old picks.
+      const corrected =
+        !unplayed &&
+        input.type === before.type &&
+        input.type !== 'closest_number' &&
+        JSON.stringify(input.options) === JSON.stringify(before.options) &&
+        input.correct_index !== before.correct_index &&
+        before.correct_index !== null &&
+        input.correct_index !== null;
       const version = row.version + 1;
       await client.query(
         `UPDATE questions SET category_id = $2, subcategory = $3, type = $4, text = $5, options = $6::jsonb,
@@ -421,14 +431,21 @@ export class QuestionBank {
           new Date(now),
         ],
       );
+      if (corrected) {
+        await client.query(
+          `INSERT INTO question_corrections (question_id, version, old_index, new_index, corrected_by, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [id, version, before.correct_index, input.correct_index, actor.id, new Date(now)],
+        );
+      }
       await addHistory(client, {
         questionId: id,
         action: 'edited',
         actor: actor.id,
         version,
-        // Games already played keep their scores; re-scoring them arrives with step 2.6b.
-        note:
-          answerChanged && row.status !== 'draft' && row.status !== 'in_review'
+        note: corrected
+          ? 'The answer changed: games from the last 14 days are being re-scored.'
+          : answerChanged && row.status !== 'draft' && row.status !== 'in_review'
             ? 'The answer changed.'
             : null,
         snapshot: before,
