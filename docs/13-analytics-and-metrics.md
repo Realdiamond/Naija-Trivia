@@ -46,8 +46,8 @@ Common properties on every event: `event_id`, `ts`, `session_id`, `seq`, `screen
 | `duel_round_played` | Server | `duel_id`, `round`, `category`, `correct_count`, `points`, `turn_duration_s` | |
 | `duel_completed` | Server | `result` (win/loss/tie/forfeit), `score_self`, `score_opp`, `rating_delta`, `duration_total_s` | One per player |
 | `lifeline_used` | Server | `type`, `paid_with` (coins/ad), `mode` | |
-| `party_room_created` / `party_joined` | Server | `settings`, `client` (app/web_app/party_client), `player_count` | |
-| `party_game_completed` | Server | `players`, `web_guests`, `rank`, `game_id` | One per player |
+| `party_room_created` / `party_joined` | Server | `settings`, `client` (app/web_app/party_client), `player_count` | For signed-in players: a web guest with only a nickname has no id to count under (their numbers show in `web_guests`) |
+| `party_game_completed` | Server | `players`, `web_guests`, `rank`, `game_id` | One per signed-in player |
 | `web_guest_install_clicked` | Client | `game_id`, `target` (store/web_app) | Party client → app or web app |
 | `pwa_installed` | Client | `prompt` (auto/manual) | Web only |
 | `daily_started` / `daily_completed` | Server | `daily_id`, `score`, `streak` | |

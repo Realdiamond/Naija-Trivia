@@ -23,7 +23,7 @@ flowchart LR
   subgraph AWS["AWS (primary region) — ECS Fargate"]
     ALB[Application Load Balancer<br/>HTTP + WebSocket]
     API[Core API<br/>Fastify/TS · incl. admin API]
-    RT[Realtime nodes<br/>Colyseus]
+    RT[Party rooms<br/>WebSockets, in the API at launch]
     WRK[Workers<br/>timed jobs · event loader]
     ING[Ingest service<br/>analytics events]
     AUTH[Auth module<br/>OTP · JWT]
@@ -88,7 +88,7 @@ flowchart LR
 |---|---|---|---|
 | **Core API** | Auth, profiles, friends, content serving, duels, daily, economy/ledger, shop, leagues, reports, webhooks, and the admin API (permissions, audit, queries for the console) | Stateless containers, auto-scale on CPU/RPS | None (Postgres/Redis) |
 | **Web app** | The Expo app's web build: static files plus a service worker | CloudFront (no servers) | Browser storage only |
-| **Realtime (Colyseus)** | Party rooms: lobby, clock, broadcast, scoring, reconnection | Process per vCPU. Rooms pinned to a process; Redis presence/driver for matchmaking across nodes | In-memory room state, with a snapshot to Redis every question for crash recovery |
+| **Realtime (party rooms)** | Party rooms: lobby, clock, broadcast, scoring, reconnection. Plain WebSockets in the API process at launch (`apps/api/src/party`), a module that can move into its own service | Rooms pinned to a process; room codes reserved in Redis. Several realtime nodes would need routing by room code (doc 06 §2) | In-memory room state; a finished game is saved to Postgres. A snapshot to Redis every question, for crash recovery, comes later |
 | **Workers** | Push fan-out, turn expiry, Daily generation, difficulty recalibration, re-scoring, leaderboard snapshots, DSAR exports, OG image rendering, the event loader (Redis stream → ClickHouse), dimension sync (read replica → ClickHouse), integrity scoring, KPI alerts | Queue-depth auto-scaling | None |
 | **Ingest service** | Receives event batches from the apps, checks them against the tracking plan, enforces consent, pseudonymises, appends to the Redis stream (doc 18 §15) | Stateless containers, auto-scale on requests per second | None (Redis stream) |
 | **Analytics store (ClickHouse)** | Raw events, sessions, time per screen and per-person daily rollups behind the admin console | One node at MVP, scale up then out | Events 13 months, rollups 25 months |
@@ -105,8 +105,7 @@ who-sabi/
 │   ├── app/             # Expo app: Android, iOS and the web app (Expo Router)
 │   ├── web-guest/       # Preact party client for light /r/{CODE} links
 │   ├── admin/           # Next.js admin console (doc 18)
-│   ├── api/             # Fastify modular monolith, incl. the admin API
-│   ├── realtime/        # Colyseus server
+│   ├── api/             # Fastify modular monolith, incl. the admin API and the party rooms
 │   ├── ingest/          # analytics event intake
 │   └── workers/         # timed jobs + event loader (for now apps/api/src/worker.ts, sharing the API's code)
 ├── packages/
@@ -121,7 +120,7 @@ who-sabi/
 ├── content/             # seed CSVs, import scripts
 └── .github/workflows/   # CI/CD
 ```
-`packages/game-rules` is shared by the API, realtime and client (for display only). There is one source of truth for scoring.
+`packages/game-rules` is shared by the API (party rooms included) and the clients (for display only). There is one source of truth for scoring.
 
 ## 4. Key runtime flows
 
@@ -149,7 +148,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   participant H as Host
-  participant RT as Colyseus room
+  participant RT as Party room (API)
   participant Pl as Players (N)
   H->>RT: start
   loop each question
@@ -160,7 +159,7 @@ sequenceDiagram
     RT->>Pl: phase=LEADERBOARD top5 + self
   end
   RT->>Pl: PODIUM
-  RT-->>API: POST /internal/party-results (signed)
+  RT->>RT: save the result to Postgres, with XP (same process at launch)
 ```
 
 ### 4.3 Event tracking (feeds the admin console)
@@ -191,7 +190,7 @@ Server events (answers, matches, coins, purchases) skip the HTTP step: the API, 
 |---|---|---|
 | Region | One primary region chosen from **Lagos-RTT probes during beta**. Default **eu-west-2 (London)**: mature services and usually good subsea routes to Lagos *(inferred, measure it)*. Alternative: af-south-1 (Cape Town) | CloudFront Lagos edge for static/media |
 | API | 2–6 × Fargate tasks (1 vCPU / 2 GB) | Min 2 for HA |
-| Realtime | 2–4 × Fargate tasks (2 vCPU / 4 GB), ~2,500 concurrent connections per vCPU target | ALB with WebSocket support; direct per-node routing through the Colyseus `publicAddress` |
+| Realtime | 2–4 × Fargate tasks (2 vCPU / 4 GB), ~2,500 concurrent connections per vCPU target | ALB with WebSocket support; routing by room code to the node that holds the room |
 | Workers | 1–4 × Fargate tasks (0.5 vCPU / 1 GB) | Scale on queue depth |
 | Ingest | 1–4 × Fargate tasks (0.5 vCPU / 1 GB) | Scale on requests per second |
 | Web app | S3 + CloudFront (static) | Each release in a versioned folder; rollback = point CloudFront at the previous one |
@@ -216,10 +215,10 @@ Server events (answers, matches, coins, purchases) skip the HTTP step: the API, 
 
 A leaner option for pre-seed: a single region on Render/Railway/Fly with managed Postgres (Neon/Supabase), Upstash Redis and the smallest ClickHouse Cloud tier (or one small ClickHouse VM), at roughly US$200–400 a month until there's product-market fit. The architecture is the same, only the hosting differs.
 
-**Chosen for launch (28 Oct 2026):** this leaner path, on Heroku in the Europe region (Heroku Postgres and Key-Value Store), with analytics events kept in Postgres until ClickHouse is needed. To keep it to two small apps, the API also serves the web app from its own address and takes the analytics events; the admin console is the second app. See build plan steps 1.3 and 1.6, and [deploy/heroku.md](deploy/heroku.md).
+**Chosen for launch (28 Oct 2026):** this leaner path, on Heroku in the Europe region (Heroku Postgres and Key-Value Store), with analytics events kept in Postgres until ClickHouse is needed. To keep it to two small apps, the API also serves the web app from its own address, takes the analytics events and holds the party rooms (so the game app runs one web dyno: Heroku can't send a player to the dyno that holds their room); the admin console is the second app. See build plan steps 1.3 and 1.6, and [deploy/heroku.md](deploy/heroku.md).
 
 ## 6. Resilience
-- **Realtime node crash:** the room state snapshot in Redis (after each question) lets a new node rehydrate the room. Clients auto-reconnect using the room ID plus a session token. Target: under 10 s disruption.
+- **Realtime node crash:** at launch a restart ends the rooms that are playing; players are told the room closed and the host starts another. Later, a snapshot of each room in Redis (after each question) lets a new node rehydrate it, with clients reconnecting on their seat token. Target then: under 10 s disruption.
 - **API dependency failures:** circuit breakers (SMS, RevenueCat). Push sends are retried by the queue with exponential backoff.
 - **DB:** Multi-AZ failover under 2 min. Writes are idempotent so clients can retry safely.
 - **Analytics outage:** ingest or ClickHouse being down never touches gameplay. The apps keep events for up to 7 days, the Redis stream buffers several hours (up to a length cap that protects Redis memory), and the loader catches up; the console shows a "data delayed" banner.

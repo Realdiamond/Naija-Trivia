@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { Redis } from 'ioredis';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { inject } from 'vitest';
+import type { PartyTimings } from '@whosabi/game-rules';
 import type { AuthResponse, Platform } from '@whosabi/shared-types';
 import { buildApp } from '../src/app';
 import { APPLE_ISSUERS, GOOGLE_ISSUERS, idTokenVerifier, type AuthProviders } from '../src/auth/providers';
@@ -94,7 +95,7 @@ export class TestClock {
 
 export async function createTestApp(
   env: Record<string, string> = {},
-  overrides: { auth?: Partial<AuthProviders> } = {},
+  overrides: { auth?: Partial<AuthProviders>; partyTimings?: Partial<PartyTimings> } = {},
 ) {
   const clock = new TestClock();
   const config = loadConfig({
@@ -122,7 +123,15 @@ export async function createTestApp(
     adminGoogle: identity.adminGoogle,
     ...overrides.auth,
   };
-  const app = await buildApp({ config, pool, redis, tokens, clock, auth });
+  const app = await buildApp({
+    config,
+    pool,
+    redis,
+    tokens,
+    clock,
+    auth,
+    partyTimings: overrides.partyTimings,
+  });
   await app.ready();
   return {
     app,

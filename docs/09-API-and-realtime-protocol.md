@@ -1,7 +1,7 @@
 # 09 · API & Realtime Protocol
 
 **Version:** 1.1 · **Date:** 15 Oct 2026 · *1.1 adds web sessions, web payments, event ingest and the admin API*
-**Base URL:** `https://api.whosabi.ng/v1` · **Realtime:** `wss://rt.whosabi.ng` (Colyseus)
+**Base URL:** `https://api.whosabi.ng/v1` · **Realtime:** `wss://api.whosabi.ng/v1/party/socket` (party rooms, §3)
 **Source of truth:** Zod schemas in `packages/shared-types` generate the OpenAPI 3.1 spec (`/v1/openapi.json`) and the TS clients.
 
 ---
@@ -133,12 +133,16 @@ POST /v1/duels/d_01J9/rounds/2/questions/1/answer
 | GET | `/leaderboards/week?scope=global|state|friends` | The same for this week's Daily points, Monday to Sunday WAT |
 
 ### 2.7 Party (REST side)
+Party rooms run in the API process (build step 2.2a); these make rooms and hand out seats, and each seat then talks to its room over the WebSocket in §3.
+
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/party/rooms` | `{settings}` → `{room_code, room_id, ws_url, seat_reservation}` |
-| POST | `/party/rooms/{code}/join` | App user or web guest `{nickname}` → `{seat_reservation, guest_token?}` |
-| GET | `/party/games/{id}` | Results (for share card) |
-| POST | `/internal/party-results` | Realtime → API only, HMAC-signed |
+| POST | `/party/rooms` | Signed in. `{settings: {questions: 5|10|15|20, timer_s: 10|15|20, categories[], family_safe, wahala, host_plays}, nickname?}` → `201 {room, seat}`. A player with no username yet (a guest) gives a nickname (`NICKNAME_REQUIRED`). `host_plays: false` is host screen mode. 30 an hour per address |
+| GET | `/party/rooms/{code}` | Public, the card behind `/r/{CODE}`: `{code, host, status: lobby|playing|podium, players, max_players, names[], locked, settings}`. `PARTY_ROOM_NOT_FOUND` once it closed |
+| POST | `/party/rooms/{code}/join` | Signed in (joins as yourself), or no session with `{nickname}` (a web guest, FR-PARTY-7) → a seat. `{screen: true}`: a big screen (a TV) that shows the game without playing, for the host only. `PARTY_ROOM_FULL` when full (20) or locked, `NICKNAME_NOT_ALLOWED` for a rude or official-looking name |
+| GET | `/party/games/{id}` | A finished game: `{game_id, room_code, ended_at, questions, ranking[{rank, name, kind, score, correct}], mvp}`. Deleted players show as "Deleted player" and 13–17s as "A player" |
+
+A **seat** is `{room_id, code, token, socket_path, expires_at}`. The token is a 12-hour JWT for that room's socket only (never the API), and the same token reconnects.
 
 ### 2.8 Economy & shop
 | Method | Path | Notes |
@@ -201,65 +205,66 @@ The load balancer routes `POST /v1/events` to the ingest service, not the core A
 ```
 The user comes from the access token when there is one; the client never sends its own user ID.
 
-## 3. Realtime protocol (Party Room, Colyseus)
+## 3. Realtime protocol (Party Room)
+Plain WebSockets carrying JSON, one message per frame, each with a `type` (doc 06 §2 says why not Colyseus).
 
 ### 3.1 Connection
-1. The client calls `POST /party/rooms/{code}/join` and receives a `seat_reservation`.
-2. The client calls `client.consumeSeatReservation(reservation)` and connects to the right node.
-3. The server validates the JWT (app) or guest token (web) in `onAuth`.
+1. The client gets a seat from `POST /party/rooms` or `POST /party/rooms/{code}/join`.
+2. It opens a WebSocket to `{socket_path}?token={token}` on the API's host. A bad or expired token closes with 4003.
+3. The server sends `welcome` (`{you: {id, name, role}, server_time}`) and the `state`, and catches up a player who comes back mid-question.
 
-### 3.2 Room state (Colyseus Schema, synced by delta patches)
+The server pings each connection every 15 s at the WebSocket level, which keeps it open through proxies (Heroku drops a connection idle for 55 s) and measures its round trip for the timing clamp (TRD §5.3). A connection may send about 10 messages a second; the rest are dropped.
+
+### 3.2 Room state
+A `state` message goes to everyone whenever something changes:
 ```ts
-class Player extends Schema {
-  @type("string") id; @type("string") name; @type("string") avatar;
-  @type("number") score = 0; @type("number") streak = 0;
-  @type("boolean") connected = true; @type("boolean") answered = false;
-}
-class PartyState extends Schema {
-  @type("string") phase = "LOBBY";      // LOBBY|COUNTDOWN|QUESTION|REVEAL|LEADERBOARD|PODIUM|CLOSED
-  @type("string") hostId;
-  @type("number") qIndex = -1; @type("number") qTotal = 10;
-  @type("number") endsAt = 0;           // server epoch ms
-  @type({ map: Player }) players = new MapSchema<Player>();
-  @type("boolean") locked = false;
-}
+{ room_id, code, phase,            // LOBBY|COUNTDOWN|QUESTION|REVEAL|LEADERBOARD|PODIUM|CLOSED
+  host_id, settings, locked, max_players,
+  q_index, q_total,                // q_index from 0; -1 before the first question
+  ends_at,                         // when this phase ends, server epoch ms; 0 while it waits for the host
+  players: [{ id, name, kind /* app|web|web_guest */, avatar_id, score, connected, answered }] }
 ```
-The question text and options are **sent as messages, not state**, so late joiners and spectators can't read them early and patches stay small.
+The question text and options are **sent as messages, not state**, so late joiners can't read them early.
 
 ### 3.3 Messages
 | Direction | Type | Payload |
 |---|---|---|
-| C→S | `ping` | `{t0}` → S→C `pong {t0, ts}` (clock sync; client keeps the median offset) |
-| C→S (host) | `settings` | `{questions, timer_s, packs[], family_safe}` |
-| C→S (host) | `start` | – |
-| C→S (host) | `kick` | `{playerId}` |
+| C→S | `time` | `{t0}` → S→C `time {t0, ts}` (clock sync; the client keeps the median offset) |
+| C→S (host) | `settings` | `{settings}` (lobby only) |
+| C→S (host) | `start` | – (at least 2 players; `TOO_FEW_PLAYERS`, or `NO_QUESTIONS` when the packs run short) |
+| C→S (host) | `kick` | `{player_id}` (they can't come back) |
 | C→S (host) | `lock` | `{locked}` |
-| S→C | `question` | `{index, total, qid, text, options[4], media?, time_limit_ms, ends_at, wahala: bool}` |
-| C→S | `answer` | `{qid, display_index, client_elapsed_ms}` (first answer only; later ones are ignored) |
+| S→C | `question` | `{index, total, qid, category_id, text, options[], time_limit_ms, ends_at, wahala}` (options in your order; a screen gets them as written) |
+| C→S | `answer` | `{qid, display_index, client_elapsed_ms}` (first answer only; another gets `ALREADY_ANSWERED`) |
 | S→C | `answered_ack` | `{qid}` |
-| S→C | `reveal` | `{qid, correct_display_index, distribution[4] (in your display order), your_points, fact}` |
-| S→C | `leaderboard` | `{top: [{id,name,score,delta}], you: {rank, score}}` |
-| S→C | `podium` | `{top3, mvp, game_id, share_url}` |
-| C→S (host) | `play_again` | – |
-| S→C | `toast` | `{kind: "joined"|"left"|"host_changed", name}` |
+| S→C | `reveal` | `{qid, correct_display_index, distribution[] (in your order), you: {display_index, correct, points, streak} | null, fact}` |
+| S→C | `leaderboard` | `{top: [{id, name, score, rank, move}], you: {rank, score} | null, next: question|wahala|last|podium}` |
+| S→C | `podium` | `{game_id, ranking[{rank, id, name, kind, avatar_id, score, correct}], mvp: {id, name, correct, total, fastest_ms} | null, share_url}` |
+| C→S (host) | `play_again` | – (back to the lobby with the same players, scores at zero) |
+| C→S | `leave` | – |
+| S→C | `toast` | `{kind: "joined"|"left"|"host_changed"|"kicked", name}` |
+| S→C | `error` | `{code, message}`: `NOT_HOST`, `NOT_NOW`, `TOO_FEW_PLAYERS`, `NO_QUESTIONS`, `BAD_MESSAGE`, `ALREADY_ANSWERED` |
 
-Options are shuffled **per player**, so `reveal` sends each client its own correct display index (a private `client.send`, not a broadcast).
+Options are shuffled **per player**, so `reveal` sends each client its own correct display index (a message to that player, not a broadcast).
 
 ### 3.4 Timing on the server
 ```
-on QUESTION start: endsAt = now + time_limit + 300ms grace
-on answer: accepted = clampElapsed(client_elapsed, now - question_sent_at, rtt(client))
-on (all answered) or (now >= endsAt): score all, phase = REVEAL (2.5 s) → LEADERBOARD (3 s) → next
+on QUESTION start: ends_at = now + time_limit; answers count until ends_at + 300 ms grace
+on answer: accepted = acceptElapsed(client_elapsed, now − sent_to_this_player_at, rtt(connection))
+on (all answered) or (grace over): score all, phase = REVEAL (2.5 s) → LEADERBOARD (3 s) → next
+the last 3 questions, with the Wahala Round on: harder, points × 2
 ```
+A player who drops and comes back within a question gets it again, timed from when it was first sent. Someone new joins at the next question. A host gone for 60 s hands the room to whoever has been there longest; a room quiet for 10 minutes in the lobby or on the podium closes, and its code isn't reused for another 10 minutes.
 
 ### 3.5 Close codes
 | Code | Meaning | Client action |
 |---|---|---|
-| 4000 | Room closed / ended | Show results or exit |
+| 4000 | Room closed or ended | Show results or exit |
 | 4001 | Kicked | Show message, don't auto-rejoin |
-| 4003 | Auth failed | Re-auth and retry once |
+| 4002 | The same seat opened somewhere else | Say so; don't auto-reconnect |
+| 4003 | Auth failed | Get a new seat and retry once |
 | 4004 | Room full or locked | Show message |
-| 1006 (abnormal) | Network drop | Auto-reconnect with backoff 0.5 s, 1 s, 2 s, 4 s… up to 60 s using the reconnection token |
+| 1006 (abnormal) | Network drop | Auto-reconnect with backoff 0.5 s, 1 s, 2 s, 4 s… up to 60 s with the same seat token |
 
 ## 4. Push payloads
 **Android (FCM).** The worker sends FCM HTTP v1 messages: a `notification` Android shows by itself, on the push's channel, and `data` for the app. One notification per duel, friend or Daily on the phone (`collapse_key` and `tag`); turn pushes go at high priority, and the TTL ends with the turn.
