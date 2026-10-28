@@ -205,7 +205,7 @@ flowchart TD
 | `color.bg` | #FFFDF7 (light) / #0E1A14 (dark) |
 | `color.correct` | #1DB954 + ✓ |
 | `color.wrong` | #E5383B + ✗ |
-| Category colours | Slang #8E44AD · Nollywood #E67E22 · Music #2980B9 · Food #C0392B · Mixed #16A085 |
+| Category colours | Slang #8E44AD · Nollywood #E67E22 · Music #2980B9 · Food #C0392B · Sport #B8860B · Mixed #16A085 |
 | Typography | "Inter" or "Nunito" for UI, "Baloo 2" for display. Use subset fonts to save size |
 | Radius | 16 dp cards, 12 dp buttons |
 | Motion | 150–250 ms ease-out. Respect "reduce motion" |

@@ -216,6 +216,8 @@ Server events (answers, matches, coins, purchases) skip the HTTP step: the API, 
 
 A leaner option for pre-seed: a single region on Render/Railway/Fly with managed Postgres (Neon/Supabase), Upstash Redis and the smallest ClickHouse Cloud tier (or one small ClickHouse VM), at roughly US$200–400 a month until there's product-market fit. The architecture is the same, only the hosting differs.
 
+**Chosen for launch (28 Oct 2026):** this leaner path, on Heroku in the Europe region (Heroku Postgres and Key-Value Store), with analytics events kept in Postgres until ClickHouse is needed. See build plan steps 1.3 and 1.6.
+
 ## 6. Resilience
 - **Realtime node crash:** the room state snapshot in Redis (after each question) lets a new node rehydrate the room. Clients auto-reconnect using the room ID plus a session token. Target: under 10 s disruption.
 - **API dependency failures:** circuit breakers (SMS, RevenueCat). Push sends are retried by the queue with exponential backoff.

@@ -16,6 +16,7 @@ import {
   OtpVerifyRequest,
   PublicUser,
   RefreshRequest,
+  type AuthMethodsResponse,
   type OtpSendResponse,
   type Platform,
   type SignInResponse,
@@ -104,6 +105,14 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
     return reply.code(status).send(body);
   }
 
+  /** Which sign-in buttons the apps show: phone and Google/Apple can each be switched off. */
+  app.get('/v1/auth/methods', async (): Promise<AuthMethodsResponse> => ({
+    guest: true,
+    phone: deps.auth.sms !== null,
+    google: deps.auth.google !== null,
+    apple: deps.auth.apple !== null,
+  }));
+
   app.post(
     '/v1/auth/guest',
     { config: { rateLimit: { max: config.guestSignupsPerIpPerHour, timeWindow: '1 hour' } } },
@@ -123,7 +132,7 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
           throw conflict(
             ErrorCode.conflict,
             'This device belongs to an account',
-            'Sign in with your phone number or Google instead.',
+            'Sign in to your account instead.',
           );
         }
         const isNew = !row;
@@ -225,15 +234,30 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
     return reply.code(204).send();
   });
 
-  const otp = new OtpService({
-    redis: deps.redis,
-    sms: deps.auth.sms,
-    captcha: deps.auth.captcha,
-    secret: config.otpSecret,
-    now: clock.now,
-    webOtpDomain: new URL(config.publicWebUrl).hostname,
-    smsRetrieverAppHash: config.smsRetrieverAppHash,
-  });
+  const otp = deps.auth.sms
+    ? new OtpService({
+        redis: deps.redis,
+        sms: deps.auth.sms,
+        captcha: deps.auth.captcha,
+        secret: config.otpSecret,
+        now: clock.now,
+        webOtpDomain: new URL(config.publicWebUrl).hostname,
+        smsRetrieverAppHash: config.smsRetrieverAppHash,
+      })
+    : null;
+
+  /** Phone sign-in is off until an SMS provider is set up (production without Termii or Africa's Talking). */
+  function phoneCodes(): OtpService {
+    if (!otp) {
+      throw new ApiError(
+        503,
+        ErrorCode.providerUnavailable,
+        'Phone sign-in is not available',
+        'Sign in with Google or Apple, or keep playing as a guest.',
+      );
+    }
+    return otp;
+  }
 
   /**
    * One path for every sign-in method: find or create the account (keeping a guest's
@@ -278,6 +302,7 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
     '/v1/auth/otp/send',
     { config: { rateLimit: { max: config.otpSendsPerIpPerHour, timeWindow: '1 hour' } } },
     async (request): Promise<OtpSendResponse> => {
+      const codes = phoneCodes();
       const body = parse(OtpSendRequest, request.body);
       const phone = normalizeNigerianPhone(body.phone);
       if (!phone) {
@@ -289,7 +314,7 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
         );
       }
       const current = await sessionFromHeader(request, tokens);
-      const sent = await otp.send({
+      const sent = await codes.send({
         phone,
         platform: body.platform,
         captchaToken: body.turnstile_token,
@@ -308,10 +333,11 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
   );
 
   app.post('/v1/auth/otp/verify', async (request, reply) => {
+    const codes = phoneCodes();
     const body = parse(OtpVerifyRequest, request.body);
     // Checked before the code is used up, so a guest is never dropped by an expired token.
     const current = await sessionFromHeader(request, tokens);
-    const checked = await otp.verify(body.request_id, body.code);
+    const checked = await codes.verify(body.request_id, body.code);
     if (!checked.ok) {
       if (current) {
         await deps.events.emit(
@@ -420,7 +446,7 @@ async function checkIdToken(
       503,
       ErrorCode.providerUnavailable,
       `${name} sign-in is not available`,
-      'Use your phone number.',
+      'Use another way to sign in.',
     );
   }
   try {

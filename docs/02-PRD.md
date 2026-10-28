@@ -81,7 +81,7 @@ Nigerians love arguing about who knows Naija culture best: which Nollywood line 
 | F3 | **Async 1v1 Duel**: 3 rounds × 3 questions, play your turn whenever you like, 48h turn timer | P0 |
 | F4 | **Party Room** (live, 2–20 players), room code plus WhatsApp join link; guests can join on the **web without installing** | P0 |
 | F5 | **Daily Sabi Challenge**: 7 questions, same set for everyone, resets 00:00 WAT, shareable result grid | P0 |
-| F6 | Categories: Slang & Pidgin, Nollywood, Music, Food, plus a "Mixed Naija" bucket | P0 |
+| F6 | Categories: Slang & Pidgin, Nollywood, Music, Food, Sport, plus a "Mixed Naija" bucket | P0 |
 | F7 | Scoring with a speed bonus and a streak multiplier; post-match answer review with "Did you know?" facts | P0 |
 | F8 | Friends: add from contacts (hashed), by username, or from a past match | P0 |
 | F9 | Share cards: match result and daily grid, optimised for WhatsApp Status and TikTok | P0 |

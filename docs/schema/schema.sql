@@ -107,7 +107,7 @@ CREATE TYPE question_status AS ENUM ('draft','in_review','approved','live','susp
 CREATE TYPE question_type AS ENUM ('mcq4','true_false','image_mcq','audio_mcq','closest_number');
 
 CREATE TABLE categories (
-  id              text PRIMARY KEY,                    -- 'slang','nollywood','music','food','mixed'
+  id              text PRIMARY KEY,                    -- 'slang','nollywood','music','food','sport','mixed'
   name_en         text NOT NULL,
   name_pcm        text,
   emoji           text,
@@ -641,4 +641,7 @@ INSERT INTO categories (id, name_en, name_pcm, emoji, color_hex, sort_order) VAL
  ('nollywood','Nollywood','Nollywood','🎬','#E67E22',2),
  ('music','Music','Music','🎶','#2980B9',3),
  ('food','Food','Chop','🍲','#C0392B',4),
- ('mixed','Mixed Naija','Naija Mix','🇳🇬','#16A085',5);
+ ('mixed','Mixed Naija','Naija Mix','🇳🇬','#16A085',6);
+-- Sport (migration 0005) starts switched off until approved sport questions are live.
+INSERT INTO categories (id, name_en, name_pcm, emoji, color_hex, sort_order, active) VALUES
+ ('sport','Sport','Sport','⚽','#B8860B',5,false);

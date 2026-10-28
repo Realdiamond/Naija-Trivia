@@ -174,7 +174,7 @@ describe('taste test', () => {
 });
 
 describe('content', () => {
-  it('lists the five launch categories', async () => {
+  it('lists the categories that are switched on; Sport waits for its questions', async () => {
     const res = await t.app.inject({ method: 'GET', url: '/v1/categories' });
     expect(res.json().categories.map((c: { id: string }) => c.id)).toEqual([
       'slang',
@@ -182,6 +182,12 @@ describe('content', () => {
       'music',
       'food',
       'mixed',
+    ]);
+    // Sport sits before Mixed Naija and stays off (never offered in a duel) until it is switched on.
+    const all = await t.pool.query('SELECT id, active FROM categories ORDER BY sort_order');
+    expect(all.rows.slice(-2)).toEqual([
+      { id: 'sport', active: false },
+      { id: 'mixed', active: true },
     ]);
   });
 
