@@ -13,6 +13,7 @@ import { Screen } from '../../ui/Screen';
 import { Text } from '../../ui/Text';
 import { category, colors, fonts, radius } from '../../ui/theme';
 import { STATE_NAMES } from '../profile/states';
+import { PushPrompt } from '../push/PushPrompt';
 import { DailyShare } from './DailyShare';
 
 export function DailyResultView({ result }: { result: DailyResult }) {
@@ -112,6 +113,7 @@ export function DailyResultView({ result }: { result: DailyResult }) {
       <Text variant="bodySoft">{t('daily.xp', { xp: result.xp })}</Text>
 
       <DailyShare id={result.id} text={result.share_text} />
+      <PushPrompt reason="daily" />
 
       <Button
         label={t('daily.leaderboards')}

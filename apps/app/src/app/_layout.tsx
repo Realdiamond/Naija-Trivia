@@ -1,10 +1,11 @@
 /**
- * The root of the app: fonts, the saved language, the session, the analytics tracker and the
- * navigation stack. Screens decide where a player goes from the session (see index.tsx).
+ * The root of the app: fonts, the saved language, the session, the analytics tracker, push
+ * notifications and the navigation stack. Screens decide where a player goes from the session
+ * (see index.tsx).
  */
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, AppState, StyleSheet, View } from 'react-native';
-import { Stack, usePathname, useSegments } from 'expo-router';
+import { router, Stack, usePathname, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -16,13 +17,14 @@ import {
   Nunito_800ExtraBold,
 } from '@expo-google-fonts/nunito';
 import { Baloo2_800ExtraBold } from '@expo-google-fonts/baloo-2';
-import { appVisible, screenName, startAnalytics, trackScreen } from '../analytics';
+import { appVisible, screenName, startAnalytics, trackEvent, trackScreen } from '../analytics';
 import { queryClient } from '../api/queryClient';
 import { restoreSession, useSession } from '../auth/session';
 import { ConsentBanner } from '../features/consent/ConsentBanner';
 import { loadConsent } from '../features/consent/store';
 import { showsSideNav, SideNav } from '../features/nav/SideNav';
 import { useLanguage } from '../i18n';
+import { syncPush, usePushHandlers } from '../platform/push';
 import { useIsDesktop } from '../ui/layout';
 import { colors } from '../ui/theme';
 
@@ -40,6 +42,29 @@ export default function RootLayout() {
   const pathname = usePathname();
   const desktop = useIsDesktop();
   const signedIn = useSession((s) => s.status === 'guest' || s.status === 'account');
+  // A tapped push opens its screen once someone is signed in (on a cold start, after restore).
+  const [pushUrl, setPushUrl] = useState<string | null>(null);
+
+  usePushHandlers({
+    open: (target) => {
+      trackEvent('push_opened', { type: target.type });
+      setPushUrl(target.url);
+    },
+    received: (target) => {
+      trackEvent('push_received', { type: target.type });
+      // Whatever it is about (a turn, a result, a request) is now out of date on screen.
+      void queryClient.invalidateQueries();
+    },
+  });
+  useEffect(() => {
+    if (signedIn && pushUrl) {
+      router.push(pushUrl as Parameters<typeof router.push>[0]);
+      setPushUrl(null);
+    }
+  }, [signedIn, pushUrl]);
+  useEffect(() => {
+    if (signedIn) void syncPush();
+  }, [signedIn]);
 
   useEffect(() => {
     void useLanguage.getState().load();

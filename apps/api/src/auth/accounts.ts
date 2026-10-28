@@ -121,10 +121,10 @@ export async function signInWithIdentity(client: PoolClient, input: SignInInput)
 
 /**
  * FR-AUTH-4: a guest signing in to an existing account keeps their progress there. Their
- * duels, answers, ratings, seen questions, consents, devices and XP move to the account; the
- * guest is retired and the link is kept for analytics. A duel between the guest and that
- * same account would become a duel against yourself, so an unfinished one is cancelled and a
- * finished one stays as history.
+ * duels, answers, ratings, seen questions, consents, devices, waiting pushes and XP move to the
+ * account; the guest is retired and the link is kept for analytics. A duel between the guest and
+ * that same account would become a duel against yourself, so an unfinished one is cancelled and
+ * a finished one stays as history.
  *
  * Every table keyed by a user must be handled here; later steps add coins and friends.
  */
@@ -215,6 +215,13 @@ export async function mergeGuestInto(
 
   await client.query('UPDATE consent_records SET user_id = $2 WHERE user_id = $1', [g, x]);
   await client.query('UPDATE devices SET user_id = $2 WHERE user_id = $1', [g, x]);
+  // Waiting pushes follow (the account's own waiting one wins where both have the same key).
+  await client.query(
+    `DELETE FROM push_outbox p WHERE p.user_id = $1 AND p.sent_at IS NULL AND EXISTS (
+       SELECT 1 FROM push_outbox q WHERE q.user_id = $2 AND q.sent_at IS NULL AND q.collapse_key = p.collapse_key)`,
+    [g, x],
+  );
+  await client.query('UPDATE push_outbox SET user_id = $2 WHERE user_id = $1 AND sent_at IS NULL', [g, x]);
   // The guest's device now belongs to the account: guest sign-in there is refused from now on.
   await client.query(
     "UPDATE auth_identities SET user_id = $2 WHERE user_id = $1 AND provider = 'guest_device'",

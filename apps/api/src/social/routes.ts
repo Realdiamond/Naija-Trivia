@@ -24,10 +24,13 @@ import { withTransaction, type PoolClient } from '../db';
 import { ApiError, notFound, parse } from '../errors';
 import { requestEventContext } from '../events';
 import { profileCards } from '../profile/routes';
+import { queuePush } from '../push/queue';
 import { pairOf } from './graph';
 
 /** Prefixes one player may look up per day, so the index can't be walked to list numbers. */
 const DISCOVERY_PREFIXES_PER_DAY = 3000;
+/** A friend request push is still worth sending for three days. */
+const FRIEND_PUSH_MS = 3 * 24 * 3_600_000;
 const UserParams = z.object({ userId: z.string().min(3).max(40) });
 
 export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
@@ -137,6 +140,7 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
       if (pair?.status === 'pending') {
         // They had already asked: asking back means yes.
         await accept(client, me, target.id);
+        await friendPush(client, target.id, me, 'accepted');
         return { status: 'accepted' as const, created: false, accepted: true };
       }
       await client.query(
@@ -144,6 +148,7 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
          VALUES (LEAST($1::text, $2::text), GREATEST($1::text, $2::text), 'pending', $1, $3, $4)`,
         [me, target.id, source, new Date(clock.now())],
       );
+      await friendPush(client, target.id, me, 'request');
       return { status: 'pending' as const, created: true, accepted: false };
     });
     if (outcome.accepted) await friendAdded(request, target.id, source);
@@ -153,6 +158,21 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
     };
     return reply.code(outcome.created ? 201 : 200).send(result);
   });
+
+  /** Tells `to` that `from` asked to be friends, or said yes (FR-NOT-1, friend_joined). */
+  async function friendPush(client: PoolClient, to: string, from: string, kind: 'request' | 'accepted') {
+    const name = (
+      await client.query<{ username: string | null }>('SELECT username FROM users WHERE id = $1', [from])
+    ).rows[0]?.username;
+    const now = clock.now();
+    await queuePush(client, {
+      userId: to,
+      params: { type: 'friend_joined', kind, user_id: from, name: name ?? null },
+      collapseKey: `friend:${from}`,
+      expiresAt: now + FRIEND_PUSH_MS,
+      now,
+    });
+  }
 
   async function accept(client: PoolClient, me: string, them: string): Promise<void> {
     await client.query(
@@ -172,6 +192,7 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
       if (pair?.status !== 'pending' || pair.requested_by !== them)
         throw notFound('No request from this player.');
       await accept(client, me, them);
+      await friendPush(client, them, me, 'accepted');
       return { accepted: true, source: pair.source };
     });
     if (outcome.accepted)

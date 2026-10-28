@@ -9,9 +9,12 @@ import { ServerEvents } from '../src/events';
 import { AnalyticsLoader } from '../src/jobs/analyticsLoader';
 import { expireDueDuels } from '../src/jobs/expiry';
 import { flushQuestionStats } from '../src/jobs/questionStats';
-import { sendTurnReminders } from '../src/jobs/reminders';
-import { inQuietHours, LogNotifier, type Notifier, type PushMessage } from '../src/notify';
+import { queueTurnReminders } from '../src/jobs/reminders';
+import { sendDuePushes } from '../src/push/dispatch';
+import { inQuietHours } from '../src/push/queue';
+import { LogTransport } from '../src/push/transport';
 import { befriend, bearer, createTestApp, signInGuest } from './helpers';
+import { givePhone, TestTransport } from './pushHelpers';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -30,23 +33,6 @@ beforeAll(async () => {
   };
 });
 afterAll(() => t.close());
-
-/** Records pushes instead of sending them; can fail once for a chosen player. */
-class TestNotifier implements Notifier {
-  sent: Array<{ userId: string; message: PushMessage }> = [];
-  private failing = new Set<string>();
-  failOnceFor(userId: string) {
-    this.failing.add(userId);
-  }
-  async send(userId: string, message: PushMessage) {
-    if (this.failing.delete(userId)) throw new Error('push service down');
-    this.sent.push({ userId, message });
-    return true;
-  }
-  to(userId: string) {
-    return this.sent.filter((s) => s.userId === userId).map((s) => s.message);
-  }
-}
 
 /** Sets the shared clock to a WAT wall time on a fresh day, ahead of anything earlier in the file. */
 let day = 10;
@@ -78,15 +64,22 @@ async function eventsOf(userId: string) {
 }
 
 describe('turn reminders', () => {
+  /** Runs the reminder job, then the push job, as the worker does. */
+  async function remindAndSend(transport: TestTransport) {
+    await queueTurnReminders(deps);
+    await sendDuePushes(deps, transport);
+  }
+
   it('reminds the player whose turn it is at 24 h and 4 h left, once each, never in quiet hours', async () => {
     startDayAt(9);
     const { a, b } = await duelBetween();
+    const [phoneA, phoneB] = [await givePhone(t.pool, a), await givePhone(t.pool, b)];
     await t.pool.query("UPDATE users SET username = 'ChidiOfLagos' WHERE id = $1", [b]);
-    const notifier = new TestNotifier();
+    const transport = new TestTransport();
 
     t.clock.advance(25 * HOUR); // 23 hours left, 10:00 WAT
-    await sendTurnReminders(deps, notifier);
-    expect(notifier.to(a)).toEqual([
+    await remindAndSend(transport);
+    expect(transport.to(phoneA)).toEqual([
       expect.objectContaining({
         type: 'duel_expiring',
         title: '24 hours left vs ChidiOfLagos',
@@ -94,19 +87,19 @@ describe('turn reminders', () => {
         body: 'Play your turn before time runs out, or the duel is cancelled.',
       }),
     ]);
-    expect(notifier.to(b)).toEqual([]);
-    await sendTurnReminders(deps, notifier);
-    expect(notifier.to(a)).toHaveLength(1);
+    expect(transport.to(phoneB)).toEqual([]);
+    await remindAndSend(transport);
+    expect(transport.to(phoneA)).toHaveLength(1);
 
     t.clock.advance(18 * HOUR); // 5 hours left, 04:00 WAT
     t.clock.advance(2 * HOUR); // 3 hours left, 06:00 WAT: quiet hours
     expect(inQuietHours(t.clock.now())).toBe(true);
-    await sendTurnReminders(deps, notifier);
-    expect(notifier.to(a)).toHaveLength(1);
+    await remindAndSend(transport);
+    expect(transport.to(phoneA)).toHaveLength(1);
 
     t.clock.advance(HOUR); // 2 hours left, 07:00 WAT
-    await sendTurnReminders(deps, notifier);
-    expect(notifier.to(a).map((m) => m.title)).toEqual([
+    await remindAndSend(transport);
+    expect(transport.to(phoneA).map((m) => m.title)).toEqual([
       '24 hours left vs ChidiOfLagos',
       '4 hours left vs ChidiOfLagos',
     ]);
@@ -119,6 +112,7 @@ describe('turn reminders', () => {
   it('names the opponent who wins on time, in Pidgin for a player who chose it', async () => {
     startDayAt(9);
     const { a, b, duelId } = await duelBetween();
+    const phoneB = await givePhone(t.pool, b);
     // Round 1 played: the turn passes to B (doc 03 §2.1), and the time limit now decides a winner.
     await t.pool.query("UPDATE duels SET state = 'wait_b_r1r2', turn_user_id = $2 WHERE id = $1", [
       duelId,
@@ -126,30 +120,34 @@ describe('turn reminders', () => {
     ]);
     await t.pool.query("UPDATE users SET username = 'ToluSabi' WHERE id = $1", [a]);
     await t.pool.query("UPDATE users SET language = 'pcm' WHERE id = $1", [b]);
-    const notifier = new TestNotifier();
+    const transport = new TestTransport();
 
     t.clock.advance(25 * HOUR);
-    await sendTurnReminders(deps, notifier);
-    expect(notifier.to(b)).toEqual([
-      {
+    await remindAndSend(transport);
+    expect(transport.to(phoneB)).toEqual([
+      expect.objectContaining({
         type: 'duel_expiring',
         title: 'Oya o! 24 hours remain for your duel with ToluSabi',
         body: 'Play your turn before time finish, or ToluSabi go win am.',
+        url: `/duel/${duelId}`,
+        channel: 'duels',
         data: { duel_id: duelId },
-      },
+      }),
     ]);
   });
 
-  it('tries again next run when the push could not be sent', async () => {
+  it('tries again shortly when the push service could not take it', async () => {
     startDayAt(9);
     const { a } = await duelBetween();
-    const notifier = new TestNotifier();
+    const phone = await givePhone(t.pool, a);
+    const transport = new TestTransport();
     t.clock.advance(25 * HOUR);
-    notifier.failOnceFor(a);
-    await sendTurnReminders(deps, notifier);
-    expect(notifier.to(a)).toEqual([]);
-    await sendTurnReminders(deps, notifier);
-    expect(notifier.to(a).map((m) => m.title)).toEqual(['24 hours left vs your opponent']);
+    transport.failNext(phone, 'transient');
+    await remindAndSend(transport);
+    expect(transport.to(phone)).toEqual([]);
+    t.clock.advance(61_000);
+    await remindAndSend(transport);
+    expect(transport.to(phone).map((m) => m.title)).toEqual(['24 hours left vs your opponent']);
   });
 });
 
@@ -157,11 +155,15 @@ describe('turn reminders before real pushes exist', () => {
   it("logs the message and doesn't count it as a push sent", async () => {
     startDayAt(9);
     const { a } = await duelBetween();
+    await givePhone(t.pool, a);
     t.clock.advance(25 * HOUR);
-    expect(await sendTurnReminders(deps, new LogNotifier(t.app.log))).toBeGreaterThanOrEqual(1);
+    expect(await queueTurnReminders(deps)).toBeGreaterThanOrEqual(1);
+    await sendDuePushes(deps, new LogTransport(t.app.log));
     expect((await eventsOf(a)).filter((e) => e.event === 'push_sent')).toEqual([]);
     const claimed = await t.pool.query('SELECT stage FROM duel_reminders WHERE user_id = $1', [a]);
     expect(claimed.rows).toEqual([{ stage: '24h' }]);
+    const outbox = await t.pool.query('SELECT outcome FROM push_outbox WHERE user_id = $1', [a]);
+    expect(outbox.rows).toEqual([{ outcome: 'logged' }]);
   });
 });
 

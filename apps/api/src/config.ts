@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ServiceAccount } from './push/transport';
 
 const Env = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -65,6 +66,11 @@ const Env = z.object({
       (v) => v.split(',').every((f) => !f.trim() || /^([0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2}$/.test(f.trim())),
       'Each fingerprint is 32 pairs of hex digits joined by colons',
     ),
+  /**
+   * The Firebase service account key (Project settings → Service accounts → Generate new private
+   * key), the whole JSON file as one setting. Unset, pushes are written to the worker's log.
+   */
+  FIREBASE_SERVICE_ACCOUNT: z.string().min(1).optional(),
   /** The Apple developer Team ID, for iOS Universal Links; unset until there is an iOS app. */
   APPLE_TEAM_ID: z
     .string()
@@ -107,6 +113,7 @@ export interface Config {
   adminGoogleDomain?: string;
   androidCertSha256: string[];
   appleTeamId?: string;
+  firebaseServiceAccount?: ServiceAccount;
 }
 
 // Stable outside production so analytics ids don't change on every restart.
@@ -167,5 +174,24 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     adminGoogleDomain: e.ADMIN_GOOGLE_DOMAIN,
     androidCertSha256: list(e.ANDROID_CERT_SHA256).map((f) => f.toUpperCase()),
     appleTeamId: e.APPLE_TEAM_ID,
+    firebaseServiceAccount: e.FIREBASE_SERVICE_ACCOUNT
+      ? serviceAccount(e.FIREBASE_SERVICE_ACCOUNT)
+      : undefined,
   };
+}
+
+/** A readable error for a pasted key that isn't the Firebase JSON file; never echoes the key. */
+function serviceAccount(json: string): ServiceAccount {
+  let value: unknown;
+  try {
+    value = JSON.parse(json);
+  } catch {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT is not JSON: paste the whole key file from Firebase');
+  }
+  const parsed = ServiceAccount.safeParse(value);
+  if (!parsed.success) {
+    const fields = parsed.error.issues.map((i) => i.path.join('.')).join(', ');
+    throw new Error(`FIREBASE_SERVICE_ACCOUNT is missing or has bad fields: ${fields}`);
+  }
+  return parsed.data;
 }

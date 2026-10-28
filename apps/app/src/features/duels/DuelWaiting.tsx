@@ -12,6 +12,7 @@ import { Text } from '../../ui/Text';
 import { colors } from '../../ui/theme';
 import { duelKeys, duels } from './api';
 import { timeLeft } from './format';
+import { PushPrompt } from '../push/PushPrompt';
 import { LinkShare } from './LinkShare';
 import { RoundChips, Scoreline, useOpponentName } from './parts';
 
@@ -59,6 +60,7 @@ export function DuelWaiting({ duel }: { duel: DuelView }) {
       </Text>
       {time && duel.opponent ? <Text variant="bodySoft">{t('duel.waitingBody', { name, time })}</Text> : null}
       {duel.invite_url ? <LinkShare url={duel.invite_url} /> : null}
+      {duel.opponent ? <PushPrompt reason="duel" name={name} /> : null}
       {canCancel ? (
         <View style={styles.cancel}>
           <Button label={t('duel.cancel')} variant="link" loading={busy} onPress={() => void cancel()} />

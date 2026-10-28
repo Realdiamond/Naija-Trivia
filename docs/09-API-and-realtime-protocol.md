@@ -48,7 +48,8 @@ A token that is sent but expired is a `401` before the code is used, so the app 
 | PATCH | `/me` | `{username?, avatar_id?, home_state?, language?, data_saver?, family_mode?, discoverable?}`, all optional. The username needs an account and is chosen once (`USERNAME_LOCKED`; support changes it): 3–20 letters, digits or `_`, unique ignoring case (`USERNAME_TAKEN`), and filtered for offensive and official-looking names (`USERNAME_NOT_ALLOWED`). Restricted (13–17) accounts can't turn family mode off or become discoverable |
 | POST | `/me/age` | `{age_band: under_13 | 13_17 | 18_plus}`. One-time (`AGE_ALREADY_SET`; changes go through support). `under_13` is refused (`AGE_NOT_ALLOWED`). `13_17` makes the account restricted (doc 10 §3.3): family mode on, not discoverable; a guest who answers 13–17 becomes a restricted account when they sign up |
 | POST | `/me/consents` | `{source: onboarding | settings | web_banner, consents: [{purpose, granted, policy_version}]}`. Purposes: `terms`, `privacy`, `analytics`, `marketing_push`, `ads_personalisation`, `contacts`, `session_replay`. Each change is a new `consent_records` row (the history is kept) and a `consent_changed` event; `204` |
-| POST | `/me/devices` | `{device_id, platform, push_token, model, ram_mb, app_version, browser?}` (web push tokens come from the Firebase JS SDK) |
+| POST | `/me/devices` | Turns pushes on for this phone: `{platform: android, push_token, app_version?, model?}`; `204`. The app sends it on every start (FCM can change the token), and the token moves to whoever is signed in on the phone. A player keeps their 10 newest phones. 30 an hour. Web push (step 2.5c) and iOS (step 2.8) add their platforms |
+| DELETE | `/me/devices` | `{push_token}`: pushes off for this phone (on sign-out); `204` |
 | GET | `/me/stats` | Per-category accuracy, best streak, duel W/L |
 | POST | `/me/delete` | Starts erasure (30-day SLA); returns a `dsar_id` |
 | POST | `/me/export` | DSAR access export (emailed / in-app download link) |
@@ -253,12 +254,26 @@ on (all answered) or (now >= endsAt): score all, phase = REVEAL (2.5 s) → LEAD
 | 4004 | Room full or locked | Show message |
 | 1006 (abnormal) | Network drop | Auto-reconnect with backoff 0.5 s, 1 s, 2 s, 4 s… up to 60 s using the reconnection token |
 
-## 4. Push payloads (FCM data messages)
+## 4. Push payloads (FCM)
+The worker sends FCM HTTP v1 messages: a `notification` Android shows by itself, on the push's channel, and `data` for the app. One notification per duel, friend or Daily on the phone (`collapse_key` and `tag`); turn pushes go at high priority, and the TTL ends with the turn.
 ```json
-{ "type": "your_turn", "duel_id": "d_01J9", "opponent": "Chidi",
-  "title": "Chidi don play! 🔥", "body": "Na your turn. Round 2 — Nollywood dey wait.",
-  "deeplink": "whosabi://duel/d_01J9", "collapse_key": "duel_d_01J9" }
+{ "message": {
+    "token": "…",
+    "notification": { "title": "Chidi don play, na your turn! 🔥", "body": "Oya, come show am say you sabi." },
+    "data": { "type": "your_turn", "url": "/duel/d_01J9", "duel_id": "d_01J9" },
+    "android": { "priority": "high", "ttl": "86400s", "collapse_key": "duel:d_01J9",
+                 "notification": { "channel_id": "duels", "tag": "duel:d_01J9", "color": "#008751" } } } }
 ```
+
+| Type | Sent when | To | Channel, opens |
+|---|---|---|---|
+| `your_turn` | A direct challenger finishes their first turn ("Tolu don challenge you! 🔥"), the turn passes, or the duel goes to a tie-break | Whoever must play now (both but the last player, for a tie-break) | `duels`, `/duel/{id}` |
+| `duel_expiring` | 24 h and 4 h before the turn runs out | Whoever's turn it is | `duels`, `/duel/{id}` |
+| `duel_result` | A duel ends, by points or by time | Each player who didn't end it | `duels`, `/duel/{id}` |
+| `friend_joined` | A friend request arrives, or yours is accepted | The other player | `friends`, `/friends` |
+| `daily_live` | 09:00 WAT | Players who played a Daily in the last week and not yet today (with their streak) | `daily`, `/daily/play` |
+
+`league_recap`, `party_invite` and `content_correction` come with leagues, party rooms and re-scoring. A player's waiting push about a duel is dropped once they act in it.
 
 ## 5. Deep links
 | URL | App route | Web fallback |

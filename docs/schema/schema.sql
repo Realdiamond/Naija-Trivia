@@ -65,8 +65,12 @@ CREATE TABLE devices (
   model           text,
   browser         text,                                -- web only, e.g. 'chrome_android', 'safari_ios'
   ram_mb          int,
-  last_seen_at    timestamptz NOT NULL DEFAULT now()
+  last_seen_at    timestamptz NOT NULL DEFAULT now(),
+  token_updated_at timestamptz                         -- when the app last sent this token (migration 0009)
 );
+-- A push token belongs to one device, and the device to whoever signed in on it last.
+CREATE UNIQUE INDEX devices_push_token_key ON devices (push_token) WHERE push_token IS NOT NULL;
+CREATE INDEX devices_user_idx ON devices (user_id) WHERE push_token IS NOT NULL;
 
 -- Guest-to-account merges (TRD FR-AUTH-4): the guest's progress moved into the account; the
 -- dimension sync copies these links to analytics.user_aliases (one timeline per person).
@@ -686,6 +690,31 @@ CREATE TABLE duel_reminders (
   sent_at         timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (duel_id, turn_deadline, stage)
 );
+
+-- Push notifications (migration 0009, build plan step 2.5b, TRD §4.8). Every push is queued in
+-- the same transaction as the move that causes it and sent by the worker. Quiet hours
+-- (22:00–07:00 WAT) move `not_before` to 07:00; a message still unsent at `expires_at` is
+-- dropped. While a message waits, a newer one with the same `collapse_key` replaces it.
+CREATE TABLE push_outbox (
+  id              bigserial PRIMARY KEY,
+  user_id         text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type            text NOT NULL,                       -- your_turn, duel_expiring, duel_result, friend_joined, daily_live
+  params          jsonb NOT NULL DEFAULT '{}',         -- the facts; the words are chosen when it is sent
+  collapse_key    text,                                -- 'duel:{id}', 'friend:{user}', 'daily:{n}'
+  not_before      timestamptz NOT NULL,
+  expires_at      timestamptz NOT NULL,
+  created_at      timestamptz NOT NULL,
+  attempts        int NOT NULL DEFAULT 0,
+  locked_until    timestamptz,                         -- claimed by a worker until then
+  sent_at         timestamptz,
+  outcome         text CHECK (outcome IN ('sent','logged','no_device','capped','expired','failed')),
+  CHECK ((sent_at IS NULL) = (outcome IS NULL))
+);
+CREATE UNIQUE INDEX push_outbox_waiting_key ON push_outbox (user_id, collapse_key)
+  WHERE sent_at IS NULL AND collapse_key IS NOT NULL;
+CREATE INDEX push_outbox_due_idx ON push_outbox (not_before) WHERE sent_at IS NULL;
+-- The daily cap counts what each player was sent today.
+CREATE INDEX push_outbox_sent_idx ON push_outbox (user_id, sent_at) WHERE outcome = 'sent';
 
 -- Analytics events loaded from the Redis stream (doc 18 §15). They live in Postgres until
 -- volume calls for ClickHouse (docs/schema/analytics.clickhouse.sql has the same columns).
