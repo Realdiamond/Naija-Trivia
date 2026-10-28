@@ -1,11 +1,11 @@
 /**
- * The Staff tab (build plan step 2.9a): live numbers for today against yesterday, work waiting,
- * player lookup, and signing this phone out. Refreshes every 30 seconds while open, or on demand.
+ * The Staff tab (build plan step 2.9): alerts, live numbers for today against yesterday, work
+ * waiting, player lookup, and signing this phone out. Refreshes every 30 seconds while open, or on demand.
  */
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { routes, type AdminCount, type AdminOverview } from '@whosabi/shared-types';
+import { routes, type AdminCount, type AdminOverview, type StaffAlertsResponse } from '@whosabi/shared-types';
 import { errorMessage } from '../../api';
 import { StaffGate } from '../../features/staff/StaffGate';
 import { staffGet, staffSignOut, useStaff } from '../../features/staff/session';
@@ -30,6 +30,12 @@ function LiveNumbers() {
     queryFn: () => staffGet<AdminOverview>(routes.admin.overview()),
     refetchInterval: 30_000,
   });
+  const alerts = useQuery({
+    queryKey: ['staff', 'overview-alerts'],
+    queryFn: () => staffGet<StaffAlertsResponse>(routes.admin.alerts()),
+    refetchInterval: 30_000,
+  });
+  const unread = alerts.data?.unread ?? 0;
   const o = overview.data;
 
   return (
@@ -53,6 +59,13 @@ function LiveNumbers() {
         <Text variant="caption">{admin?.name}</Text>
       </View>
 
+      <Button
+        label={unread > 0 ? `Alerts · ${unread} new` : 'Alerts'}
+        variant={unread > 0 ? 'accent' : 'outline'}
+        icon="bell"
+        onPress={() => router.push('/staff/alerts')}
+        testID="staff-alerts"
+      />
       {overview.error ? (
         <Text variant="body" color={colors.wrongInk}>
           {errorMessage(overview.error, 'Could not load the numbers. Tap Refresh to try again.')}

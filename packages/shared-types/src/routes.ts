@@ -91,6 +91,11 @@ export const routes = {
     overview: () => '/admin/overview',
     phones: () => '/admin/phones',
     revokePhone: (id: string) => `/admin/phones/${encodeURIComponent(id)}/revoke`,
+    /** This phone's push token, for staff alerts (phone sessions only). */
+    phonePush: () => '/admin/phones/push',
+    alerts: (before?: string) => `/admin/alerts${before ? `?before=${encodeURIComponent(before)}` : ''}`,
+    alertsSeen: () => '/admin/alerts/seen',
+    alertSettings: () => '/admin/alerts/settings',
     resolveReports: (id: string) => `/admin/questions/${encodeURIComponent(id)}/reports/resolve`,
   },
   /** Served by the ingest service, routed by the load balancer (doc 09 §2.11). */

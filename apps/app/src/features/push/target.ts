@@ -3,7 +3,14 @@
  * app's own screens for a push. Anything else opens Home, so a bad push can't send the app
  * somewhere odd.
  */
-const SCREENS = [/^\/duel\/[A-Za-z0-9_-]{3,40}$/, /^\/friends$/, /^\/daily\/play$/];
+const SCREENS = [
+  /^\/duel\/[A-Za-z0-9_-]{3,40}$/,
+  /^\/friends$/,
+  /^\/daily\/play$/,
+  // Staff alerts (step 2.9b); the Staff tab still asks for the fingerprint.
+  /^\/staff\/alerts$/,
+  /^\/staff\/player\/[A-Za-z0-9_-]{3,40}$/,
+];
 
 export interface PushTarget {
   url: string;

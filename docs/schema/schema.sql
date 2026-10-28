@@ -567,7 +567,8 @@ CREATE TABLE admin_users (
   created_at      timestamptz NOT NULL DEFAULT now(),
   -- The player account they use in the app, linked when they sign in there with this Google email
   -- (migration 0010): owners and admins then get the Staff tab.
-  player_id       text REFERENCES users(id) ON DELETE SET NULL
+  player_id       text REFERENCES users(id) ON DELETE SET NULL,
+  alerts_seen_id  bigint NOT NULL DEFAULT 0            -- the newest staff alert they have seen (migration 0011)
 );
 CREATE UNIQUE INDEX admin_users_player_key ON admin_users (player_id) WHERE player_id IS NOT NULL;
 
@@ -582,9 +583,35 @@ CREATE TABLE admin_phone_sessions (
   expires_at      timestamptz NOT NULL,
   last_used_at    timestamptz NOT NULL,
   revoked_at      timestamptz,
-  revoked_by      text
+  revoked_by      text,
+  push_token      text                                 -- staff alerts reach this phone (migration 0011)
 );
 CREATE INDEX admin_phone_sessions_admin_idx ON admin_phone_sessions (admin_id, created_at DESC);
+
+-- Staff alerts (migration 0011, build plan step 2.9b): pushed to staff phones at once, day or night,
+-- and listed in the Staff tab. All kinds are on until someone switches one off.
+CREATE TABLE staff_alerts (
+  id              bigserial PRIMARY KEY,
+  kind            text NOT NULL CHECK (kind IN ('problem','signup','payment_opened','payment_started','payment_paid')),
+  title           text NOT NULL,
+  body            text NOT NULL,
+  url             text,                                -- where tapping it goes in the Staff tab
+  dedupe_key      text UNIQUE,                         -- one alert per key, e.g. 'daily_missing:2026-11-03'
+  created_at      timestamptz NOT NULL,
+  attempts        int NOT NULL DEFAULT 0,
+  locked_until    timestamptz,
+  delivered_at    timestamptz                          -- pushed (or nobody to push to)
+);
+CREATE INDEX staff_alerts_waiting_idx ON staff_alerts (id) WHERE delivered_at IS NULL;
+CREATE INDEX staff_alerts_created_idx ON staff_alerts (created_at DESC);
+
+-- A kind someone switched off (or back on). No row means on.
+CREATE TABLE admin_alert_prefs (
+  admin_id        text NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+  kind            text NOT NULL,
+  enabled         boolean NOT NULL,
+  PRIMARY KEY (admin_id, kind)
+);
 
 CREATE TABLE admin_role_grants (
   admin_id        text NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,

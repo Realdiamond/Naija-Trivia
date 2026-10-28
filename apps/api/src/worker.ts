@@ -10,6 +10,7 @@
  */
 import { setTimeout as sleep } from 'node:timers/promises';
 import { pino } from 'pino';
+import { raiseStaffAlert, sendStaffAlerts } from './admin/alerts';
 import { systemClock } from './clock';
 import { loadConfig } from './config';
 import { DailyService } from './daily/service';
@@ -52,17 +53,36 @@ await loader.ensureGroup();
 const stop = new AbortController();
 const pause = (ms: number) => sleep(ms, undefined, { signal: stop.signal }).catch(() => undefined);
 
+/** A job that fails this many runs in a row raises a staff alert (step 2.9b). */
+const FAILURES_TO_ALERT = 3;
+
 /** Runs `job` every `intervalMs`, one run at a time, until shutdown. */
 async function every(name: string, intervalMs: number, job: () => Promise<unknown>): Promise<void> {
+  let failures = 0;
   while (!stop.signal.aborted) {
     try {
       const result = await job();
+      failures = 0;
       if (result) log.info({ job: name, result }, 'job done');
     } catch (err) {
       log.error({ err, job: name }, 'job failed');
+      if (++failures === FAILURES_TO_ALERT) await jobFailing(name, err);
     }
     await pause(intervalMs);
   }
+}
+
+/** At most one alert per job every 6 hours, however many workers see it fail. */
+async function jobFailing(name: string, err: unknown): Promise<void> {
+  const now = systemClock.now();
+  const message = err instanceof Error ? err.message : String(err);
+  await raiseStaffAlert(pool, {
+    kind: 'problem',
+    title: 'A background job keeps failing',
+    body: `“${name}” failed ${FAILURES_TO_ALERT} times in a row: ${message.slice(0, 120)}`,
+    dedupeKey: `job_failing:${name}:${Math.floor(now / (6 * 3_600_000))}`,
+    now,
+  }).catch((alertErr: unknown) => log.error({ err: alertErr }, 'could not raise a staff alert'));
 }
 
 async function loadEvents(): Promise<void> {
@@ -80,6 +100,7 @@ async function loadEvents(): Promise<void> {
 const jobs = [
   every('expire-duels', 30 * SECOND, () => expireDueDuels(duels)),
   every('push-send', 5 * SECOND, () => sendDuePushes(deps, transport)),
+  every('staff-alerts', 5 * SECOND, () => sendStaffAlerts(deps, transport)),
   every('turn-reminders', MINUTE, () => queueTurnReminders(deps)),
   every('daily-reminder', 5 * MINUTE, () => queueDailyReminders(deps)),
   every('push-prune', 60 * MINUTE, () => prunePushes(deps)),

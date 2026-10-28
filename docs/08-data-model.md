@@ -79,7 +79,8 @@ erDiagram
 | `consent_records` | An append-only consent history (NDPA accountability) |
 | `dsar_requests` | Tracks the 30-day statutory clock |
 | `admin_users` / `admin_role_grants` | Staff identities from Google Workspace SSO (no passwords). Privileged roles need a second approver, and a CHECK stops anyone approving their own grant. `expires_at` time-boxes contractors. `player_id` is the player account a staff member uses in the app, set when they sign in there with their staff Google account (players' emails are not kept) |
-| `admin_phone_sessions` | Staff tools on a phone: 30-day sessions for owners and admins, only the token's hash kept, listed in the console and signed out there (`revoked_at`, `revoked_by`) |
+| `admin_phone_sessions` | Staff tools on a phone: 30-day sessions for owners and admins, only the token's hash kept, listed in the console and signed out there (`revoked_at`, `revoked_by`). `push_token` takes staff alerts to that phone |
+| `staff_alerts` / `admin_alert_prefs` | Alerts for the team (problems, sign-ups, payments), raised in the same transaction as what caused them and pushed by the worker; `dedupe_key` keeps one per key (one "no Daily" per date). A row in `admin_alert_prefs` is a kind someone switched off (or back on); `admin_users.alerts_seen_id` gives the unread count |
 | `admin_audit_log` | Every admin action **and every view of a player**. Append-only (the app role can only INSERT and SELECT). `reason` is required for PII reveals, exports and grants |
 | `user_notes` | Internal notes on a player for support and moderation; never shown to the player |
 | `integrity_flags` | Anti-cheat and abuse signals with a 0–1 risk score and evidence, waiting for a human decision |

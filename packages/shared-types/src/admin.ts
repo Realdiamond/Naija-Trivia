@@ -295,3 +295,62 @@ export const AdminOverview = z.object({
   }),
 });
 export type AdminOverview = z.infer<typeof AdminOverview>;
+
+// ----- Staff alerts (step 2.9b) -----
+
+/** What staff can be alerted about; each can be switched off in the Staff tab. */
+export const StaffAlertKind = z.enum([
+  'problem',
+  'signup',
+  'payment_opened',
+  'payment_started',
+  'payment_paid',
+]);
+export type StaffAlertKind = z.infer<typeof StaffAlertKind>;
+
+export const StaffAlert = z.object({
+  id: z.string(),
+  kind: StaffAlertKind,
+  title: z.string(),
+  body: z.string(),
+  /** Where tapping it goes in the Staff tab, e.g. /staff/player/u_123. */
+  url: z.string().nullable(),
+  created_at: z.iso.datetime(),
+  unread: z.boolean(),
+});
+export type StaffAlert = z.infer<typeof StaffAlert>;
+
+export const StaffAlertsQuery = z.object({ before: z.coerce.number().int().positive().optional() });
+export const StaffAlertsResponse = z.object({
+  alerts: z.array(StaffAlert),
+  unread: z.number().int(),
+  /** Pass back as `before` for older alerts; null when there are none. */
+  next_before: z.string().nullable(),
+});
+export type StaffAlertsResponse = z.infer<typeof StaffAlertsResponse>;
+
+export const StaffAlertsSeen = z.object({ up_to: z.coerce.number().int().positive() }).strict();
+
+export const StaffAlertSetting = z.object({
+  kind: StaffAlertKind,
+  label: z.string(),
+  description: z.string(),
+  enabled: z.boolean(),
+});
+export type StaffAlertSetting = z.infer<typeof StaffAlertSetting>;
+
+export const StaffAlertSettingsResponse = z.object({ settings: z.array(StaffAlertSetting) });
+export type StaffAlertSettingsResponse = z.infer<typeof StaffAlertSettingsResponse>;
+
+export const UpdateStaffAlertSetting = z.object({ kind: StaffAlertKind, enabled: z.boolean() }).strict();
+
+/** The phone's push token, so staff alerts reach this phone (phone sessions only). */
+export const StaffPhonePush = z
+  .object({
+    push_token: z
+      .string()
+      .min(20)
+      .max(4096)
+      .regex(/^[A-Za-z0-9:_-]+$/),
+  })
+  .strict();

@@ -11,7 +11,9 @@ export type PushType =
   | 'daily_live'
   | 'league_recap'
   | 'party_invite'
-  | 'content_correction';
+  | 'content_correction'
+  /** To staff phones (step 2.9b), not players. */
+  | 'staff_alert';
 
 export type PushParams =
   | {
@@ -35,7 +37,7 @@ export type PushParams =
   | { type: 'daily_live'; daily_id: number; streak: number };
 
 /** Android notification channels: players can switch each one off in the phone's settings. */
-export type PushChannel = 'duels' | 'friends' | 'daily';
+export type PushChannel = 'duels' | 'friends' | 'daily' | 'staff';
 
 export interface RenderedPush {
   type: PushType;
