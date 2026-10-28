@@ -12,6 +12,11 @@ __pycache__/
 .env.*
 !.env.example
 
+# Next.js (admin console)
+.next/
+next-env.d.ts
+apps/admin/e2e/.output/
+
 # Expo
 .expo/
 web-build/

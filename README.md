@@ -11,6 +11,7 @@ One repository for the game: the Expo app (Android, iOS and web), the backend se
 | [`packages/analytics`](packages/analytics)       | Tracking plan, the client event tracker and server helpers                                                                                                                                        | Built and tested                           |
 | [`apps/api`](apps/api)                           | Fastify API: sign-in (guest, phone, Google, Apple), profiles, friends and blocks, the taste test and async duels, plus its worker (duel expiry, turn reminders, question stats, analytics loader) | Built and tested                           |
 | [`apps/ingest`](apps/ingest)                     | Analytics event intake                                                                                                                                                                            | Built and tested                           |
+| [`apps/admin`](apps/admin)                       | Staff admin console (Next.js): Google sign-in, roles, player search, User 360 with the activity timeline, the audit log                                                                           | Built and tested (v0, step 1.5)            |
 | [`apps/app`](apps/app)                           | Expo app (Expo Router) for Android, iOS and the web: welcome, taste test, sign-in, profile, home, duels, duel links, friends, keyboard play and the desktop layout                                | Built and tested (step 1.4)                |
 | [`docs/`](docs/00-README.md)                     | Product, design and technical docs, schemas and seed questions                                                                                                                                    | v1.1                                       |
 
@@ -34,6 +35,14 @@ pnpm --filter @whosabi/api dev              # the API on http://localhost:3000
 pnpm --filter @whosabi/app web              # the app in the browser on http://localhost:8081
 ```
 
+The admin console: add yourself as an owner, then run it and sign in with the development form.
+
+```sh
+pnpm --filter @whosabi/api admin:add you@example.com "Your Name" owner
+cp apps/admin/.env.example apps/admin/.env.local
+pnpm --filter @whosabi/admin dev            # the console on http://localhost:3002
+```
+
 Sign-in codes are not texted in development: the API writes them to its log. To try the app on an Android phone with Expo Go, copy `apps/app/.env.example` to `apps/app/.env`, set `EXPO_PUBLIC_API_URL` to your computer's address on the Wi-Fi (like `http://192.168.1.20:3000`), run `pnpm --filter @whosabi/app dev` and scan the QR code.
 
 ## Checks
@@ -47,7 +56,7 @@ pnpm typecheck      # TypeScript in every package
 pnpm test           # Vitest in every package
 ```
 
-CI also builds the web app and runs the end-to-end tests: Playwright plays the app in Chromium against the real API (`apps/app/e2e`). Locally, with Postgres and Redis running:
+CI also builds the web app and the admin console and runs their end-to-end tests: Playwright drives them in Chromium against the real API (`apps/app/e2e`, `apps/admin/e2e`). Locally, with Postgres and Redis running:
 
 ```sh
 EXPO_PUBLIC_API_URL=http://localhost:3100 pnpm --filter @whosabi/app build:web

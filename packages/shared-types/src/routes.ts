@@ -47,6 +47,24 @@ export const routes = {
   duelRematch: (duelId: string) => `${API_PREFIX}/duels/${encodeURIComponent(duelId)}/rematch`,
   invite: (token: string) => `${API_PREFIX}/invites/${encodeURIComponent(token)}`,
   inviteAccept: (token: string) => `${API_PREFIX}/invites/${encodeURIComponent(token)}/accept`,
+  admin: {
+    authGoogle: () => '/admin/auth/google',
+    authDev: () => '/admin/auth/dev',
+    authLogout: () => '/admin/auth/logout',
+    me: () => '/admin/me',
+    users: (q: string) => `/admin/users?q=${encodeURIComponent(q)}`,
+    user: (id: string) => `/admin/users/${encodeURIComponent(id)}`,
+    timeline: (id: string) => `/admin/users/${encodeURIComponent(id)}/timeline`,
+    reveal: (id: string) => `/admin/users/${encodeURIComponent(id)}/reveal`,
+    userAudit: (id: string) => `/admin/users/${encodeURIComponent(id)}/audit`,
+    audit: () => '/admin/audit',
+    staff: () => '/admin/staff',
+    staffRoles: (id: string) => `/admin/staff/${encodeURIComponent(id)}/roles`,
+    staffRole: (id: string, role: string) =>
+      `/admin/staff/${encodeURIComponent(id)}/roles/${encodeURIComponent(role)}`,
+    approveRole: (id: string, role: string) =>
+      `/admin/staff/${encodeURIComponent(id)}/roles/${encodeURIComponent(role)}/approve`,
+  },
   /** Served by the ingest service, routed by the load balancer (doc 09 §2.11). */
   events: () => `${API_PREFIX}/events`,
 } as const;

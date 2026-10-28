@@ -52,9 +52,17 @@ jobs:
       - run: pnpm --filter @whosabi/app exec playwright install --with-deps chromium
       - name: End-to-end tests (the web app against the API)
         run: pnpm --filter @whosabi/app e2e
+      - name: Build the admin console
+        run: pnpm --filter @whosabi/admin build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+      - name: End-to-end tests (the admin console against the API and worker)
+        run: pnpm --filter @whosabi/admin e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: e2e-report
-          path: apps/app/e2e/.output
+          path: |
+            apps/app/e2e/.output
+            apps/admin/e2e/.output
           retention-days: 7

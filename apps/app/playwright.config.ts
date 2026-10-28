@@ -22,7 +22,7 @@ export default defineConfig({
   projects: [{ name: 'phone-chromium', use: { browserName: 'chromium' } }],
   webServer: [
     {
-      command: 'node e2e/api.mjs',
+      command: 'node ../api/scripts/e2e-server.mjs',
       url: 'http://localhost:3100/health',
       reuseExistingServer: !CI,
       timeout: 120_000,

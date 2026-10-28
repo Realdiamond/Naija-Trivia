@@ -1,0 +1,47 @@
+/** The signed-in console: the top bar with search, and the sections this staff member may use. */
+import Link from 'next/link';
+import type { ReactNode } from 'react';
+import type { AdminProfile } from '@whosabi/shared-types';
+import { adminApi } from '../../lib/api';
+import { signOut } from '../login/actions';
+import { NavLinks } from './NavLinks';
+
+export default async function ConsoleLayout({ children }: { children: ReactNode }) {
+  const me = await adminApi<AdminProfile>('/admin/me');
+  const links = [
+    ...(me.permissions.includes('players.search') ? [{ href: '/players', label: 'Players' }] : []),
+    ...(me.permissions.includes('audit.view') ? [{ href: '/audit', label: 'Audit log' }] : []),
+    ...(me.permissions.includes('staff.manage') ? [{ href: '/staff', label: 'Staff and roles' }] : []),
+  ];
+  return (
+    <>
+      <header className="topbar">
+        <Link className="brand" href="/players">
+          Who Sabi? <span>Admin</span>
+        </Link>
+        {me.permissions.includes('players.search') ? (
+          <form className="search" action="/players" role="search">
+            <input
+              name="q"
+              aria-label="Search players"
+              placeholder="Username, user ID, phone, device ID or duel ID"
+              data-testid="search"
+            />
+          </form>
+        ) : null}
+        <div className="who">
+          <span data-testid="staff-name">
+            {me.name} · {me.roles.join(', ') || 'no roles'}
+          </span>
+          <form action={signOut}>
+            <button type="submit">Sign out</button>
+          </form>
+        </div>
+      </header>
+      <div className="shell">
+        <NavLinks links={links} />
+        <main className="main">{children}</main>
+      </div>
+    </>
+  );
+}

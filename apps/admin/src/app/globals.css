@@ -1,0 +1,326 @@
+/* Who Sabi? Admin (mockups 31 and 32): the game's colours on a calmer, denser layout. */
+:root {
+  --primary: #008751;
+  --primary-ink: #006b40;
+  --primary-tint: #e3f3ea;
+  --accent: #ff7a00;
+  --gold: #ffb547;
+  --ink: #14231b;
+  --ink-soft: #3f4a44;
+  --muted: #5a6660;
+  --bg: #f6f4ee;
+  --surface: #ffffff;
+  --border: #e8e2d2;
+  --border-strong: #d9d1be;
+  --wrong: #b3191c;
+  --wrong-tint: #fde8e8;
+  --night: #14231b;
+  --radius: 12px;
+  font-family:
+    'Nunito',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+a {
+  color: var(--primary-ink);
+}
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 19px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 24px;
+  background: var(--night);
+  color: #fff;
+}
+.brand {
+  font-weight: 900;
+  font-size: 20px;
+  white-space: nowrap;
+  color: #fff;
+  text-decoration: none;
+}
+.brand span {
+  color: var(--gold);
+}
+.search {
+  flex: 1;
+  max-width: 640px;
+}
+.search input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #2c3d33;
+  background: #22332a;
+  color: #fff;
+  font: inherit;
+}
+.search input::placeholder {
+  color: #9aa79f;
+}
+.who {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+.who form {
+  margin: 0;
+}
+.shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: calc(100vh - 62px);
+}
+.nav {
+  padding: 20px 12px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nav a {
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 700;
+}
+.nav a[aria-current='page'] {
+  background: var(--primary-tint);
+  color: var(--primary-ink);
+}
+.main {
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 13px;
+}
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--primary-tint);
+  color: var(--primary-ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+.badge.warn {
+  background: #fff1e3;
+  color: #a84300;
+}
+.badge.off {
+  background: #eee;
+  color: var(--muted);
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.tile b {
+  display: block;
+  font-size: 20px;
+  margin-top: 2px;
+}
+.tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.tabs a {
+  padding: 10px 14px;
+  text-decoration: none;
+  color: var(--ink-soft);
+  font-weight: 700;
+  border-bottom: 3px solid transparent;
+}
+.tabs a[aria-current='page'] {
+  color: var(--ink);
+  border-color: var(--primary);
+}
+.grid2 {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 700;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 9px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+td.mono,
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+
+button,
+.button {
+  font: inherit;
+  font-weight: 800;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+button.primary,
+.button.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+button.danger {
+  color: var(--wrong);
+  border-color: #f0b8b9;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+input,
+select {
+  font: inherit;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 2px solid var(--border-strong);
+  background: #fff;
+}
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 14px;
+}
+form.inline {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.error {
+  color: var(--wrong);
+  background: var(--wrong-tint);
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+.ok {
+  color: var(--primary-ink);
+  background: var(--primary-tint);
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+
+.session {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.session ol {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 14px;
+  border-left: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.session li {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 12px;
+  position: relative;
+}
+.session li::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.login {
+  max-width: 420px;
+  margin: 12vh auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

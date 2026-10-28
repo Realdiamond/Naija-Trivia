@@ -13,6 +13,7 @@
     "db:migrate": "tsx --env-file-if-exists=.env src/scripts/migrate.ts",
     "db:seed": "tsx --env-file-if-exists=.env src/scripts/seed.ts",
     "db:e2e": "tsx --env-file-if-exists=.env src/scripts/e2e-db.ts",
+    "admin:add": "tsx --env-file-if-exists=.env src/scripts/admin-add.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
