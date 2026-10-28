@@ -24,7 +24,8 @@ export interface IdTokenVerifier {
 }
 
 export interface AuthProviders {
-  sms: SmsSender;
+  /** Null when phone sign-in is off (production without an SMS provider). */
+  sms: SmsSender | null;
   captcha: CaptchaVerifier;
   /** Null when the sign-in method is not configured. */
   google: IdTokenVerifier | null;
@@ -88,8 +89,9 @@ export function createAuthProviders(
   const senders: SmsSender[] = [];
   if (config.sms.termii) senders.push(new TermiiSms(config.sms.termii));
   if (config.sms.africasTalking) senders.push(new AfricasTalkingSms(config.sms.africasTalking));
-  // loadConfig refuses to start production without a provider, so DevSms never runs there.
-  const sms = senders.length > 0 ? new FailoverSms(senders, log) : new DevSms(log);
+  // DevSms only outside production; production without a provider has phone sign-in off.
+  const sms =
+    senders.length > 0 ? new FailoverSms(senders, log) : config.phoneSignIn ? new DevSms(log) : null;
 
   const captcha: CaptchaVerifier = config.turnstileSecret
     ? new TurnstileVerifier(config.turnstileSecret)

@@ -12,6 +12,8 @@ const Env = z.object({
   JWT_PUBLIC_KEY: z.string().optional(),
   /** HMAC key for pseudonymous analytics ids (doc 18 §15). */
   ANALYTICS_KEY: z.string().min(32).optional(),
+  /** Days the worker keeps raw analytics events in Postgres; daily counts are kept for good. */
+  ANALYTICS_RETENTION_DAYS: z.coerce.number().int().min(7).max(400).default(60),
   CORS_ORIGINS: z.string().default('http://localhost:8081,http://localhost:19006'),
   COOKIE_SECURE: z.enum(['true', 'false']).default('true'),
   /** Round-trip estimate used for answer timing until per-session RTT sampling lands. */
@@ -22,7 +24,7 @@ const Env = z.object({
   /** HMAC key for the sign-in codes kept in Redis (32+ characters). */
   OTP_SECRET: z.string().min(32).optional(),
   OTP_SENDS_PER_IP_PER_HOUR: z.coerce.number().int().min(1).default(20),
-  /** SMS (TRD §3): Termii first, Africa's Talking as the fallback. */
+  /** SMS (TRD §3): Termii first, Africa's Talking as the fallback. In production, phone sign-in is on only when one is set. */
   TERMII_API_KEY: z.string().min(1).optional(),
   TERMII_SENDER_ID: z.string().min(1).max(11).default('WhoSabi'),
   AT_USERNAME: z.string().min(1).optional(),
@@ -33,7 +35,7 @@ const Env = z.object({
     .string()
     .regex(/^[A-Za-z0-9+/]{11}$/)
     .optional(),
-  /** Cloudflare Turnstile secret for OTP sends. */
+  /** Cloudflare Turnstile secret for OTP sends (required in production when phone sign-in is on). */
   TURNSTILE_SECRET: z.string().min(1).optional(),
   /** OAuth client ids (Android, iOS, web) whose Google ID tokens we accept; empty turns Google sign-in off. */
   GOOGLE_CLIENT_IDS: z.string().default(''),
@@ -51,11 +53,14 @@ export interface Config {
   jwtPrivateKeyPem?: string;
   jwtPublicKeyPem?: string;
   analyticsKey: string;
+  analyticsRetentionDays: number;
   corsOrigins: string[];
   cookieSecure: boolean;
   defaultRttMs: number;
   guestSignupsPerIpPerHour: number;
   publicWebUrl: string;
+  /** Phone codes: on outside production (codes go to the log), and in production once an SMS provider is set. */
+  phoneSignIn: boolean;
   otpSecret: string;
   otpSendsPerIpPerHour: number;
   sms: {
@@ -80,16 +85,12 @@ const list = (value: string) =>
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const e = Env.parse(env);
+  const smsProvider = Boolean(e.TERMII_API_KEY || (e.AT_USERNAME && e.AT_API_KEY));
   if (e.NODE_ENV === 'production') {
-    const missing = [
-      'JWT_PRIVATE_KEY',
-      'JWT_PUBLIC_KEY',
-      'ANALYTICS_KEY',
-      'OTP_SECRET',
-      'TURNSTILE_SECRET',
-    ].filter((k) => !env[k]);
-    if (!e.TERMII_API_KEY && !(e.AT_USERNAME && e.AT_API_KEY))
-      missing.push('TERMII_API_KEY or AT_USERNAME + AT_API_KEY');
+    const required = ['JWT_PRIVATE_KEY', 'JWT_PUBLIC_KEY', 'ANALYTICS_KEY'];
+    // Phone sign-in stays off until an SMS provider is set; then its secrets are needed too.
+    if (smsProvider) required.push('OTP_SECRET', 'TURNSTILE_SECRET');
+    const missing = required.filter((k) => !env[k]);
     if (missing.length) throw new Error(`Missing required production settings: ${missing.join(', ')}`);
   }
   return {
@@ -102,11 +103,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     jwtPrivateKeyPem: e.JWT_PRIVATE_KEY,
     jwtPublicKeyPem: e.JWT_PUBLIC_KEY,
     analyticsKey: e.ANALYTICS_KEY ?? DEV_ANALYTICS_KEY,
+    analyticsRetentionDays: e.ANALYTICS_RETENTION_DAYS,
     corsOrigins: list(e.CORS_ORIGINS),
     cookieSecure: e.COOKIE_SECURE === 'true',
     defaultRttMs: e.DEFAULT_RTT_MS,
     guestSignupsPerIpPerHour: e.GUEST_SIGNUPS_PER_IP_PER_HOUR,
     publicWebUrl: e.PUBLIC_WEB_URL.replace(/\/+$/, ''),
+    phoneSignIn: e.NODE_ENV !== 'production' || smsProvider,
     otpSecret: e.OTP_SECRET ?? DEV_OTP_SECRET,
     otpSendsPerIpPerHour: e.OTP_SENDS_PER_IP_PER_HOUR,
     sms: {

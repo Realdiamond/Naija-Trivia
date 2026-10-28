@@ -3,6 +3,7 @@ export const API_PREFIX = '/v1';
 
 export const routes = {
   health: () => '/health',
+  authMethods: () => `${API_PREFIX}/auth/methods`,
   authGuest: () => `${API_PREFIX}/auth/guest`,
   authRefresh: () => `${API_PREFIX}/auth/refresh`,
   authLogout: () => `${API_PREFIX}/auth/logout`,

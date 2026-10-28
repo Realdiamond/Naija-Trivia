@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Daily Sabi Challenge result</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFDF7; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; padding: 10px 16px 18px; overflow: hidden">
+  <div style="display: flex; align-items: center; gap: 4px">
+    <a href="Home.dc.html" aria-label="Back to home" style="width: 48px; height: 48px; margin-left: -8px; display: flex; align-items: center; justify-content: center; color: #14231B">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 26px">Daily Sabi #142</h1>
+  </div>
+
+  <div style="margin-top: 6px; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-radius: 16px; background: #14231B; color: #FFFFFF">
+    <div>
+      <p style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 46px; line-height: 1">6/7</p>
+      <p style="margin: 2px 0 0; font-size: 14px; font-weight: 700">in 58 seconds</p>
+    </div>
+    <div style="text-align: right">
+      <p style="margin: 0; display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: 22px; font-weight: 800; color: #FFB547">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><path d="M12 3c.5 3.5 5 5.5 5 10.5a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5.5.3 1.6 1 2.6 2 3.2C11.5 8.5 11 6 12 3z"></path></svg>12 days</p>
+      <p style="margin: 2px 0 0; font-size: 13px; font-weight: 700">1 free streak freeze left this week</p>
+    </div>
+  </div>
+
+  <ol aria-label="Your answers" style="list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px">
+    <sc-for list="{{grid}}" as="g" hint-placeholder-count="7">
+      <li style="display: flex; flex-direction: column; align-items: center; gap: 4px">
+        <span style="{{g.box}}" aria-label="{{g.label}}">
+          <sc-if value="{{g.ok}}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: none; stroke: #FFFFFF; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if>
+          <sc-if value="{{g.bad}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: none; stroke: #FFFFFF; stroke-width: 3; stroke-linecap: round"><path d="M7 7l10 10M17 7L7 17"></path></svg></sc-if>
+        </span>
+        <span style="font-size: 11px; font-weight: 800; color: #5A6660">{{g.tag}}</span>
+      </li>
+    </sc-for>
+  </ol>
+
+  <div style="margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <div style="padding: 12px; border-radius: 14px; background: #E3F3EA">
+      <p style="margin: 0; font-size: 22px; font-weight: 800; color: #0B6B33">82%</p>
+      <p style="margin: 2px 0 0; font-size: 13px; font-weight: 700; line-height: 1.35">of Naija you sabi pass today</p>
+    </div>
+    <a href="Leagues.dc.html" style="display: block; padding: 12px; border-radius: 14px; background: #FFF1E3; color: #14231B; text-decoration: none">
+      <p style="margin: 0; font-size: 22px; font-weight: 800">#214</p>
+      <p style="margin: 2px 0 0; font-size: 13px; font-weight: 700; line-height: 1.35">in Lagos today · Anambra dey lead</p>
+    </a>
+  </div>
+  <p style="margin: 10px 0 0; font-size: 14px; font-weight: 700; color: #3F4A44">+70 coins · +112 XP</p>
+
+  <section style="margin-top: 14px; border-radius: 16px; background: #FFFFFF; border: 1px solid #E8E2D2; padding: 14px">
+    <h2 style="margin: 0; font-size: 16px; font-weight: 800">Share your result</h2>
+    <p style="margin: 8px 0 0; padding: 10px 12px; border-radius: 10px; background: #F3EEE1; font-size: 14px; line-height: 1.5; font-weight: 700; white-space: pre-line">Who Sabi? #142  6/7 ⏱ 58s
+🟩🟩🟩🟥🟩🟩🟩 🔥12
+whosabi.ng/daily/142</p>
+    <p style="margin: 6px 0 0; font-size: 12px; font-weight: 700; color: #5A6660">Only squares and your score, so nobody sees the answers.</p>
+    <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <button type="button" style="height: 46px; border: 0; border-radius: 12px; background: #FF7A00; color: #14231B; font: 800 14px Nunito, system-ui, sans-serif; cursor: pointer">WhatsApp</button>
+      <button type="button" style="height: 46px; border: 2px solid #D9D1BE; border-radius: 12px; background: #FFFFFF; color: #14231B; font: 800 14px Nunito, system-ui, sans-serif; cursor: pointer">X</button>
+      <button type="button" style="height: 46px; border: 2px solid #D9D1BE; border-radius: 12px; background: #FFFFFF; color: #14231B; font: 800 14px Nunito, system-ui, sans-serif; cursor: pointer">Copy</button>
+    </div>
+  </section>
+
+  <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px">
+    <a href="Challenge.dc.html" style="display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 12px; background: #008751; color: #FFFFFF; font-weight: 800; font-size: 16px; text-decoration: none">Challenge a friend on Music</a>
+    <a href="RoundReview.dc.html" style="display: flex; align-items: center; justify-content: center; height: 40px; font-weight: 800; font-size: 15px">See answers and facts</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const box = (ok) => 'width: 100%; aspect-ratio: 1; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: ' + (ok ? '#0B6B33' : '#B3191C');
+    const results = [true, true, true, false, true, true, true];
+    const tags = ['Slang', 'Nolly', 'Music', 'Food', 'Mixed', 'Slang', 'Boss'];
+    return {
+      grid: results.map((ok, i) => ({
+        ok,
+        bad: !ok,
+        tag: tags[i],
+        box: box(ok),
+        label: 'Question ' + (i + 1) + ': ' + (ok ? 'correct' : 'wrong')
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

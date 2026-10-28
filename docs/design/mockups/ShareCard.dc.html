@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Duel share card</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 693px; box-sizing: border-box; background: #008751; color: #FFFFFF; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+  <div aria-hidden="true" style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); height: 39px; flex-shrink: 0">
+    <sc-for list="{{pattern}}" as="p" hint-placeholder-count="10">
+      <div style="{{p.cell}}"><div style="{{p.mark}}"></div></div>
+    </sc-for>
+  </div>
+  <div style="flex: 1; display: flex; flex-direction: column; align-items: center; padding: 26px 24px 22px; box-sizing: border-box; text-align: center">
+    <p style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 30px; line-height: 1">Who Sabi?</p>
+    <p style="margin: 4px 0 0; font-size: 14px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase">Duel result</p>
+
+    <div style="margin-top: 22px; width: 100%; border-radius: 22px; background: #FFFDF7; color: #14231B; padding: 22px 18px 20px; box-sizing: border-box">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 18px">
+        <div>
+          <span aria-hidden="true" style="width: 70px; height: 70px; margin: 0 auto; border-radius: 50%; background: #008751; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border: 4px solid #FFB547">
+            <svg viewBox="0 0 40 40" width="58" height="58" style="fill: #FFFDF7"><circle cx="20" cy="16" r="7"></circle><path d="M7 38c1.5-8 7-12 13-12s11.5 4 13 12z"></path></svg>
+          </span>
+          <p style="margin: 6px 0 0; font-size: 14px; font-weight: 800">ToluSabi</p>
+          <p style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 34px; line-height: 1.05; color: #006B40">1,318</p>
+        </div>
+        <span style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px; color: #5A6660">vs</span>
+        <div>
+          <span aria-hidden="true" style="width: 70px; height: 70px; margin: 0 auto; border-radius: 50%; background: #C0392B; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 28px; border: 4px solid #E8E2D2">F</span>
+          <p style="margin: 6px 0 0; font-size: 14px; font-weight: 800">FemiTheGreat</p>
+          <p style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 34px; line-height: 1.05">1,204</p>
+        </div>
+      </div>
+      <div style="margin: 18px auto 0; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: #FBE6E3">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: none; stroke: #C0392B; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><path d="M3 11h18a9 9 0 0 1-18 0z"></path><path d="M8 7.5c0-1.5 1-2 1-3.5M12 7.5c0-1.5 1-2 1-3.5M16 7.5c0-1.5 1-2 1-3.5"></path></svg>
+        <span style="font-size: 14px; font-weight: 800">Won the Food round 486 to 386</span>
+      </div>
+      <p style="margin: 16px 0 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 26px; line-height: 1.15">Tolu don school Femi for Food</p>
+    </div>
+
+    <div style="margin-top: auto; width: 100%; display: flex; align-items: center; gap: 14px; text-align: left">
+      <div aria-hidden="true" style="width: 84px; height: 84px; padding: 6px; box-sizing: border-box; border-radius: 10px; background: #FFFFFF; display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 0; flex-shrink: 0">
+        <sc-for list="{{qr}}" as="q" hint-placeholder-count="81">
+          <span style="{{q}}"></span>
+        </sc-for>
+      </div>
+      <div>
+        <p style="margin: 0; font-size: 18px; font-weight: 800; line-height: 1.25">Think you sabi pass Tolu?</p>
+        <p style="margin: 4px 0 0; font-size: 15px; font-weight: 700">Play free at whosabi.ng</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":693}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const pattern = [];
+    for (let i = 0; i < 10; i++) {
+      const odd = i % 2 === 1;
+      pattern.push({
+        cell: 'display: flex; align-items: center; justify-content: center; background: ' + (odd ? '#FF7A00' : '#006B40'),
+        mark: odd
+          ? 'width: 14px; height: 14px; background: #FFFDF7; transform: rotate(45deg)'
+          : 'width: 16px; height: 16px; border-radius: 50%; background: #FF7A00'
+      });
+    }
+    const rows = [
+      '111101111',
+      '100100001',
+      '101110101',
+      '100011001',
+      '111010111',
+      '000110100',
+      '111011010',
+      '100101101',
+      '111100111'
+    ];
+    const qr = [];
+    rows.forEach((r) => r.split('').forEach((c) => qr.push('display: block; aspect-ratio: 1; background: ' + (c === '1' ? '#14231B' : '#FFFFFF'))));
+    return { pattern, qr };
+  }
+}
+</script>
+</body>
+</html>

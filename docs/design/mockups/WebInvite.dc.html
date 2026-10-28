@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Duel invite in the browser</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; background: #FFFDF7; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #E8E2D2; background: #FFFFFF">
+    <p style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 24px; line-height: 1; color: #006B40">Who Sabi?</p>
+    <a href="#get-app" style="display: flex; align-items: center; height: 40px; padding: 0 14px; border-radius: 999px; border: 2px solid #008751; font-weight: 800; font-size: 14px; text-decoration: none">Get the app</a>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-direction: column; padding: 22px 20px 20px; box-sizing: border-box">
+    <div style="border-radius: 22px; background: #008751; color: #FFFFFF; padding: 22px 18px; text-align: center">
+      <span aria-hidden="true" style="width: 84px; height: 84px; margin: 0 auto; border-radius: 50%; background: #FFFDF7; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border: 4px solid #FF7A00">
+        <svg viewBox="0 0 40 40" width="70" height="70" style="fill: #008751"><circle cx="20" cy="16" r="7"></circle><path d="M7 38c1.5-8 7-12 13-12s11.5 4 13 12z"></path></svg>
+      </span>
+      <h1 style="margin: 14px 0 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 34px; line-height: 1.05">Tolu don challenge you!</h1>
+      <p style="margin: 8px 0 0; font-size: 15px; font-weight: 700">ToluSabi · Oga · Lagos</p>
+    </div>
+
+    <ul style="list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px">
+      <li style="display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 700">
+        <span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 10px; background: #F2E8F7; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+          <svg viewBox="0 0 24 24" width="20" height="20" style="fill: none; stroke: #8E44AD; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><path d="M4 5h16v11H9l-5 4z"></path></svg>
+        </span>
+        Round 1 is Slang &amp; Pidgin. You pick round 2.
+      </li>
+      <li style="display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 700">
+        <span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 10px; background: #E3F3EA; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+          <svg viewBox="0 0 24 24" width="20" height="20" style="fill: none; stroke: #006B40; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+        </span>
+        About 2 minutes · 47 hours left to play
+      </li>
+    </ul>
+
+    <a href="Question.dc.html" style="margin-top: 22px; display: flex; align-items: center; justify-content: center; gap: 10px; height: 58px; border-radius: 12px; background: #FF7A00; color: #14231B; font-weight: 800; font-size: 18px; text-decoration: none">
+      Play in my browser
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+    </a>
+    <p style="margin: 10px 0 0; text-align: center; font-size: 14px; font-weight: 700; color: #3F4A44">No install and no sign-up to play your turn.</p>
+    <p style="margin: 6px 0 0; text-align: center; font-size: 14px; font-weight: 700"><a href="SignIn.dc.html" style="font-weight: 800">Already playing? Sign in</a></p>
+  </div>
+
+  <sc-if value="{{showBanner}}" hint-placeholder-val="{{ true }}">
+    <section aria-label="Cookies" style="position: absolute; left: 12px; right: 12px; bottom: 12px; border-radius: 16px; background: #14231B; color: #FFFFFF; padding: 14px">
+      <p style="margin: 0; font-size: 14px; line-height: 1.45; font-weight: 700">We only store what keeps you playing. Can we also count visits to make the game better?</p>
+      <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <button type="button" onClick="{{dismiss}}" style="height: 44px; border: 0; border-radius: 10px; background: #FFFDF7; color: #14231B; font: 800 15px Nunito, system-ui, sans-serif; cursor: pointer">Allow</button>
+        <button type="button" onClick="{{dismiss}}" style="height: 44px; border: 2px solid #FFFFFF; border-radius: 10px; background: transparent; color: #FFFFFF; font: 800 15px Nunito, system-ui, sans-serif; cursor: pointer">Only what’s needed</button>
+      </div>
+    </section>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const gone = !!(this.state && this.state.gone);
+    return {
+      showBanner: !gone,
+      dismiss: () => this.setState({ gone: true })
+    };
+  }
+}
+</script>
+</body>
+</html>

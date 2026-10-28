@@ -32,10 +32,12 @@ Read **01 → 03** to understand *why* and *what*. Engineers start at **06 → 0
 | 19 | [Build Plan & Progress](19-build-plan.md) | The milestones from doc 15 split into build steps, what is already built, and what waits on the team. A living checklist, updated by every pull request | Everyone building |
 | – | [`Who-Sabi-Complete-Pack.html`](Who-Sabi-Complete-Pack.html) | All 20 docs in one page with a table of contents and rendered diagrams. Open it in any browser | Anyone who doesn't want to read Markdown |
 | – | [`tools/build-pack.sh`](tools/build-pack.sh) | Rebuilds the HTML pack from the Markdown docs (needs pandoc) | Anyone editing the docs |
+| – | [`design/`](design/README.md) | Mockups of all 32 screens (app, web and admin console) as PNGs, one PDF and their source | Everyone, design, mobile |
 | – | [`schema/schema.sql`](schema/schema.sql) | PostgreSQL 16 DDL, 52 tables (validated: loads cleanly with the seed questions, and matches the API's migrations) | Backend |
 | – | [`schema/analytics.clickhouse.sql`](schema/analytics.clickhouse.sql) | ClickHouse DDL for events, sessions, time spent and rollups, with example queries (tested with sample events) | Backend, data |
-| – | [`content/seed-questions.csv`](content/seed-questions.csv) | 104 draft questions across 5 categories (need fact-check before going live) | Content |
+| – | [`content/seed-questions.csv`](content/seed-questions.csv) | 114 draft questions across 5 categories: 104 multiple choice and 10 closest-number tie-breaks (need fact-check before going live) | Content |
 | – | [`content/csv_to_sql.py`](content/csv_to_sql.py) | Converts the question CSV into SQL inserts for the schema (tested) | Backend, content |
+| – | [`content/question-bank/`](content/question-bank/README.md) | The growing bank of researched draft questions, each with a source link, as CSV and an Excel workbook, waiting for the team's fact-check | Content |
 
 ---
 
@@ -50,7 +52,7 @@ Read **01 → 03** to understand *why* and *what*. Engineers start at **06 → 0
 2. **Live party rooms:** up to 50 players; guests join from a WhatsApp link in the browser, no install needed.
 3. **Daily Sabi Challenge:** a Wordle-style shareable grid.
 
-Categories are Slang & Pidgin, Nollywood, Music, Food and Mixed Naija. The game is built for budget Android phones and tight data plans: under 25 MB download, under 1 MB per match, and a Data Saver mode. It runs on **Android, iOS and a full web app** from one codebase, so any invite link can be played without installing. An **admin console** shows the team everything players do, including time spent, with privacy controls built in.
+Categories are Slang & Pidgin, Nollywood, Music, Food, Sport and Mixed Naija. The game is built for budget Android phones and tight data plans: under 25 MB download, under 1 MB per match, and a Data Saver mode. It runs on **Android, iOS and a full web app** from one codebase, so any invite link can be played without installing. An **admin console** shows the team everything players do, including time spent, with privacy controls built in.
 
 **Business.** Revenue comes from rewarded ads, coins and cosmetics, the Sabi Pass subscription (₦1,200/month), and **brand-sponsored packs**, which carry the most upside. At about 250k MAU the modelled revenue is about ₦22M a month, around break-even for a 6-person team **if sponsorship works**.
 

@@ -31,7 +31,7 @@ This document turns the PRD into technical requirements: the platforms, the stac
 | API | **Node.js 22 LTS + Fastify + TypeScript**, Zod schemas → OpenAPI | Fast, typed, one language end-to-end | NestJS (heavier) |
 | Realtime | **Colyseus** (Node) for Party Rooms, WebSocket transport, Redis presence/driver | Built for room-based multiplayer, handles reconnection and state sync, scales horizontally with Redis | Socket.IO (more custom code to write), Firebase RTDB (cost and anti-cheat), Ably/Pusher (cost per message at scale) |
 | Database | **PostgreSQL 16** (managed: AWS RDS) | Relational integrity for duels, ledger and content. JSONB where flexible | MongoDB |
-| Cache, leaderboards, queues | **Redis 7** (ElastiCache). Sorted sets for leaderboards. **BullMQ** for jobs | One dependency covers several needs | Kafka (overkill) |
+| Cache, leaderboards, queues | **Redis 7**. Sorted sets for leaderboards. Background jobs run in a worker process on timers, each safe to run on several workers at once; BullMQ only if a real job queue is needed later | One dependency covers several needs | Kafka (overkill) |
 | Object storage / CDN | S3 + **CloudFront** (Lagos edge) | Images and audio close to users | – |
 | Auth | Own auth service: phone OTP (Termii primary, Africa's Talking fallback) + Google Sign-In + Apple Sign-In (iOS). JWT access (15 min) + rotating refresh (30 days) | Local SMS routes cost about ₦8–12 per OTP. Full control of the guest-to-account merge | Firebase Auth phone (higher per-SMS cost to Nigeria, less control) |
 | Push | FCM for Android, iOS (through APNs) and web push; expo-notifications in the app, the Firebase JS SDK on the web | Free and reliable, one token format everywhere | OneSignal |
@@ -68,7 +68,7 @@ This document turns the PRD into technical requirements: the platforms, the stac
 ### 4.3 Duel service (async)
 - **FR-DUEL-1:** A state machine (see §5.2) runs on the server. Every transition is idempotent and keyed by `(duel_id, round, player)`.
 - **FR-DUEL-2:** Both players get identical questions in a round. Options are shuffled per player with a deterministic seed `hash(duel_id, user_id, question_id)`.
-- **FR-DUEL-3:** Turn deadline 48 h. A BullMQ delayed job handles expiry and sends reminder pushes at T-24h and T-4h.
+- **FR-DUEL-3:** Turn deadline 48 h. The worker ends overdue duels every 30 s and sends reminder pushes at T-24h and T-4h (outside quiet hours).
 - **FR-DUEL-4:** Answer submission is per question (streamed). The server stores `served_at` and `answered_at` (see timing §5.3).
 - **FR-DUEL-5:** Offline tolerance: if the network drops during a question, the client keeps a local answer record. If it re-sends within the grace window (question time limit + 10 s), the answer is accepted with timing clamped to the limit (no speed bonus).
 - **FR-DUEL-6:** Random matchmaking: a Redis queue per rating bucket (±200, widening by 100 every 10 s, max 60 s, then fall back to a "Sabi Bot" with a disclosed bot label).

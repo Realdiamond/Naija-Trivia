@@ -107,7 +107,7 @@ CREATE TYPE question_status AS ENUM ('draft','in_review','approved','live','susp
 CREATE TYPE question_type AS ENUM ('mcq4','true_false','image_mcq','audio_mcq','closest_number');
 
 CREATE TABLE categories (
-  id              text PRIMARY KEY,                    -- 'slang','nollywood','music','food','mixed'
+  id              text PRIMARY KEY,                    -- 'slang','nollywood','music','food','sport','mixed'
   name_en         text NOT NULL,
   name_pcm        text,
   emoji           text,
@@ -635,10 +635,69 @@ CREATE TABLE alert_rules (
   created_at      timestamptz NOT NULL DEFAULT now()
 );
 
+-- Background jobs (migration 0006, build plan step 1.3).
+-- One row per turn reminder: each turn gets its 24 h and 4 h reminder once, however many
+-- workers run. A new turn has a new deadline, so it gets reminders of its own.
+CREATE TABLE duel_reminders (
+  duel_id         text NOT NULL REFERENCES duels(id) ON DELETE CASCADE,
+  turn_deadline   timestamptz NOT NULL,
+  stage           text NOT NULL CHECK (stage IN ('24h','4h')),
+  user_id         text NOT NULL,
+  sent_at         timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (duel_id, turn_deadline, stage)
+);
+
+-- Analytics events loaded from the Redis stream (doc 18 §15). They live in Postgres until
+-- volume calls for ClickHouse (docs/schema/analytics.clickhouse.sql has the same columns).
+-- Raw rows are kept for ANALYTICS_RETENTION_DAYS; analytics_daily keeps the daily counts.
+CREATE TABLE analytics_events (
+  event_id        text PRIMARY KEY,
+  event           text NOT NULL,
+  source          text NOT NULL CHECK (source IN ('client','server')),
+  ts              timestamptz NOT NULL,
+  user_pid        text NOT NULL DEFAULT '',
+  anon_id         text NOT NULL DEFAULT '',
+  session_id      text NOT NULL DEFAULT '',
+  seq             int NOT NULL DEFAULT 0,
+  platform        text NOT NULL DEFAULT '',
+  app_version     text NOT NULL DEFAULT '',
+  os_version      text NOT NULL DEFAULT '',
+  device_model    text NOT NULL DEFAULT '',
+  browser         text NOT NULL DEFAULT '',
+  ram_mb          int NOT NULL DEFAULT 0,
+  network_type    text NOT NULL DEFAULT '',
+  carrier         text NOT NULL DEFAULT '',
+  geo_state       text NOT NULL DEFAULT '',
+  home_state      text NOT NULL DEFAULT '',
+  language        text NOT NULL DEFAULT '',
+  age_band        text NOT NULL DEFAULT '',
+  data_saver      boolean NOT NULL DEFAULT false,
+  screen          text NOT NULL DEFAULT '',
+  props           jsonb NOT NULL DEFAULT '{}',
+  loaded_at       timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX analytics_events_ts_idx ON analytics_events (ts);
+-- A player's timeline (User 360, doc 18 §7.2).
+CREATE INDEX analytics_events_user_idx ON analytics_events (user_pid, ts) WHERE user_pid <> '';
+CREATE INDEX analytics_events_event_idx ON analytics_events (event, ts);
+
+-- Events and distinct players per WAT day, platform and event, kept after the raw rows go.
+CREATE TABLE analytics_daily (
+  day             date NOT NULL,
+  platform        text NOT NULL,
+  event           text NOT NULL,
+  events          bigint NOT NULL,
+  players         bigint NOT NULL,
+  PRIMARY KEY (day, platform, event)
+);
+
 -- Seed categories
 INSERT INTO categories (id, name_en, name_pcm, emoji, color_hex, sort_order) VALUES
  ('slang','Slang & Pidgin','Slang & Pidgin','🗣️','#8E44AD',1),
  ('nollywood','Nollywood','Nollywood','🎬','#E67E22',2),
  ('music','Music','Music','🎶','#2980B9',3),
  ('food','Food','Chop','🍲','#C0392B',4),
- ('mixed','Mixed Naija','Naija Mix','🇳🇬','#16A085',5);
+ ('mixed','Mixed Naija','Naija Mix','🇳🇬','#16A085',6);
+-- Sport (migration 0005) starts switched off until approved sport questions are live.
+INSERT INTO categories (id, name_en, name_pcm, emoji, color_hex, sort_order, active) VALUES
+ ('sport','Sport','Sport','⚽','#B8860B',5,false);

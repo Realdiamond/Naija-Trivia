@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFDF7; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; overflow: hidden">
+  <div style="flex: 1; min-height: 0; overflow: hidden; padding: 18px 16px 0; box-sizing: border-box">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <h1 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 32px; line-height: 1.1">Shop</h1>
+      <div style="display: flex; gap: 8px">
+        <span style="display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; background: #FFF1E3; font-weight: 800; font-size: 15px">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" style="fill: #FFB547; stroke: #9A5200; stroke-width: 1.8"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="4.5" style="fill: none"></circle></svg>1,240 coins</span>
+        <span style="display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; background: #E4EEF8; font-weight: 800; font-size: 15px">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" style="fill: #7FB3E0; stroke: #1F4E79; stroke-width: 1.8; stroke-linejoin: round"><path d="M6 4h12l3 5-9 11L3 9z"></path></svg>0 gems</span>
+      </div>
+    </div>
+
+    <button type="button" style="margin-top: 14px; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; border: 2px solid #008751; background: #E3F3EA; color: #14231B; font-family: Nunito, system-ui, sans-serif; text-align: left; cursor: pointer">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" style="fill: none; stroke: #006B40; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0"><rect x="3" y="5" width="18" height="14" rx="2.5"></rect><path d="M10 9l5 3-5 3z"></path></svg>
+      <span style="flex: 1">
+        <span style="display: block; font-size: 16px; font-weight: 800">Watch a short ad</span>
+        <span style="display: block; font-size: 13px; font-weight: 700; color: #3F4A44">Only when you choose · never during a question</span>
+      </span>
+      <span style="font-size: 17px; font-weight: 800; color: #0B6B33">+25</span>
+    </button>
+
+    <div style="margin-top: 10px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #FF7A00">
+      <div style="flex: 1">
+        <p style="margin: 0; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px">Starter pack · once only</p>
+        <p style="margin: 2px 0 0; font-size: 16px; font-weight: 800">1,000 coins + “JJC No More” outfit</p>
+        <p style="margin: 2px 0 0; font-size: 13px; font-weight: 700">Ends in 41 hours</p>
+      </div>
+      <button type="button" style="height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: #14231B; color: #FFFFFF; font: 800 16px Nunito, system-ui, sans-serif; cursor: pointer">₦500</button>
+    </div>
+
+    <h2 style="margin: 16px 0 8px; font-size: 16px; font-weight: 800">Coins</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+      <sc-for list="{{packs}}" as="p" hint-placeholder-count="4">
+        <button type="button" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px; border-radius: 16px; border: 1px solid #E8E2D2; background: #FFFFFF; color: #14231B; font-family: Nunito, system-ui, sans-serif; text-align: left; cursor: pointer">
+          <span style="display: flex; align-items: center; gap: 6px; font-size: 18px; font-weight: 800">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: #FFB547; stroke: #9A5200; stroke-width: 1.8"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="4.5" style="fill: none"></circle></svg>{{p.coins}}</span>
+          <span style="font-size: 13px; font-weight: 800; color: #0B6B33; min-height: 18px">{{p.bonus}}</span>
+          <span style="margin-top: 4px; font-size: 16px; font-weight: 800">{{p.price}}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <section style="margin-top: 14px; padding: 14px; border-radius: 16px; background: #14231B; color: #FFFFFF">
+      <div style="display: flex; align-items: baseline; justify-content: space-between">
+        <h2 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 24px; color: #FFB547">Sabi Pass</h2>
+        <p style="margin: 0; font-size: 15px; font-weight: 800">₦1,200 a month</p>
+      </div>
+      <ul style="margin: 8px 0 0; padding: 0 0 0 18px; font-size: 14px; line-height: 1.6; font-weight: 700">
+        <li>No ads between matches</li>
+        <li>Double Daily coins and unlimited duels</li>
+        <li>Party rooms for up to 50 people</li>
+      </ul>
+      <p style="margin: 6px 0 0; font-size: 13px; font-weight: 700; color: #D3DCD7">Or ₦9,900 a year with the “Founding Sabi” frame.</p>
+    </section>
+    <p style="margin: 10px 0 0; font-size: 12px; line-height: 1.45; font-weight: 600; color: #5A6660; text-align: center">No cash and no wallet: coins can’t be withdrawn or traded.</p>
+  </div>
+
+  <nav aria-label="Main" style="flex-shrink: 0; height: 72px; border-top: 1px solid #E8E2D2; background: #FFFFFF; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr))">
+    <a href="Home.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #5A6660; font-size: 12px; font-weight: 700">
+      <span style="display: flex; align-items: center; justify-content: center; width: 52px; height: 30px"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><path d="M3 11l9-7 9 7"></path><path d="M5 10v10h14V10"></path></svg></span>Home</a>
+    <a href="Play.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #5A6660; font-size: 12px; font-weight: 700">
+      <span style="display: flex; align-items: center; justify-content: center; width: 52px; height: 30px"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><circle cx="12" cy="12" r="9"></circle><path d="M10 8.5l5.5 3.5-5.5 3.5z"></path></svg></span>Play</a>
+    <a href="Leagues.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #5A6660; font-size: 12px; font-weight: 700">
+      <span style="display: flex; align-items: center; justify-content: center; width: 52px; height: 30px"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><path d="M8 4h8v5a4 4 0 0 1-8 0z"></path><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"></path><path d="M12 13v4M9 20h6"></path></svg></span>Leagues</a>
+    <a href="Shop.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #006B40; font-size: 12px; font-weight: 800">
+      <span style="display: flex; align-items: center; justify-content: center; width: 52px; height: 30px; border-radius: 15px; background: #E3F3EA"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><path d="M5 8h14l-1 12H6z"></path><path d="M9 8a3 3 0 0 1 6 0"></path></svg></span>Shop</a>
+    <a href="Profile.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #5A6660; font-size: 12px; font-weight: 700">
+      <span style="display: flex; align-items: center; justify-content: center; width: 52px; height: 30px"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></span>Profile</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      packs: [
+        { coins: '500', bonus: '', price: '₦300' },
+        { coins: '1,500', bonus: '20% extra', price: '₦800' },
+        { coins: '3,500', bonus: '40% extra', price: '₦1,500' },
+        { coins: '9,000', bonus: '60% extra', price: '₦3,500' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Friends</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+input::placeholder{color:#6B756F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFDF7; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; padding: 10px 16px 18px; overflow: hidden">
+  <div style="display: flex; align-items: center; gap: 4px">
+    <a href="Profile.dc.html" aria-label="Back" style="width: 48px; height: 48px; margin-left: -8px; display: flex; align-items: center; justify-content: center; color: #14231B">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 26px">Friends <span style="font-size: 20px; color: #5A6660">(23)</span></h1>
+  </div>
+
+  <label for="add" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Add a friend by username</label>
+  <div style="margin-top: 6px; display: flex; gap: 8px">
+    <input id="add" type="text" placeholder="Add by username" style="flex: 1; min-width: 0; height: 48px; box-sizing: border-box; border-radius: 12px; border: 2px solid #D9D1BE; background: #FFFFFF; padding: 0 14px; font: 700 16px Nunito, system-ui, sans-serif; color: #14231B">
+    <button type="button" style="width: 72px; height: 48px; border: 0; border-radius: 12px; background: #008751; color: #FFFFFF; font: 800 15px Nunito, system-ui, sans-serif; cursor: pointer">Send</button>
+  </div>
+
+  <h2 style="margin: 16px 0 4px; font-size: 16px; font-weight: 800">Requests</h2>
+  <ul style="list-style: none; margin: 0; padding: 0">
+    <sc-for list="{{requests}}" as="r" hint-placeholder-count="2">
+      <li style="display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #EFEADF">
+        <span aria-hidden="true" style="{{r.avatar}}">{{r.initial}}</span>
+        <div style="flex: 1; min-width: 0">
+          <p style="margin: 0; font-size: 15px; font-weight: 800">{{r.name}}</p>
+          <p style="margin: 0; font-size: 12px; font-weight: 700; color: #5A6660">{{r.note}}</p>
+        </div>
+        <sc-if value="{{r.open}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; gap: 6px">
+            <button type="button" onClick="{{r.accept}}" style="height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: #008751; color: #FFFFFF; font: 800 14px Nunito, system-ui, sans-serif; cursor: pointer">Accept</button>
+            <button type="button" onClick="{{r.decline}}" style="height: 40px; padding: 0 12px; border: 2px solid #D9D1BE; border-radius: 10px; background: #FFFFFF; color: #14231B; font: 800 14px Nunito, system-ui, sans-serif; cursor: pointer">Decline</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{r.closed}}" hint-placeholder-val="{{ false }}">
+          <span style="font-size: 14px; font-weight: 800; color: #3F4A44">{{r.result}}</span>
+        </sc-if>
+      </li>
+    </sc-for>
+  </ul>
+
+  <h2 style="margin: 14px 0 4px; font-size: 16px; font-weight: 800">You played them recently</h2>
+  <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #EFEADF">
+    <span aria-hidden="true" style="width: 40px; height: 40px; border-radius: 50%; background: #1F5F8B; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0">I</span>
+    <div style="flex: 1; min-width: 0">
+      <p style="margin: 0; font-size: 15px; font-weight: 800">IkennaQuiz</p>
+      <p style="margin: 0; font-size: 12px; font-weight: 700; color: #5A6660">Random duel yesterday · you lost</p>
+    </div>
+    <button type="button" style="height: 40px; padding: 0 14px; border: 2px solid #008751; border-radius: 10px; background: #FFFFFF; color: #006B40; font: 800 14px Nunito, system-ui, sans-serif; cursor: pointer">Add</button>
+  </div>
+
+  <h2 style="margin: 14px 0 4px; font-size: 16px; font-weight: 800">Your friends</h2>
+  <ul style="list-style: none; margin: 0; padding: 0">
+    <sc-for list="{{friends}}" as="f" hint-placeholder-count="3">
+      <li style="position: relative; display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #EFEADF">
+        <span aria-hidden="true" style="{{f.avatar}}">{{f.initial}}</span>
+        <div style="flex: 1; min-width: 0">
+          <p style="margin: 0; font-size: 15px; font-weight: 800">{{f.name}}</p>
+          <p style="margin: 0; font-size: 12px; font-weight: 700; color: #5A6660">{{f.note}}</p>
+        </div>
+        <a href="Category.dc.html" style="display: flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 10px; background: #008751; color: #FFFFFF; font-weight: 800; font-size: 14px; text-decoration: none">Challenge</a>
+        <button type="button" onClick="{{f.toggle}}" aria-label="{{f.menuLabel}}" aria-expanded="{{f.open}}" style="width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: #3F4A44; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: currentColor"><circle cx="12" cy="5" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="12" cy="19" r="1.8"></circle></svg>
+        </button>
+        <sc-if value="{{f.open}}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; right: 0; top: 52px; z-index: 2; width: 240px; padding: 6px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E3DCCB; box-shadow: 0 8px 24px rgba(20,35,27,0.16)">
+            <button type="button" style="width: 100%; text-align: left; padding: 12px; border: 0; border-radius: 10px; background: transparent; font: 800 15px Nunito, system-ui, sans-serif; color: #14231B; cursor: pointer">Unfriend</button>
+            <button type="button" style="width: 100%; text-align: left; padding: 12px; border: 0; border-radius: 10px; background: #FDE8E8; font: 800 15px Nunito, system-ui, sans-serif; color: #B3191C; cursor: pointer">Block</button>
+            <p style="margin: 4px 8px 6px; font-size: 12px; line-height: 1.4; font-weight: 600; color: #5A6660">Blocking stops their requests, challenges and links. We don’t tell them.</p>
+          </div>
+        </sc-if>
+      </li>
+    </sc-for>
+  </ul>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const done = s.done || {};
+    const menu = s.menu === undefined ? null : s.menu;
+    const av = (c) => 'width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 800; background: ' + c;
+    const reqs = [
+      { id: 'dami', name: 'DamiDaBest', note: 'Wants to be friends · 2 friends in common', initial: 'D', color: '#7A5A1E' },
+      { id: 'sade', name: 'SadeSabi', note: 'You played 3 days ago', initial: 'S', color: '#008751' }
+    ];
+    const friends = [
+      { id: 'chidi', name: 'ChidiOfLagos', note: 'Oga · you lead 4–3', initial: 'C', color: '#1F5F8B' },
+      { id: 'ngozi', name: 'NgoziVibes', note: 'Chairman · Ngozi leads 6–2', initial: 'N', color: '#8E44AD' },
+      { id: 'kemi', name: 'KemiCooks', note: 'Oga · 2–2', initial: 'K', color: '#C0392B' }
+    ];
+    return {
+      requests: reqs.map((r) => ({
+        name: r.name,
+        note: r.note,
+        initial: r.initial,
+        avatar: av(r.color),
+        open: !done[r.id],
+        closed: !!done[r.id],
+        result: done[r.id] === 'yes' ? 'Friends now' : 'Declined',
+        accept: () => this.setState({ done: Object.assign({}, done, { [r.id]: 'yes' }) }),
+        decline: () => this.setState({ done: Object.assign({}, done, { [r.id]: 'no' }) })
+      })),
+      friends: friends.map((f) => ({
+        name: f.name,
+        note: f.note,
+        initial: f.initial,
+        avatar: av(f.color),
+        open: menu === f.id,
+        menuLabel: 'More options for ' + f.name,
+        toggle: () => this.setState({ menu: menu === f.id ? null : f.id })
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

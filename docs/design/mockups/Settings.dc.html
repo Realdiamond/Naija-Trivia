@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFDF7; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; padding: 10px 16px 16px; overflow: hidden">
+  <div style="display: flex; align-items: center; gap: 4px">
+    <a href="Profile.dc.html" aria-label="Back" style="width: 48px; height: 48px; margin-left: -8px; display: flex; align-items: center; justify-content: center; color: #14231B">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <h1 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 26px">Settings</h1>
+  </div>
+
+  <sc-for list="{{sections}}" as="sec" hint-placeholder-count="3">
+    <section style="margin-top: 10px">
+      <h2 style="margin: 0 0 4px 4px; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: #5A6660">{{sec.title}}</h2>
+      <div style="border-radius: 16px; background: #FFFFFF; border: 1px solid #E8E2D2">
+        <sc-for list="{{sec.rows}}" as="r" hint-placeholder-count="3">
+          <div style="{{r.rowStyle}}">
+            <div style="flex: 1; min-width: 0">
+              <p id="{{r.id}}" style="margin: 0; font-size: 15px; font-weight: 800">{{r.name}}</p>
+              <p style="margin: 1px 0 0; font-size: 12px; font-weight: 600; color: #5A6660">{{r.note}}</p>
+            </div>
+            <button type="button" role="switch" aria-checked="{{r.on}}" aria-labelledby="{{r.id}}" onClick="{{r.toggle}}" style="{{r.track}}"><span style="{{r.knob}}"></span></button>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+
+  <section style="margin-top: 10px">
+    <h2 style="margin: 0 0 4px 4px; font-size: 13px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: #5A6660">Account</h2>
+    <div style="border-radius: 16px; background: #FFFFFF; border: 1px solid #E8E2D2">
+      <button type="button" style="width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 0; background: transparent; font-family: Nunito, system-ui, sans-serif; color: #14231B; text-align: left; cursor: pointer">
+        <span style="flex: 1">
+          <span style="display: block; font-size: 15px; font-weight: 800">Language</span>
+          <span style="display: block; font-size: 12px; font-weight: 600; color: #5A6660">English · Pidgin is coming</span>
+        </span>
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+      <button type="button" style="width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 0; border-top: 1px solid #EFEADF; background: transparent; font-family: Nunito, system-ui, sans-serif; color: #14231B; text-align: left; cursor: pointer">
+        <span style="flex: 1">
+          <span style="display: block; font-size: 15px; font-weight: 800">Sign-in methods</span>
+          <span style="display: block; font-size: 12px; font-weight: 600; color: #5A6660">Phone 0803 ••• 4567 · Google</span>
+        </span>
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+      <button type="button" style="width: 100%; padding: 12px 14px; border: 0; border-top: 1px solid #EFEADF; background: transparent; font: 800 15px Nunito, system-ui, sans-serif; color: #14231B; text-align: left; cursor: pointer">Sign out on every device</button>
+      <button type="button" style="width: 100%; padding: 12px 14px; border: 0; border-top: 1px solid #EFEADF; background: transparent; font: 800 15px Nunito, system-ui, sans-serif; color: #B3191C; text-align: left; cursor: pointer">Delete my account</button>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = (this.state && this.state.sw) || {};
+    const val = (id, def) => (s[id] === undefined ? def : s[id]);
+    const track = (on) => 'position: relative; width: 52px; height: 32px; flex-shrink: 0; border-radius: 16px; border: 0; padding: 0; cursor: pointer; background: ' + (on ? '#008751' : '#8A8270');
+    const knob = (on) => 'position: absolute; top: 3px; left: ' + (on ? '23px' : '3px') + '; width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF';
+    const make = (list) => list.map((r, i) => {
+      const on = val(r.id, r.def);
+      return {
+        id: r.id,
+        name: r.name,
+        note: r.note,
+        on,
+        track: track(on),
+        knob: knob(on),
+        rowStyle: 'display: flex; align-items: center; gap: 12px; padding: 9px 14px' + (i > 0 ? '; border-top: 1px solid #EFEADF' : ''),
+        toggle: () => this.setState({ sw: Object.assign({}, s, { [r.id]: !on }) })
+      };
+    });
+    return {
+      sections: [
+        {
+          title: 'Play',
+          rows: make([
+            { id: 'saver', name: 'Data Saver', note: 'Text-only questions, no animations', def: true },
+            { id: 'sound', name: 'Sounds and vibration', note: 'Talking drum, “Ehen!” and haptics', def: true },
+            { id: 'extra', name: 'Extra time', note: '+50% timer in practice and party games', def: false }
+          ])
+        },
+        {
+          title: 'Notifications',
+          rows: make([
+            { id: 'turn', name: 'Your turn', note: 'When a friend plays their turn', def: true },
+            { id: 'daily', name: 'Daily is live', note: 'Once a day, at midnight', def: true }
+          ])
+        },
+        {
+          title: 'Privacy and family',
+          rows: make([
+            { id: 'family', name: 'Family mode', note: 'Only family-safe questions', def: false },
+            { id: 'find', name: 'Let contacts find me', note: 'People who have your number', def: true }
+          ])
+        }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

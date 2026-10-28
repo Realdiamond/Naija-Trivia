@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin console User 360</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+input::placeholder{color:#6B756F}
+</style>
+</helmet>
+<div style="min-height: 100vh; box-sizing: border-box; background: #F6F4EE; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column">
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 12px 24px; background: #14231B; color: #FFFFFF">
+    <p style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px; line-height: 1">Who Sabi? <span style="color: #FFB547">Admin</span></p>
+    <label for="global-search-2" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search players, duels and rooms</label>
+    <div style="flex: 1 1 320px; max-width: 560px; display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border-radius: 10px; background: #22362B">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" style="fill: none; stroke: #D3DCD7; stroke-width: 2.2; stroke-linecap: round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+      <input id="global-search-2" type="search" placeholder="Username, user ID, phone, duel ID or room code" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: #FFFFFF; font: 600 14px Nunito, system-ui, sans-serif">
+    </div>
+    <span style="margin-left: auto; padding: 4px 10px; border-radius: 999px; background: #FFB547; color: #14231B; font-size: 12px; font-weight: 800">Sample data</span>
+    <span style="font-size: 14px; font-weight: 700">Wed 28 Oct · 14:32 WAT</span>
+    <span aria-label="Signed in as Ada, support lead" style="width: 34px; height: 34px; border-radius: 50%; background: #8E44AD; display: flex; align-items: center; justify-content: center; font-weight: 800">A</span>
+  </header>
+
+  <div style="flex: 1; display: flex; flex-wrap: wrap">
+    <nav aria-label="Console" style="flex: 1 1 200px; box-sizing: border-box; padding: 16px 12px; border-right: 1px solid #E3DCCB; background: #FFFFFF">
+      <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px">
+        <sc-for list="{{nav}}" as="n" hint-placeholder-count="11">
+          <li><a href="{{n.href}}" aria-current="{{n.current}}" style="{{n.style}}">{{n.name}}</a></li>
+        </sc-for>
+      </ul>
+    </nav>
+
+    <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 18px 24px 32px">
+      <p style="margin: 0; font-size: 13px; font-weight: 700; color: #5A6660"><a href="#players">Players</a> › ToluSabi</p>
+
+      <section style="margin-top: 10px; padding: 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E8E2D2; display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+        <span aria-hidden="true" style="width: 64px; height: 64px; border-radius: 50%; background: #008751; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; flex-shrink: 0">
+          <svg viewBox="0 0 40 40" width="54" height="54" style="fill: #FFFDF7"><circle cx="20" cy="16" r="7"></circle><path d="M7 38c1.5-8 7-12 13-12s11.5 4 13 12z"></path></svg>
+        </span>
+        <div style="flex: 1 1 320px; min-width: 0">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+            <h1 style="margin: 0; font-size: 24px; font-weight: 800">ToluSabi</h1>
+            <span style="padding: 2px 10px; border-radius: 999px; background: #E3F3EA; color: #0B6B33; font-size: 12px; font-weight: 800">Active</span>
+            <span style="padding: 2px 10px; border-radius: 999px; background: #F3EEE1; font-size: 12px; font-weight: 800">18+</span>
+            <span style="font-size: 13px; font-weight: 700; color: #5A6660">usr_01JB7Q2M</span>
+          </div>
+          <p style="margin: 4px 0 0; font-size: 14px; font-weight: 600; color: #3F4A44">Lagos · joined 2 Oct 2026 on Android from a WhatsApp invite · last seen 14:20 WAT on the web</p>
+          <p style="margin: 6px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; font-weight: 700">
+            Phone <span style="font-family: ui-monospace, monospace">+234 80• ••• 4567</span>
+            <button type="button" style="height: 30px; padding: 0 10px; border: 1px solid #B9B09B; border-radius: 8px; background: #FFFFFF; font: 800 12px Nunito, system-ui, sans-serif; color: #14231B; cursor: pointer">Reveal (needs a reason)</button>
+            <span style="color: #5A6660">· Google linked</span>
+          </p>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <button type="button" style="height: 38px; padding: 0 14px; border: 1px solid #B9B09B; border-radius: 10px; background: #FFFFFF; font: 800 13px Nunito, system-ui, sans-serif; color: #14231B; cursor: pointer">Add note</button>
+          <button type="button" style="height: 38px; padding: 0 14px; border: 1px solid #B9B09B; border-radius: 10px; background: #FFFFFF; font: 800 13px Nunito, system-ui, sans-serif; color: #14231B; cursor: pointer">Grant coins</button>
+          <button type="button" style="height: 38px; padding: 0 14px; border: 1px solid #E5383B; border-radius: 10px; background: #FFFFFF; font: 800 13px Nunito, system-ui, sans-serif; color: #B3191C; cursor: pointer">Restrict</button>
+        </div>
+      </section>
+
+      <dl style="margin: 12px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px">
+        <sc-for list="{{facts}}" as="f" hint-placeholder-count="8">
+          <div style="padding: 10px 12px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E8E2D2">
+            <dt style="font-size: 12px; font-weight: 800; color: #5A6660">{{f.k}}</dt>
+            <dd style="margin: 2px 0 0; font-size: 16px; font-weight: 800">{{f.v}}</dd>
+          </div>
+        </sc-for>
+      </dl>
+
+      <div role="tablist" aria-label="Player sections" style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #E3DCCB">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="10">
+          <button type="button" role="tab" aria-selected="{{t.on}}" style="{{t.style}}">{{t.name}}</button>
+        </sc-for>
+      </div>
+
+      <div style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start">
+        <section aria-label="Timeline" style="flex: 2 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+          <sc-for list="{{sessions}}" as="s" hint-placeholder-count="3">
+            <article style="border-radius: 14px; background: #FFFFFF; border: 1px solid #E8E2D2; padding: 14px 16px">
+              <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px">
+                <h2 style="margin: 0; font-size: 15px; font-weight: 800">{{s.when}}</h2>
+                <p style="margin: 0; font-size: 13px; font-weight: 700; color: #5A6660">{{s.where}}</p>
+              </div>
+              <ol style="list-style: none; margin: 10px 0 0; padding: 0 0 0 14px; border-left: 2px solid #E3DCCB">
+                <sc-for list="{{s.events}}" as="e" hint-placeholder-count="6">
+                  <li style="position: relative; display: flex; gap: 10px; padding: 4px 0; font-size: 14px">
+                    <span aria-hidden="true" style="position: absolute; left: -20px; top: 10px; width: 8px; height: 8px; border-radius: 50%; background: #008751; border: 2px solid #FFFFFF"></span>
+                    <span style="width: 44px; flex-shrink: 0; font-size: 12px; font-weight: 700; color: #5A6660; padding-top: 1px">{{e.t}}</span>
+                    <span style="font-weight: 600">{{e.what}}</span>
+                  </li>
+                </sc-for>
+              </ol>
+            </article>
+          </sc-for>
+        </section>
+
+        <aside style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+          <section style="padding: 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E8E2D2">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 800">Minutes played per day</h2>
+            <p style="margin: 2px 0 0; font-size: 13px; font-weight: 600; color: #5A6660">Last 14 days · 31 min today, most so far</p>
+            <div role="img" aria-label="Minutes per day over 14 days, between 6 and 31, highest today." style="margin-top: 10px; height: 120px; display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid #ECE7DC">
+              <sc-for list="{{perDay}}" as="d" hint-placeholder-count="14">
+                <span title="{{d.tip}}" style="{{d.style}}"></span>
+              </sc-for>
+            </div>
+            <div style="margin-top: 4px; display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: #5A6660"><span>15 Oct</span><span>Today</span></div>
+          </section>
+
+          <section style="padding: 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E8E2D2">
+            <h2 style="margin: 0 0 10px; font-size: 15px; font-weight: 800">Time by mode this week</h2>
+            <sc-for list="{{modes}}" as="m" hint-placeholder-count="5">
+              <div title="{{m.tip}}" style="display: grid; grid-template-columns: 92px minmax(0, 1fr) 40px; align-items: center; gap: 8px; padding: 4px 0">
+                <span style="font-size: 13px; font-weight: 700">{{m.name}}</span>
+                <span aria-hidden="true" style="height: 12px"><span style="{{m.bar}}"></span></span>
+                <span style="font-size: 13px; font-weight: 800; text-align: right">{{m.value}}</span>
+              </div>
+            </sc-for>
+            <p style="margin: 10px 0 0; font-size: 13px; font-weight: 700; color: #3F4A44">Platforms: Android 72% · Web 28%</p>
+          </section>
+
+          <section style="padding: 14px 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E8E2D2">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 800">Staff views of this player</h2>
+            <p style="margin: 6px 0 0; font-size: 13px; line-height: 1.5; font-weight: 600; color: #3F4A44">You opened this page at 14:31 (logged). No reveals or actions in the last 30 days.</p>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tab = (this.state && this.state.tab) || 'Timeline';
+    const navItems = ['Overview', 'Live', 'Players', 'Analytics', 'LiveOps', 'Content', 'Moderation', 'Support', 'Commerce', 'Compliance', 'Settings'];
+    const nav = navItems.map((n) => ({
+      name: n,
+      href: '#' + n.toLowerCase(),
+      current: n === 'Players' ? 'page' : undefined,
+      style: 'display: block; padding: 10px 12px; border-radius: 10px; font-size: 15px; text-decoration: none; ' + (n === 'Players' ? 'background: #E3F3EA; color: #006B40; font-weight: 800' : 'color: #3F4A44; font-weight: 700')
+    }));
+    const facts = [
+      { k: 'Level', v: '7' }, { k: 'Tier', v: 'Oga · 1,734' }, { k: 'Coins / gems', v: '1,240 / 0' },
+      { k: 'Sabi Pass', v: 'No' }, { k: 'Lifetime spend', v: '₦800' }, { k: 'Friends', v: '23' },
+      { k: 'Daily streak', v: '12 days' }, { k: 'Risk score', v: 'Low · no flags' }
+    ];
+    const tabNames = ['Summary', 'Timeline', 'Sessions and time', 'Matches', 'Money', 'Social', 'Safety', 'Devices and consent', 'Support', 'Admin history'];
+    const tabs = tabNames.map((n) => ({
+      name: n,
+      on: n === tab,
+      pick: () => this.setState({ tab: n }),
+      style: 'height: 40px; padding: 0 12px; border: 0; border-bottom: 3px solid ' + (n === tab ? '#008751' : 'transparent') + '; background: transparent; font: ' + (n === tab ? '800' : '700') + ' 14px Nunito, system-ui, sans-serif; color: ' + (n === tab ? '#14231B' : '#3F4A44') + '; cursor: pointer'
+    }));
+    const sessions = [
+      {
+        when: 'Today 14:02 to 14:20 · 18 min 4 s',
+        where: 'Web · Chrome on Windows · Lagos',
+        events: [
+          { t: '14:02', what: 'Opened whosabi.ng (signed in)' },
+          { t: '14:02', what: 'Home · 9 s' },
+          { t: '14:03', what: 'Duel vs ChidiOfLagos, round 2 (Nollywood)' },
+          { t: '14:03', what: 'Q1 correct in 2.1 s · +186' },
+          { t: '14:04', what: 'Q2 correct in 4.0 s · +193' },
+          { t: '14:04', what: 'Q3 wrong · 0 · reported the question (“outdated”)' },
+          { t: '14:05', what: 'Picked Food for round 3 · 3 of 3 correct · +486' },
+          { t: '14:20', what: 'Left the site' }
+        ]
+      },
+      {
+        when: 'Today 08:12 to 08:18 · 6 min 12 s',
+        where: 'Android 1.2.0 · MTN 4G · Lagos',
+        events: [
+          { t: '08:12', what: 'Opened the app' },
+          { t: '08:12', what: 'Home · 12 s' },
+          { t: '08:13', what: 'Daily #142 · 6 of 7 in 58 s · +70 coins' },
+          { t: '08:15', what: 'Watched a rewarded ad · +25 coins' },
+          { t: '08:16', what: 'Shared the Daily grid to WhatsApp' },
+          { t: '08:18', what: 'Left the app' }
+        ]
+      },
+      {
+        when: 'Yesterday 21:40 to 22:05 · 25 min',
+        where: 'Android 1.2.0 · Wi-Fi · Lagos',
+        events: [
+          { t: '21:41', what: 'Created party room K7QXM (host) · 10 questions' },
+          { t: '21:46', what: 'Started with 7 players (2 on the web)' },
+          { t: '21:58', what: 'Finished 2nd · 2,236 points' },
+          { t: '22:01', what: 'Sent friend request to IkennaQuiz' }
+        ]
+      }
+    ];
+    const mins = [9, 14, 6, 22, 18, 11, 25, 12, 8, 19, 16, 21, 27, 31];
+    const perDay = mins.map((m, i) => ({
+      tip: (i === 13 ? 'Today' : (13 - i) + ' days ago') + ': ' + m + ' min',
+      style: 'flex: 1 1 0; max-width: 24px; height: ' + Math.round((m / 35) * 100) + '%; border-radius: 4px 4px 0 0; background: ' + (i === 13 ? '#006B40' : '#2F8F5E')
+    }));
+    const modeData = [['Duels', 52], ['Party rooms', 21], ['Daily', 12], ['Practice', 8], ['Menus and shop', 7]];
+    const modes = modeData.map((m) => ({
+      name: m[0],
+      value: m[1] + '%',
+      tip: m[0] + ': ' + m[1] + '% of time this week',
+      bar: 'display: block; height: 12px; border-radius: 0 4px 4px 0; background: #008751; width: ' + Math.round((m[1] / 52) * 100) + '%'
+    }));
+    return { nav, facts, tabs, sessions, perDay, modes };
+  }
+}
+</script>
+</body>
+</html>

@@ -13,11 +13,12 @@
 | **Nollywood** | 🎬 | Classics (1992–2005), New Nollywood (2010+), box office, actors & roles, iconic lines, Kannywood, streaming originals, TV series | 600 | 10+ |
 | **Music** | 🎶 | Afrobeats era (2010+), Afrobeat & Fela, 2000s Naija pop, highlife & jùjú, fuji & apala, gospel, records & awards, real names, labels | 600 | 25+ |
 | **Food** | 🍲 | Soups & swallows, street food, drinks, regional dishes, ingredients, party food, snacks | 600 | 5+ |
-| **Mixed Naija** | 🇳🇬 | Sports, geography, history (non-political), BBNaija & TV, tech & brands, Lagos life, school days | 600 | 10+ |
+| **Sport** | ⚽ | Super Eagles and Super Falcons, youth teams, AFCON and the World Cup, clubs and stadiums, Nigerians abroad, athletics and the Olympics, boxing, MMA, basketball, other sports | 600 | 10+ |
+| **Mixed Naija** | 🇳🇬 | Geography, history (non-political), BBNaija & TV, tech & brands, Lagos life, school days | 600 | 10+ |
 | **(v1.1) Throwback** | 📼 | 90s/2000s TV, adverts, old Naija music | 300 | – |
 | **(v2) Kannywood & Arewa** | 🌙 | Northern film, music, food, Hausa language | 300 | 5+ |
 
-**Launch total: ≥ 3,000 approved questions.** At an average of 9 questions a match and a 30-day no-repeat window per player, 600 per category supports heavy daily play for ~2 months before re-use. Freshness is then kept up by the weekly pipeline.
+**Launch total: ≥ 3,600 approved questions** (3,000 before Sport was added as a sixth category in October 2026). Sport questions never touch betting or odds, and anything that can change (captains, coaches, records) carries a `valid_until` date. At an average of 9 questions a match and a 30-day no-repeat window per player, 600 per category supports heavy daily play for ~2 months before re-use. Freshness is then kept up by the weekly pipeline.
 
 ### Difficulty mix per category
 - Level 1 (easy, "even your mama sabi"): 15%

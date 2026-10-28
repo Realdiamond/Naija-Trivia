@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const CategoryId = z.enum(['slang', 'nollywood', 'music', 'food', 'mixed']);
+export const CategoryId = z.enum(['slang', 'nollywood', 'music', 'food', 'sport', 'mixed']);
 export type CategoryId = z.infer<typeof CategoryId>;
 
 export const Category = z.object({

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Join a party in the browser</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#B6F0C9}a:hover{color:#FFFFFF}
+input::placeholder{color:#8FA197}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E1A14; color: #FFFFFF; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; padding: 16px 20px 20px; overflow: hidden">
+  <p style="margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px; line-height: 1">Who Sabi? <span style="color: #FFB547">Party</span></p>
+
+  <div style="margin-top: 40px">
+    <p style="margin: 0; font-size: 14px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: #FFB547">Room K7QXM</p>
+    <h1 style="margin: 6px 0 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 36px; line-height: 1.05">You’re joining ToluSabi’s party</h1>
+    <div style="margin-top: 16px; display: flex; align-items: center; gap: 10px">
+      <div aria-hidden="true" style="display: flex">
+        <sc-for list="{{faces}}" as="f" hint-placeholder-count="5">
+          <span style="{{f.style}}">{{f.initial}}</span>
+        </sc-for>
+      </div>
+      <p style="margin: 0; font-size: 15px; font-weight: 700; color: #D3DCD7">7 people are in the lobby</p>
+    </div>
+  </div>
+
+  <label for="nick" style="margin-top: 36px; font-size: 16px; font-weight: 800">Your nickname</label>
+  <input id="nick" type="text" maxlength="16" autocomplete="nickname" placeholder="e.g. Big Bolu" style="margin-top: 8px; height: 58px; box-sizing: border-box; border-radius: 12px; border: 2px solid #3A5446; background: #17291F; padding: 0 16px; font: 800 19px Nunito, system-ui, sans-serif; color: #FFFFFF">
+  <p style="margin: 8px 0 0; font-size: 14px; font-weight: 600; color: #B8C4BD">That’s all. No app, no sign-up.</p>
+
+  <a href="PartyLobby.dc.html" style="margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; height: 58px; border-radius: 12px; background: #FF7A00; color: #14231B; font-weight: 800; font-size: 18px; text-decoration: none">
+    Join the game
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+  </a>
+  <p style="margin: 14px 0 0; text-align: center; font-size: 15px; font-weight: 700"><a href="SignIn.dc.html" style="font-weight: 800">Have an account? Sign in to keep your score</a></p>
+
+  <p style="margin: auto 0 0; font-size: 13px; line-height: 1.5; font-weight: 600; color: #B8C4BD; text-align: center">Works in Chrome, Safari, Samsung Internet, Opera and the WhatsApp browser. On Opera Mini? Open this link in Chrome.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const people = [['T', '#008751'], ['C', '#1F5F8B'], ['N', '#8E44AD'], ['F', '#C0392B'], ['A', '#7A5A1E']];
+    return {
+      faces: people.map((p, i) => ({
+        initial: p[0],
+        style: 'width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 800; font-size: 15px; border: 2px solid #0E1A14; background: ' + p[1] + (i > 0 ? '; margin-left: -10px' : '')
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

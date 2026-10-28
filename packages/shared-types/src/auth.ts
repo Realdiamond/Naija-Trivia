@@ -43,6 +43,15 @@ export const RefreshRequest = z.object({
 });
 export type RefreshRequest = z.infer<typeof RefreshRequest>;
 
+/** The sign-in methods switched on (GET /v1/auth/methods); the apps show only these buttons. */
+export const AuthMethodsResponse = z.object({
+  guest: z.literal(true),
+  phone: z.boolean(),
+  google: z.boolean(),
+  apple: z.boolean(),
+});
+export type AuthMethodsResponse = z.infer<typeof AuthMethodsResponse>;
+
 /** Phone sign-in, step 1 (doc 09 §2.1, TRD FR-AUTH-2). The platform picks the SMS format. */
 export const OtpSendRequest = z.object({
   /** A Nigerian mobile number in any common format; the server normalises it to E.164. */

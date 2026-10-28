@@ -104,14 +104,14 @@ erDiagram
 | `lb:daily:{yyyymmdd}` | sorted set | 8 d | Daily percentile/leaderboard |
 | `lb:daily:{yyyymmdd}:state:{st}` | sorted set | 8 d | State board |
 | `lb:league:{id}:{isoweek}` | sorted set | 21 d | League week |
-| `qstat:{qid}` | hash | flushed every minute | Hot counters |
+| `qstat:{qid}` | hash | flushed every minute | Hot counters; the worker renames each to `qstatf:{qid}` while it writes it to `question_stats` |
+| `lock:qstat-flush` | string | 2 min | One worker flushes question stats at a time |
 | `room:{roomId}:snap` | string (msgpack) | 30 min | Party room crash recovery |
 | `code:{CODE}` | string → roomId | room life + 10 min | Room code reservation |
-| `bull:*` | BullMQ | – | Job queues |
 | `cfg:*` | hash | 60 s | Cached remote config, flags and experiments |
 | `presence:{platform}` | sorted set (user id → last seen, ms) | trimmed to 10 min | "Online now" in the admin console |
 | `live:{metric}:{yyyymmdd}` | counter / HyperLogLog | 3 d | Today's tiles on the admin Overview (e.g. `live:dau:*` is a HyperLogLog of user ids) |
-| `ev:stream` | stream | length-capped (~300k entries, several hours) | Analytics events waiting for the loader |
+| `ev:stream` | stream | length-capped (~300k entries, several hours) | Analytics events waiting for the loader, read through the `loader` consumer group; entries are deleted once stored |
 | `ev:batch:{batch_id}` | string | 48 h | Accept each client event batch once |
 | `adsess:{id}` | hash | 1 h | Web rewarded-ad session (v1.1) |
 

@@ -1,6 +1,6 @@
 # 19 · Build Plan & Progress
 
-**Version:** 1.3 · **Date:** 22 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
+**Version:** 1.4 · **Date:** 28 Oct 2026 · *A living checklist: every pull request that finishes part of a step ticks it here*
 **Related:** [15 Roadmap](15-roadmap-and-delivery-plan.md) (milestones, sprints, Definition of Done) · [02 PRD](02-PRD.md) (stories and release criteria) · [06 TRD](06-TRD.md) · [09 API](09-API-and-realtime-protocol.md) · [14 Testing](14-testing-and-QA-plan.md) · [18 Admin & Analytics](18-admin-console-and-analytics.md)
 
 ---
@@ -80,17 +80,34 @@ Not in this step: the WhatsApp OTP fallback (PRD US-2, v1.1), contact discovery 
 
 Not in this step: guardian consent for 13–17s by guardian phone code (doc 10 §3.3; with the compliance work in step 2.8), reporting players and the moderators' forced rename (with moderation in step 2.7), QR friend codes (with the app in step 1.4).
 
-### Step 1.3 · Workers & analytics loader ⬜ (next)
-`apps/workers` (BullMQ): duel expiry at the deadline (calling `DuelService.expireDue`) and reminders at 24 h and 4 h left (push stand-in until step 2.5); flushing `qstat:*` counters to `question_stats`; the event loader from the Redis stream into ClickHouse with `schema/analytics.clickhouse.sql`. Docs: [07 §4.3](07-system-architecture.md), [08 §6](08-data-model.md), [18 §15](18-admin-console-and-analytics.md).
+#### Step 1.2c · Cheaper launch setup ✅
+Decided on 28 Oct 2026 to keep running costs down before launch.
+- ✅ Phone sign-in can be off: production starts without an SMS provider, both phone endpoints answer `503 PROVIDER_UNAVAILABLE`, and `GET /v1/auth/methods` tells the apps which buttons to show. Launch with guest, Google and Apple; phone comes back by setting the Termii or Africa's Talking keys plus `OTP_SECRET` and `TURNSTILE_SECRET`. Until then "find friends from contacts" finds nobody, so friends come from usernames, invite links, recent opponents and QR codes
+- ✅ Sport is the sixth category (migration `0005_sport.sql`; docs 02, 04 and 05), switched off so duels never offer it until approved sport questions are live
+- ✅ Mockups of all 32 screens in [`design/`](design/README.md), the reference for step 1.4
+- ✅ The [question bank](content/question-bank/README.md): one CSV per category with a source link on every question, an Excel workbook for the team's review, and a checker for the Question Bible rules. Researched sport drafts go in first, and a daily job adds more on the `question-bank` branch
+- ✅ Tests: production settings with and without an SMS provider, both phone steps while phone is off, the methods list, and Sport kept out of the category list
 
-### Step 1.4 · The app: Android and web ⬜
+### Step 1.3 · Workers & analytics loader ✅
+Docs: [07 §4.3](07-system-architecture.md), [08 §3, §6](08-data-model.md), [18 §15](18-admin-console-and-analytics.md), [TRD FR-DUEL-3, FR-NOT-1 to 3](06-TRD.md).
+
+- ✅ A worker process (`apps/api/src/worker.ts`, `pnpm worker`) beside the API, sharing its code. Each job runs on a timer and is safe with several workers at once (locked rows, claimed rows, a Redis lock, a stream consumer group), so no job queue (BullMQ) is needed yet
+- ✅ Duel expiry every 30 s through `DuelService.expireDue`, in batches
+- ✅ Turn reminders at 24 h and 4 h left, once each per turn (`duel_reminders`), never in quiet hours (22:00–07:00 WAT), in English or Pidgin, naming the opponent and saying whether the duel is lost or cancelled. A stand-in writes them to the log until FCM in step 2.5, and only real pushes record `push_sent`
+- ✅ Question stats: `qstat:*` counters added into `question_stats` every minute (plays, right answers, option counts for "Ask Naija", average time), finishing any flush that died halfway
+- ✅ Analytics loader into Postgres, decided on 28 Oct 2026 to save cost: `analytics_events` from the Redis stream through a consumer group, each event stored once, bad rows skipped without blocking the rest, entries another loader dropped taken over; hourly daily counts in `analytics_daily` and raw events dropped after `ANALYTICS_RETENTION_DAYS` (60). ClickHouse (`schema/analytics.clickhouse.sql`) comes when daily players reach the thousands, and only the loader changes
+- ✅ Tests: each job against real Postgres and Redis, including quiet hours, a failed push tried again, two workers flushing at once, and a loader that died mid-batch
+
+Not in this step: reminders during a tie-break (both players answer, so there is no single turn), the 4-a-day cap on non-turn pushes (FR-NOT-2, with real pushes in step 2.5), and difficulty recalibration from the stats (step 2.6).
+
+### Step 1.4 · The app: Android and web ⬜ (next)
 `apps/app` (Expo, Expo Router): design tokens and core components, platform adapters (TRD §5.6), the taste test, sign-in, home with "Your turn" cards, the duel screens, an invite link that opens straight into the turn in the browser, the analytics tracker wired in, web build in CI. Docs: [05 UX](05-UX-and-user-flows.md), [TRD §4.10, §5.6](06-TRD.md), [PRD US-1, US-3, US-4, US-11](02-PRD.md).
 
 ### Step 1.5 · Admin console v0 ⬜
-`apps/admin` (Next.js): Google Workspace SSO, roles, the audit log, player search and User 360 with the activity timeline. Docs: [18 §3, §7, §16](18-admin-console-and-analytics.md), [PRD US-12](02-PRD.md).
+`apps/admin` (Next.js): staff sign-in with Google (Google Workspace, or an allow-list of staff Google accounts to save cost), roles, the audit log, player search and User 360 with the activity timeline. Docs: [18 §3, §7, §16](18-admin-console-and-analytics.md), [PRD US-12](02-PRD.md).
 
 ### Step 1.6 · Staging ⬜
-`infra/terraform` base and deploys for the API, ingest, workers, the web app and the admin console. Docs: [07 §5](07-system-architecture.md), [TRD §7](06-TRD.md). Needs the AWS account and the ClickHouse hosting decision (§6).
+Heroku in the Europe region, decided on 28 Oct 2026 instead of AWS to save cost: a `Procfile` and `app.json` for the API, ingest, workers, the web app and the admin console, with Heroku Postgres and Heroku Key-Value Store (Redis). Docs: [07 §5](07-system-architecture.md) (its "leaner option"), [TRD §7](06-TRD.md). Needs the team's Heroku account connected to this repo (§6).
 
 ## 4. Milestone M2: "Feature complete" (doc 15, week 12)
 **Done when:** every P0 story works on Android, iOS and web; the admin console's MVP modules are live (doc 18 §4); 2,000+ approved questions.
@@ -114,12 +131,13 @@ These are for the team, not pull requests, and some steps wait on them.
 
 | Item | Needed by | Notes |
 |---|---|---|
-| **3,000 approved questions** (≥ 600 per category + 600 mixed) | M2 (2,000), launch (3,000) | The critical path (doc 15 §5). Today: 114 drafts (104 multiple choice, 10 closest-number for tie-breaks), none fact-checked |
-| Termii sender ID (and Africa's Talking) | 1.2a going live | Registration and NCC approval take weeks. Then set `TERMII_API_KEY`, `TERMII_SENDER_ID` (and `AT_USERNAME`, `AT_API_KEY`) |
-| Cloudflare Turnstile site key and secret | 1.2a going live | `TURNSTILE_SECRET` on the API; the site key goes in the apps |
-| Google OAuth client IDs (Android, iOS, web) and Apple sign-in ids | 1.2a going live | `GOOGLE_CLIENT_IDS`, `APPLE_AUDIENCES`; the Android SMS Retriever hash comes from the signed app (`SMS_RETRIEVER_APP_HASH`) |
-| AWS account; ClickHouse Cloud vs self-hosted | 1.6 | Doc 15 §5 item 6 |
-| Google Workspace for staff SSO | 1.5 | |
+| **3,600 approved questions** (≥ 600 in each of the six categories) | M2 (2,000), launch (3,600) | The critical path (doc 15 §5). Today: 114 drafts in the seed file, plus researched drafts in the [question bank](content/question-bank/README.md), none fact-checked yet. A daily job adds drafts; the team checks them in the workbook |
+| Google OAuth client IDs (Android, web) | 1.4 | Free in Google Cloud Console; set `GOOGLE_CLIENT_IDS`. The Android client needs the app-signing SHA-1 from Play Console |
+| Apple Developer Program and Apple sign-in ids | iOS build (2.8) | US$99 a year; `APPLE_AUDIENCES`. Not needed for Android or the web |
+| Expo account (EAS Build) | 1.4 | The free tier builds the Android app; its token goes in CI |
+| Heroku account connected to this repo | 1.6 | Europe region. ClickHouse waits until daily players reach the thousands |
+| Staff Google accounts for the admin console | 1.5 | Google Workspace, or an allow-list of personal Google accounts |
+| Termii sender ID (and Africa's Talking), Turnstile keys | Only when phone sign-in is switched on | Not needed for launch. Registration and NCC approval take weeks. Then set `TERMII_API_KEY`, `TERMII_SENDER_ID` (and `AT_USERNAME`, `AT_API_KEY`), `OTP_SECRET`, `TURNSTILE_SECRET` and the app's `SMS_RETRIEVER_APP_HASH` |
 | Firebase project (FCM, web push) | 2.5 | |
-| Google Play organisation account, AdMob, RevenueCat | 2.4, M4 | Play and AdMob approval take 2–4 weeks |
+| Google Play developer account ✅, AdMob, RevenueCat | 2.4, M4 | The Play account exists. A personal (not organisation) account created after November 2023 must run a closed test with at least 12 testers for 14 days before publishing. AdMob approval takes 2–4 weeks |
 | Legal review (NDPA, prizes, ARCON), DPO, DPIA | Before beta | Doc 10 |

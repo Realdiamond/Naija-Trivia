@@ -390,6 +390,40 @@ describe('Google and Apple sign-in', () => {
   });
 });
 
+describe('switching sign-in methods off', () => {
+  it('lists the methods that are on, so the apps show only those buttons', async () => {
+    const res = await t.app.inject({ method: 'GET', url: '/v1/auth/methods' });
+    expect(res.json()).toEqual({ guest: true, phone: true, google: true, apple: true });
+  });
+
+  it('answers 503 on both phone steps when there is no SMS provider', async () => {
+    const bare = await createTestApp(
+      { OTP_SENDS_PER_IP_PER_HOUR: '10000' },
+      { auth: { sms: null, apple: null } },
+    );
+    try {
+      const methods = await bare.app.inject({ method: 'GET', url: '/v1/auth/methods' });
+      expect(methods.json()).toEqual({ guest: true, phone: false, google: true, apple: false });
+      const send = await bare.app.inject({
+        method: 'POST',
+        url: '/v1/auth/otp/send',
+        payload: { phone: '0803 123 4567', platform: 'android' },
+      });
+      expect([send.statusCode, send.json().code]).toEqual([503, 'PROVIDER_UNAVAILABLE']);
+      const verify = await bare.app.inject({
+        method: 'POST',
+        url: '/v1/auth/otp/verify',
+        payload: { request_id: 'otp_0123456789ab', code: '123456' },
+      });
+      expect([verify.statusCode, verify.json().code]).toEqual([503, 'PROVIDER_UNAVAILABLE']);
+      // Guests still play.
+      expect((await signInGuest(bare.app)).access).toBeTruthy();
+    } finally {
+      await bare.close();
+    }
+  });
+});
+
 describe('accounts and sessions', () => {
   it('signs out everywhere (FR-AUTH-8)', async () => {
     const sub = `g-${randomInt(1e9)}`;

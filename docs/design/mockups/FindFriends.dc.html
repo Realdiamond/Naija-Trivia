@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Find friends</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#006B40}a:hover{color:#004F2F}
+input::placeholder{color:#6B756F}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFDF7; color: #14231B; font-family: Nunito, system-ui, sans-serif; display: flex; flex-direction: column; padding: 14px 20px 22px; overflow: hidden">
+  <div style="display: flex; align-items: center; justify-content: space-between">
+    <a href="Username.dc.html" aria-label="Back" style="width: 48px; height: 48px; margin-left: -12px; display: flex; align-items: center; justify-content: center; color: #14231B">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round"><path d="M15 18l-6-6 6-6"></path></svg>
+    </a>
+    <a href="Home.dc.html" style="padding: 12px 4px; font-weight: 800; font-size: 16px">Skip</a>
+  </div>
+  <h1 style="margin: 6px 0 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 32px; line-height: 1.05">Find your people</h1>
+  <p style="margin: 6px 0 0; font-size: 16px; line-height: 1.45; color: #3F4A44">Trivia sweet pass when you dey beat your guys.</p>
+
+  <section style="margin-top: 18px; border-radius: 16px; background: #FFFFFF; border: 1px solid #E8E2D2; padding: 14px 14px 6px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+      <h2 style="margin: 0; font-size: 17px; font-weight: 800">3 contacts already play</h2>
+      <span style="display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #5A6660">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+        Private match
+      </span>
+    </div>
+    <ul style="list-style: none; margin: 6px 0 0; padding: 0">
+      <sc-for list="{{people}}" as="p" hint-placeholder-count="3">
+        <li style="display: flex; align-items: center; gap: 12px; padding: 10px 0">
+          <span aria-hidden="true" style="{{p.avatar}}">{{p.initial}}</span>
+          <div style="flex: 1; min-width: 0">
+            <p style="margin: 0; font-size: 16px; font-weight: 800">{{p.name}}</p>
+            <p style="margin: 1px 0 0; font-size: 13px; color: #5A6660; font-weight: 600">{{p.contact}}</p>
+          </div>
+          <button type="button" onClick="{{p.add}}" style="{{p.btn}}">{{p.btnLabel}}</button>
+        </li>
+      </sc-for>
+    </ul>
+  </section>
+  <p style="margin: 8px 2px 0; font-size: 13px; line-height: 1.45; color: #5A6660">Numbers are scrambled on your phone before anything is sent. We never see or keep your contact list.</p>
+
+  <label for="find" style="margin-top: 18px; font-size: 15px; font-weight: 800">Add by username</label>
+  <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px; height: 52px; border-radius: 12px; border: 2px solid #D9D1BE; background: #FFFFFF; padding: 0 14px; box-sizing: border-box">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: none; stroke: #5A6660; stroke-width: 2.2; stroke-linecap: round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+    <input id="find" type="search" placeholder="e.g. ChidiOfLagos" style="flex: 1; min-width: 0; border: 0; outline: none; font: 700 16px Nunito, system-ui, sans-serif; color: #14231B; background: transparent">
+  </div>
+
+  <div style="margin-top: 18px; border-radius: 16px; background: #FFF1E3; padding: 14px">
+    <p style="margin: 0; font-size: 16px; font-weight: 800">Invite your group chat</p>
+    <p style="margin: 4px 0 10px; font-size: 14px; line-height: 1.4; color: #3F4A44">When a friend finishes their first duel, you both get 200 coins.</p>
+    <button type="button" style="width: 100%; height: 50px; border-radius: 12px; border: 0; background: #FF7A00; color: #14231B; font: 800 16px Nunito, system-ui, sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style="fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round"><circle cx="18" cy="5" r="2.5"></circle><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="19" r="2.5"></circle><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"></path></svg>
+      Share to WhatsApp
+    </button>
+  </div>
+
+  <a href="Home.dc.html" style="margin-top: auto; display: flex; align-items: center; justify-content: center; height: 56px; border-radius: 12px; background: #008751; color: #FFFFFF; font-weight: 800; font-size: 17px; text-decoration: none">Continue</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const sent = (this.state && this.state.sent) || {};
+    const list = [
+      { id: 'chidi', name: 'ChidiOfLagos', contact: 'Chidi Okafor in your contacts', initial: 'C', color: '#1F5F8B' },
+      { id: 'ngozi', name: 'NgoziVibes', contact: 'Ngozi E. in your contacts', initial: 'N', color: '#8E44AD' },
+      { id: 'femi', name: 'FemiTheGreat', contact: 'Femi Lawal in your contacts', initial: 'F', color: '#C0392B' }
+    ];
+    const add = 'min-width: 92px; height: 44px; border-radius: 12px; border: 0; background: #008751; color: #FFFFFF; font: 800 15px Nunito, system-ui, sans-serif; cursor: pointer';
+    const done = 'min-width: 92px; height: 44px; border-radius: 12px; border: 2px solid #D9D1BE; background: #FFFFFF; color: #3F4A44; font: 800 15px Nunito, system-ui, sans-serif';
+    return {
+      people: list.map((p) => ({
+        name: p.name,
+        contact: p.contact,
+        initial: p.initial,
+        avatar: 'width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 800; font-size: 18px; background: ' + p.color,
+        btn: sent[p.id] ? done : add,
+        btnLabel: sent[p.id] ? 'Requested' : 'Add',
+        add: () => this.setState({ sent: Object.assign({}, sent, { [p.id]: true }) })
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>
