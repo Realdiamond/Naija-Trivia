@@ -17,7 +17,8 @@ import { bearer, createTestApp, signInGuest } from './helpers';
 
 let t: Awaited<ReturnType<typeof createTestApp>>;
 beforeAll(async () => {
-  t = await createTestApp();
+  // The per-IP code limit is shared with the other test files in this run.
+  t = await createTestApp({ OTP_SENDS_PER_IP_PER_HOUR: '10000' });
   await t.pool.query(
     `INSERT INTO admin_users (id, email, name, status) VALUES ($1, 'system@whosabi.invalid', 'System', 'removed')
      ON CONFLICT (id) DO NOTHING`,
@@ -67,6 +68,7 @@ async function phoneSignIn(phone: ReturnType<typeof newPhone>, access?: string) 
     headers: access ? bearer(access) : {},
     payload: { phone: phone.typed, platform: 'android' },
   });
+  expect(sent.statusCode, sent.body).toBe(200);
   const res = await t.app.inject({
     method: 'POST',
     url: '/v1/auth/otp/verify',
