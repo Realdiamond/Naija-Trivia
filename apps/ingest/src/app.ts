@@ -20,18 +20,20 @@ export interface AccessIdentity {
   userId: string;
 }
 
-export interface IngestOptions {
+export interface IngestRouteOptions {
   redis: Redis;
   /** Verifies an access token issued by the API; throws if it is invalid or expired. */
   verifyAccess: (token: string) => Promise<AccessIdentity>;
   analyticsKey: string;
-  corsOrigins: string[];
   now?: () => number;
+}
+
+export interface IngestOptions extends IngestRouteOptions {
+  corsOrigins: string[];
   logLevel?: string;
 }
 
 export async function buildIngestApp(options: IngestOptions): Promise<FastifyInstance> {
-  const now = options.now ?? (() => Date.now());
   const app = Fastify({
     logger: { level: options.logLevel ?? 'info' },
     bodyLimit: MAX_COMPRESSED_BYTES,
@@ -44,6 +46,23 @@ export async function buildIngestApp(options: IngestOptions): Promise<FastifyIns
     maxAge: 86_400,
   });
 
+  app.get('/health', async () => {
+    await options.redis.ping();
+    return { ok: true };
+  });
+
+  // The intake in its own context, so its JSON parser applies to it alone.
+  const { redis, verifyAccess, analyticsKey, now } = options;
+  await app.register(ingestRoutes, { redis, verifyAccess, analyticsKey, now });
+  return app;
+}
+
+/**
+ * POST /v1/events as a plugin: the standalone service above, or mounted in the API when one
+ * process serves both (the Heroku launch setup, doc 07 §5).
+ */
+export async function ingestRoutes(app: FastifyInstance, options: IngestRouteOptions): Promise<void> {
+  const now = options.now ?? (() => Date.now());
   // Batches arrive as JSON, optionally gzipped. Decompression is capped against zip bombs.
   app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (request, body: Buffer, done) => {
     try {
@@ -58,11 +77,6 @@ export async function buildIngestApp(options: IngestOptions): Promise<FastifyIns
         undefined,
       );
     }
-  });
-
-  app.get('/health', async () => {
-    await options.redis.ping();
-    return { ok: true };
   });
 
   app.post('/v1/events', async (request, reply) => {
@@ -103,6 +117,4 @@ export async function buildIngestApp(options: IngestOptions): Promise<FastifyIns
     const fresh = await appendBatchOnce(options.redis, `${userPid}:${batch.batch_id}`, rows);
     return reply.code(202).send({ accepted: rows.length, rejected: rejected.length, duplicate: !fresh });
   });
-
-  return app;
 }

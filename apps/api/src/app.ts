@@ -14,12 +14,14 @@ import { contentRoutes } from './content/routes';
 import { duelRoutes } from './duels/routes';
 import type { Pool } from './db';
 import { registerErrorHandlers } from './errors';
+import { ingestRoutes } from '@whosabi/ingest';
 import { ServerEvents } from './events';
 import { newId } from './ids';
 import { profileRoutes } from './profile/routes';
 import { roundRoutes } from './rounds/routes';
 import { rttRoutes } from './rtt';
 import { socialRoutes } from './social/routes';
+import { serveWebApp, webAppPage } from './web';
 
 export interface AppDeps {
   config: Config;
@@ -57,7 +59,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
     auth: { ...createAuthProviders(options.config, app.log, options.clock.now), ...options.auth },
   };
 
-  registerErrorHandlers(app);
+  registerErrorHandlers(app, options.config.webAppDir ? webAppPage : undefined);
   await app.register(cors, {
     origin: options.config.corsOrigins,
     credentials: true,
@@ -97,5 +99,16 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   roundRoutes(app, deps);
   duelRoutes(app, deps);
   adminRoutes(app, deps);
+
+  // One process for everything at launch (Heroku, doc 07 §5): the event intake and the web app.
+  if (options.config.eventsInApi) {
+    await app.register(ingestRoutes, {
+      redis: options.redis,
+      analyticsKey: options.config.analyticsKey,
+      now: options.clock.now,
+      verifyAccess: async (token) => ({ userId: (await options.tokens.verifyAccess(token)).userId }),
+    });
+  }
+  if (options.config.webAppDir) await serveWebApp(app, options.config.webAppDir);
   return app;
 }

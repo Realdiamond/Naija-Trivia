@@ -1,5 +1,5 @@
 /** Errors as RFC 9457 problem+json (doc 09 §1). */
-import type { FastifyError, FastifyInstance } from 'fastify';
+import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { ErrorCode, type Problem } from '@whosabi/shared-types';
 import type { z } from 'zod';
 
@@ -52,7 +52,10 @@ function problemFor(
   };
 }
 
-export function registerErrorHandlers(app: FastifyInstance): void {
+/** Answers a request nothing else matched, e.g. the web app's page for a path it routes itself. */
+export type NotFoundFallback = (request: FastifyRequest, reply: FastifyReply) => boolean;
+
+export function registerErrorHandlers(app: FastifyInstance, fallback?: NotFoundFallback): void {
   app.setErrorHandler((error: FastifyError | ApiError, request, reply) => {
     let problem: Problem;
     if (error instanceof ApiError) {
@@ -77,6 +80,7 @@ export function registerErrorHandlers(app: FastifyInstance): void {
   });
 
   app.setNotFoundHandler((request, reply) => {
+    if (fallback?.(request, reply)) return;
     const problem = problemFor(
       404,
       ErrorCode.notFound,

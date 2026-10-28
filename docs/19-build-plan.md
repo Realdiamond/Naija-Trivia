@@ -29,6 +29,8 @@ Doc 15 sprint mapping: S0 is done (the Expo app and the web build in CI came wit
 ## 3. Milestone M1: "First duel" (doc 15, week 8)
 **Done when:** two internal users complete a duel against staging, one on an Android phone and one in the web app, and the duel shows on both players' admin timelines.
 
+**Status (28 Oct 2026):** every code step is done (1.1 to 1.6). What is left is the check itself: the team deploys staging by following [deploy/heroku.md](deploy/heroku.md), then plays one duel with one player on an Android phone (Expo Go, pointed at staging) and one on the web app, and finds it on both timelines in the admin console. The same flow already passes end to end in CI, with both players in browsers.
+
 ### Step 1.1 · Duel API ✅
 Docs: [GDD §2.1, §3.2, §9](03-game-design-document.md) · [TRD §4.3, §5.1–5.4](06-TRD.md) · [API §2.5](09-API-and-realtime-protocol.md) · [Data model: `duels`, `duel_rounds`, `duel_answers`](08-data-model.md) · [Testing §4.1–4.2](14-testing-and-QA-plan.md) · [Analytics: duel events](13-analytics-and-metrics.md) · [PRD US-3, US-4](02-PRD.md)
 
@@ -157,8 +159,19 @@ Left for later on purpose: changing the consent in settings (with the profile an
 
 Left for later on purpose (step 2.7): Overview and Live, analytics dashboards, the other User 360 tabs (sessions and time, matches, money, safety, support), player actions (grants, warnings, bans) and notes, IP allow-lists and signing in again before sensitive actions.
 
-### Step 1.6 · Staging ⬜
-Heroku in the Europe region, decided on 28 Oct 2026 instead of AWS to save cost: a `Procfile` and `app.json` for the API, ingest, workers, the web app and the admin console, with Heroku Postgres and Heroku Key-Value Store (Redis). Docs: [07 §5](07-system-architecture.md) (its "leaner option"), [TRD §7](06-TRD.md). Needs the team's Heroku account connected to this repo (§6).
+### Step 1.6 · Staging on Heroku ✅
+Heroku in the Europe region, decided on 28 Oct 2026 instead of AWS to save cost. Docs: [07 §5](07-system-architecture.md) (its "leaner option"), [TRD §7](06-TRD.md), and the step-by-step [deployment guide](deploy/heroku.md).
+
+- ✅ Two Heroku apps from one repository, told apart by `WHOSABI_APP`: **game** (`web`: the API; `worker`: the worker; migrations in the release phase) and **admin** (`web`: the console). `Procfile`, `app.json` (add-ons, settings and formation for the game app) and `scripts/heroku.mjs` hold it together; `heroku-postbuild` builds only what each app needs
+- ✅ The web app is served by the API from the same address (`WEB_APP_DIR`), with long caching for hashed bundles and the app's page for any other path. One address keeps the refresh cookie first-party, which `herokuapp.com` would otherwise block between two apps
+- ✅ The event intake runs inside the API (`EVENTS_IN_API`), so there is no ingest app to pay for; the ingest service stays for later and both share the same code
+- ✅ Heroku Postgres and Key-Value Store over TLS (`PGSSLMODE=no-verify`, `REDIS_TLS_VERIFY=false`)
+- ✅ `pnpm --filter @whosabi/api keys` makes the signing keys and analytics key as a `heroku config:set` command; keys stored with `\n` for line breaks also work
+- ✅ Staging can play the draft questions with `SEED_LIVE_ALLOWED=yes` (refused in production otherwise)
+- ✅ Rehearsed locally: the Heroku build of both apps, then the release, web and worker processes in production mode. A guest played the taste test on the same-origin web app, stayed signed in after a reload, the event batch was accepted and the worker loaded it; the console signed staff out to its Google sign-in and the API had no development sign-in
+- ✅ Tests: the web app from the API (pages, caching, API 404s untouched), events taken by the API, and Redis TLS settings
+
+To do by the team (§6): create the two apps and deploy them by following the [guide](deploy/heroku.md). About US$29 a month at Basic dynos.
 
 ## 4. Milestone M2: "Feature complete" (doc 15, week 12)
 **Done when:** every P0 story works on Android, iOS and web; the admin console's MVP modules are live (doc 18 §4); 2,000+ approved questions.
@@ -186,7 +199,7 @@ These are for the team, not pull requests, and some steps wait on them.
 | Google OAuth client IDs (Android, web) | 1.4 | Free in Google Cloud Console; set `GOOGLE_CLIENT_IDS`. The Android client needs the app-signing SHA-1 from Play Console |
 | Apple Developer Program and Apple sign-in ids | iOS build (2.8) | US$99 a year; `APPLE_AUDIENCES`. Not needed for Android or the web |
 | Expo account (EAS Build) | 1.4 | The free tier builds the Android app; its token goes in CI |
-| Heroku account connected to this repo | 1.6 | Europe region. ClickHouse waits until daily players reach the thousands |
+| Heroku account and the two staging apps | 1.6 | Europe region, about US$29 a month; follow [deploy/heroku.md](deploy/heroku.md). ClickHouse waits until daily players reach the thousands |
 | Staff Google accounts for the admin console | 1.5 | Google Workspace, or an allow-list of personal Google accounts. Also a Google OAuth web client for the console (`ADMIN_GOOGLE_CLIENT_IDS` on the API, `ADMIN_GOOGLE_CLIENT_ID` on the console) |
 | Termii sender ID (and Africa's Talking), Turnstile keys | Only when phone sign-in is switched on | Not needed for launch. Registration and NCC approval take weeks. Then set `TERMII_API_KEY`, `TERMII_SENDER_ID` (and `AT_USERNAME`, `AT_API_KEY`), `OTP_SECRET`, `TURNSTILE_SECRET` and the app's `SMS_RETRIEVER_APP_HASH` |
 | Firebase project (FCM, web push) | 2.5 | |

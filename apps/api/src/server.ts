@@ -1,14 +1,14 @@
-import { Redis } from 'ioredis';
 import { buildApp } from './app';
 import { createTokenService } from './auth/tokens';
 import { systemClock } from './clock';
 import { loadConfig } from './config';
 import { createPool } from './db';
 import { migrate } from './migrate';
+import { createRedis } from './redis';
 
 const config = loadConfig();
 const pool = createPool(config.databaseUrl);
-const redis = new Redis(config.redisUrl, { maxRetriesPerRequest: 2 });
+const redis = createRedis(config, { maxRetriesPerRequest: 2 });
 const tokens = await createTokenService(
   { privateKeyPem: config.jwtPrivateKeyPem, publicKeyPem: config.jwtPublicKeyPem },
   systemClock.now,
