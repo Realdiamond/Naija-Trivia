@@ -34,7 +34,7 @@ This document turns the PRD into technical requirements: the platforms, the stac
 | Cache, leaderboards, queues | **Redis 7**. Sorted sets for leaderboards. Background jobs run in a worker process on timers, each safe to run on several workers at once; BullMQ only if a real job queue is needed later | One dependency covers several needs | Kafka (overkill) |
 | Object storage / CDN | S3 + **CloudFront** (Lagos edge) | Images and audio close to users | – |
 | Auth | Own auth service: phone OTP (Termii primary, Africa's Talking fallback) + Google Sign-In + Apple Sign-In (iOS). JWT access (15 min) + rotating refresh (30 days) | Local SMS routes cost about ₦8–12 per OTP. Full control of the guest-to-account merge | Firebase Auth phone (higher per-SMS cost to Nigeria, less control) |
-| Push | FCM for Android, iOS (through APNs) and web push; expo-notifications in the app, the Firebase JS SDK on the web | Free and reliable, one token format everywhere | OneSignal |
+| Push | FCM for Android and iOS (through APNs), expo-notifications in the app; the standard Web Push protocol (VAPID) for browsers, with our own service worker | Free and reliable; web push needs no Firebase SDK in the page | OneSignal |
 | Ads | Google AdMob with mediation (AppLovin, Meta Audience Network, Unity Ads, Liftoff) via `react-native-google-mobile-ads`. Web (v1.1): Google's H5 Games Ads / Ad Manager rewarded and interstitial formats, subject to Google's approval | Best fill in Nigeria with mediation | IronSource-only |
 | IAP / subscriptions | Google Play Billing + StoreKit through **RevenueCat**. Web (v1.1): **Paystack** for coins, gems and Sabi Pass | Receipt validation, entitlements and webhooks handled for us; Paystack is the local standard for card, bank and USSD payments | Building receipt validation ourselves |
 | Analytics | **First-party pipeline:** `packages/analytics` SDK → ingest service → Redis stream → **ClickHouse** (ClickHouse Cloud or self-hosted). Firebase Analytics in the mobile apps only, for ads attribution | Every event in one store we control, joined with game data and shown in the admin console; fast at billions of rows; no per-event vendor bill; one processor fewer for NDPA | PostHog (good, but splits the admin across two tools and bills per event at scale). BigQuery (slower and pay-per-query for live dashboards). Postgres (won't hold a year of events) |
@@ -113,7 +113,8 @@ This document turns the PRD into technical requirements: the platforms, the stac
 - **FR-NOT-1:** Types: your_turn, duel_expiring, duel_result, friend_joined, daily_live, league_recap, party_invite, content_correction.
 - **FR-NOT-2:** Quiet hours 22:00–07:00 WAT (except party invites from friends). Max 4 non-turn pushes a day per user.
 - **FR-NOT-3:** Pidgin or English templates, based on the user's language setting.
-- **FR-NOT-4:** Web push uses the same FCM token flow. On iPhone it only works after the player adds the web app to the Home Screen (iOS 16.4+), so on iPhone the web app leans on WhatsApp nudges instead.
+- **FR-NOT-4:** Web push uses the standard Web Push protocol: the browser subscribes with our VAPID public key, the API keeps the subscription (only at known push services), and the worker encrypts each push for that browser (RFC 8291) and signs it (RFC 8292). A service worker shows it and opens its screen. On iPhone it only works after the player adds the web app to the Home Screen (iOS 16.4+), so there the web app doesn't prompt, the notifications screen explains how, and the game leans on WhatsApp nudges instead.
+- **FR-NOT-5:** Players switch kinds of push off in the app (duels, friends, Daily), since browsers have no notification channels; the switches count on every device.
 
 ### 4.9 Admin console
 - **FR-ADM-1:** One console for players, live activity, analytics, content, LiveOps, moderation, support, commerce and compliance, specified in [doc 18](18-admin-console-and-analytics.md).
@@ -196,7 +197,7 @@ Screens call one interface; the bundler picks `adapter.native.ts` for Android an
 |---|---|---|
 | Key-value storage | MMKV | IndexedDB (localStorage fallback) |
 | Refresh token | expo-secure-store (Keystore / Keychain) | HttpOnly cookie (FR-AUTH-7) |
-| Push | expo-notifications + FCM | Firebase JS SDK + service worker |
+| Push | expo-notifications + FCM | Web Push API (VAPID) + service worker |
 | OTP autofill | SMS Retriever (Android), iOS autofill | WebOTP (Chrome on Android), `autocomplete="one-time-code"` |
 | Google sign-in | Native Google Sign-In | Google Identity Services |
 | Purchases | RevenueCat (Play, App Store) | Paystack inline checkout (v1.1) |

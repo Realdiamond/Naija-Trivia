@@ -2,6 +2,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import { describe, expect, it } from 'vitest';
 import { createAuthProviders } from '../src/auth/providers';
 import { loadConfig } from '../src/config';
+import { newVapidKeys } from '../src/push/webpush';
 
 const production = {
   NODE_ENV: 'production',
@@ -58,6 +59,20 @@ describe('phone sign-in settings', () => {
     // Outside production, codes go to the log.
     const dev = loadConfig({ DATABASE_URL: production.DATABASE_URL, REDIS_URL: production.REDIS_URL });
     expect(createAuthProviders(dev, silent, Date.now).email).not.toBeNull();
+  });
+
+  it('turns web push on in production only with a VAPID key, and always in development', () => {
+    expect(loadConfig(production).webPush).toBeUndefined();
+    const key = newVapidKeys('mailto:x@y.z');
+    const on = loadConfig({ ...production, VAPID_PRIVATE_KEY: key.privateKey });
+    expect(on.webPush).toEqual({ ...key, subject: 'https://whosabi.ng' });
+    expect(() => loadConfig({ ...production, VAPID_PRIVATE_KEY: 'A'.repeat(43) })).toThrow(
+      'VAPID_PRIVATE_KEY is not a P-256 private key',
+    );
+    // Development: the same key in every process, so the API and the worker agree.
+    const dev = { DATABASE_URL: production.DATABASE_URL, REDIS_URL: production.REDIS_URL };
+    expect(loadConfig(dev).webPush?.publicKey).toBe(loadConfig(dev).webPush?.publicKey);
+    expect(loadConfig(dev).webPush?.publicKey).toMatch(/^B[A-Za-z0-9_-]{86}$/);
   });
 
   it('still refuses production without its signing keys', () => {

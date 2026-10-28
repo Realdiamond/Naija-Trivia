@@ -13,6 +13,7 @@ const ITEMS: Array<{ path: string; label: MessageKey; icon: IconName; accountOnl
   { path: '/challenge', label: 'nav.play', icon: 'play' },
   { path: '/leaderboards', label: 'nav.leaderboards', icon: 'trophy' },
   { path: '/friends', label: 'nav.friends', icon: 'users', accountOnly: true },
+  { path: '/notifications', label: 'nav.notifications', icon: 'bell' },
 ];
 
 /** Which item a page belongs to: duels under "Start a duel", any Daily page under the Daily. */

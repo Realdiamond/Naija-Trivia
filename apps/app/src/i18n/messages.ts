@@ -235,6 +235,7 @@ export const en = {
   'nav.friends': 'Friends',
   'nav.daily': 'Daily Sabi',
   'nav.leaderboards': 'Leaderboards',
+  'nav.notifications': 'Notifications',
 
   'daily.bannerTitle': 'Daily #{id} dey wait',
   'daily.bannerQuestions': '{total} questions',
@@ -269,6 +270,27 @@ export const en = {
   'push.turnOn': 'Turn on notifications',
   'push.notNow': 'Not now',
   'push.denied': "Notifications are off for Who Sabi? in your phone's settings.",
+  'push.deniedWeb':
+    'Notifications are blocked for Who Sabi? in this browser. Allow them in the site settings.',
+
+  'notify.title': 'Notifications',
+  'notify.on': 'Notifications are on here.',
+  'notify.offHere': "Notifications are off here. Turn them on to hear when it's your turn.",
+  'notify.blocked': "Notifications are off for Who Sabi? in your phone's settings. Turn them on there.",
+  'notify.blockedWeb':
+    'Notifications are blocked for Who Sabi? in this browser. Allow them in the site settings (tap the icon by the address).',
+  'notify.iphone':
+    'On iPhone, add Who Sabi? to your Home Screen first: tap Share, then "Add to Home Screen", and open the game from there.',
+  'notify.unsupported':
+    "This browser can't show notifications. These switches still count on your other phones and browsers.",
+  'notify.kinds': 'What to tell you about',
+  'notify.duels': 'Duels',
+  'notify.duelsHint': 'Your turn, time running out, and results',
+  'notify.friends': 'Friends',
+  'notify.friendsHint': 'Friend requests',
+  'notify.daily': 'Daily challenge',
+  'notify.dailyHint': 'A morning reminder when you have not played',
+  'notify.quiet': 'Never between 10 pm and 7 am, and at most 4 a day besides your turns.',
   'share.picture': 'Share picture for Status',
   'share.making': 'Making your picture…',
   'share.saved': 'Picture saved. Post it on your WhatsApp Status.',
@@ -543,6 +565,7 @@ export const pcm: Record<MessageKey, string> = {
   'nav.friends': 'Friends',
   'nav.daily': 'Daily Sabi',
   'nav.leaderboards': 'Leaderboards',
+  'nav.notifications': 'Notifications',
 
   'daily.bannerTitle': 'Daily #{id} dey wait',
   'daily.bannerQuestions': '{total} questions',
@@ -577,6 +600,26 @@ export const pcm: Record<MessageKey, string> = {
   'push.turnOn': 'Turn on notifications',
   'push.notNow': 'Not now',
   'push.denied': 'Notifications don off for Who Sabi? for your phone settings.',
+  'push.deniedWeb': 'Notifications don block for Who Sabi? for this browser. Allow am for the site settings.',
+
+  'notify.title': 'Notifications',
+  'notify.on': 'Notifications dey on for here.',
+  'notify.offHere': 'Notifications dey off for here. Turn am on make you know when na your turn.',
+  'notify.blocked': 'Notifications don off for Who Sabi? for your phone settings. Turn am on for there.',
+  'notify.blockedWeb':
+    'Notifications don block for Who Sabi? for this browser. Allow am for the site settings (tap the icon near the address).',
+  'notify.iphone':
+    'For iPhone, first add Who Sabi? to your Home Screen: tap Share, then "Add to Home Screen", then open the game from there.',
+  'notify.unsupported':
+    'This browser no fit show notifications. These switches still dey work for your other phones and browsers.',
+  'notify.kinds': 'Wetin make we tell you about',
+  'notify.duels': 'Duels',
+  'notify.duelsHint': 'Your turn, when time wan finish, and results',
+  'notify.friends': 'Friends',
+  'notify.friendsHint': 'Friend requests',
+  'notify.daily': 'Daily challenge',
+  'notify.dailyHint': 'One morning reminder if you never play',
+  'notify.quiet': 'Nothing between 10pm and 7am, and maximum 4 for one day apart from your turns.',
   'share.picture': 'Share picture for Status',
   'share.making': 'We dey make your picture…',
   'share.saved': 'Picture don save. Post am for your WhatsApp Status.',

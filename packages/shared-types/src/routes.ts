@@ -19,6 +19,8 @@ export const routes = {
   meConsents: () => `${API_PREFIX}/me/consents`,
   /** POST to turn pushes on for this phone, DELETE (same body shape, the token) to turn them off. */
   meDevices: () => `${API_PREFIX}/me/devices`,
+  /** The web push (VAPID) public key browsers subscribe with. */
+  pushWebKey: () => `${API_PREFIX}/push/web-key`,
   user: (username: string) => `${API_PREFIX}/users/${encodeURIComponent(username)}`,
   friends: () => `${API_PREFIX}/friends`,
   friend: (userId: string) => `${API_PREFIX}/friends/${encodeURIComponent(userId)}`,

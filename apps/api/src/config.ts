@@ -1,5 +1,7 @@
 import { z } from 'zod';
+import { createHash } from 'node:crypto';
 import { ServiceAccount } from './push/transport';
+import { vapidKeysFrom, type VapidKeys } from './push/webpush';
 
 const Env = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -75,6 +77,19 @@ const Env = z.object({
    * key), the whole JSON file as one setting. Unset, pushes are written to the worker's log.
    */
   FIREBASE_SERVICE_ACCOUNT: z.string().min(1).optional(),
+  /**
+   * Web push (step 2.5c): the VAPID private key from the keys script (the public key follows from
+   * it). Unset in production, browsers get no pushes.
+   */
+  VAPID_PRIVATE_KEY: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{43}$/, 'a base64url P-256 private key from the keys script')
+    .optional(),
+  /** Who push services can contact about our pushes: mailto: or https:; PUBLIC_WEB_URL by default. */
+  VAPID_SUBJECT: z
+    .string()
+    .regex(/^(mailto:|https:\/\/)\S+$/)
+    .optional(),
   /** The Apple developer Team ID, for iOS Universal Links; unset until there is an iOS app. */
   APPLE_TEAM_ID: z
     .string()
@@ -121,11 +136,17 @@ export interface Config {
   androidCertSha256: string[];
   appleTeamId?: string;
   firebaseServiceAccount?: ServiceAccount;
+  /** Web push keys: always outside production (a fixed development key), in production when set. */
+  webPush?: VapidKeys;
 }
 
 // Stable outside production so analytics ids don't change on every restart.
 const DEV_ANALYTICS_KEY = 'dev-only-analytics-key-not-for-production-use';
 const DEV_OTP_SECRET = 'dev-only-otp-secret-not-for-production-use';
+// The API and the worker must share the key browsers subscribe with, so development uses a fixed one.
+const DEV_VAPID_KEY = createHash('sha256')
+  .update('dev-only-vapid-key-not-for-production-use')
+  .digest('base64url');
 
 const list = (value: string) =>
   value
@@ -186,7 +207,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     firebaseServiceAccount: e.FIREBASE_SERVICE_ACCOUNT
       ? serviceAccount(e.FIREBASE_SERVICE_ACCOUNT)
       : undefined,
+    webPush: webPushKeys(
+      e.VAPID_PRIVATE_KEY ?? (e.NODE_ENV === 'production' ? undefined : DEV_VAPID_KEY),
+      e.VAPID_SUBJECT ?? e.PUBLIC_WEB_URL.replace(/\/+$/, ''),
+    ),
   };
+}
+
+function webPushKeys(privateKey: string | undefined, subject: string): VapidKeys | undefined {
+  if (!privateKey) return undefined;
+  try {
+    return vapidKeysFrom(privateKey, subject);
+  } catch {
+    throw new Error('VAPID_PRIVATE_KEY is not a P-256 private key: make a new one with the keys script');
+  }
 }
 
 /** A readable error for a pasted key that isn't the Firebase JSON file; never echoes the key. */

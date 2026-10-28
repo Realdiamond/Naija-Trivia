@@ -238,8 +238,16 @@ TRD §4.8 (FR-NOT-1 to 3), API §2.2 and §4, doc 05 §4. Web push follows in 2.
 - ✅ The app (Android): asks at the right moment, not on first open (a card after playing a turn, "we'll tell you the moment Chidi plays", and after the Daily), then the system prompt. Pushes show while the app is open and refresh what is on screen; a tap opens the duel, Friends or the Daily, also from a cold start. `push_received` and `push_opened` are counted
 - ✅ Tests: the API (16: registering phones, what each duel move, friend request and the Daily queue, quiet hours, the cap, expiry, collapsing, dead tokens, refusals and retries, a guest's pushes moving to their account, the wording, and the FCM sign-in and message against a stand-in for Google); the reminder tests rewritten on the queue; settings; the app's push routing
 
-### Step 2.5c · Web push ⬜
-Push in the browser through the standard Web Push protocol (VAPID keys from the keys script): a service worker shows the push and opens the page, the same prompt cards on the web, and the iOS rule that web push needs the app on the Home Screen (FR-NOT-4). A notifications section in settings to switch kinds off where the phone has no channels.
+### Step 2.5c · Web push ✅
+TRD FR-NOT-4 and FR-NOT-5, API §2.2 and §4.
+
+- ✅ The standard Web Push protocol, no Firebase SDK in the page: the browser subscribes with our VAPID public key (`GET /v1/push/web-key`), and `POST /v1/me/devices` keeps the subscription, only at the browsers' push services (an endpoint anywhere else is refused, so a request can't point our servers elsewhere)
+- ✅ The worker encrypts each push for its browser (RFC 8291, checked against the RFC's worked example) and signs it with the VAPID key (RFC 8292), through the same push job as Android: quiet hours, the daily cap, collapsing (`Topic`), expiry (`TTL`), turns at high `Urgency`, ended subscriptions forgotten and busy push services tried again. Each device goes through its own service (FCM or web push); a service not set up writes to the log
+- ✅ The keys script prints `VAPID_PRIVATE_KEY` (and `OTP_SECRET`); development uses a fixed key so the API and the worker agree. Production without the key keeps web push off and the web app asks for nothing
+- ✅ The web app: a service worker (`/sw.js`) shows each push with the game's icon and opens its screen, in the open game when there is one; the same prompt cards as Android after a turn or a Daily; a web manifest and icons, so the game can go on the Home Screen
+- ✅ iPhone: Safari allows web push only for a game on the Home Screen, so there the prompt cards stay hidden and the notifications screen says how to add it
+- ✅ **Notifications** (the bell on Home, and in the side navigation on computers): whether this phone or browser gets them, a button to turn them on or what to do when they are blocked, and a switch for duels, friends and the Daily reminder. The switches are kept on the account (`push_off`) and count on every device; a switched-off push is recorded as `muted`
+- ✅ Tests: the API (9: the RFC example, push services only, the encrypted message and the VAPID signature, what each answer means, the public key following from the private one, the key for browsers, subscribing and forgetting, the push job reaching a browser, switched-off kinds), the worker and manifest served fresh, the VAPID settings; end to end, the notifications screen and its switches
 
 ### Step 2.9a · Staff on the phone: the Staff tab ✅
 doc 18 §16, owner's decisions above.
@@ -275,7 +283,7 @@ Difficulty calibration after each answer (`d_rating`, GDD §6.3) and the nightly
 | 2.2 Party rooms ⬜ | `apps/realtime` (Colyseus), party REST side, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
 | 2.3 Random opponents ⬜ | Rating-bucket matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
 | 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
-| 2.5 Sharing, links & push: 2.5a ✅, 2.5b ✅, 2.5c ⬜ | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
+| 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools: 2.6a ✅, 2.6b ⬜ | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |

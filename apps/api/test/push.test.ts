@@ -413,6 +413,41 @@ describe('the push job', () => {
     expect(transport.to(live)).toHaveLength(2);
   });
 
+  it('skips the kinds a player switched off in the app, on every phone', async () => {
+    startDayAt(9);
+    const p = await player();
+    const phone = await givePhone(t.pool, p.id);
+    const off = await t.app.inject({
+      method: 'PATCH',
+      url: '/v1/me',
+      headers: bearer(p.access),
+      payload: { push_off: ['friends', 'friends'] },
+    });
+    expect(off.json().push_off).toEqual(['friends']);
+    await push(p.id, 1);
+    await queuePush(t.pool, {
+      userId: p.id,
+      params: { type: 'your_turn', duel_id: 'd_muted', kind: 'turn', opponent: null },
+      collapseKey: 'duel:d_muted',
+      expiresAt: t.clock.now() + HOUR,
+      now: t.clock.now(),
+    });
+    const transport = new TestTransport();
+    await sendDuePushes(deps, transport);
+    expect(transport.to(phone).map((m) => m.type)).toEqual(['your_turn']);
+    expect(await outcomes(p.id)).toEqual([
+      { type: 'friend_joined', outcome: 'muted' },
+      { type: 'your_turn', outcome: 'sent' },
+    ]);
+    const bad = await t.app.inject({
+      method: 'PATCH',
+      url: '/v1/me',
+      headers: bearer(p.access),
+      payload: { push_off: ['staff'] },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
+
   it('keeps one waiting message per key: the newest', async () => {
     startDayAt(9);
     const p = await player();

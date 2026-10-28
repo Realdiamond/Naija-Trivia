@@ -46,12 +46,13 @@ A token that is sent but expired is a `401` before the code is used, so the app 
 ### 2.2 Me & profile
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/me` | Profile, settings, age band, level with XP progress, rating and tier, and `staff` (an owner or admin playing with their staff Google account: the app shows the Staff tab, step 2.9a). Balances, entitlements and flags join with their steps |
-| PATCH | `/me` | `{username?, avatar_id?, home_state?, language?, data_saver?, family_mode?, discoverable?}`, all optional. The username needs an account and is chosen once (`USERNAME_LOCKED`; support changes it): 3–20 letters, digits or `_`, unique ignoring case (`USERNAME_TAKEN`), and filtered for offensive and official-looking names (`USERNAME_NOT_ALLOWED`). Restricted (13–17) accounts can't turn family mode off or become discoverable |
+| GET | `/me` | Profile, settings, age band, level with XP progress, rating and tier, `staff` (an owner or admin playing with their staff Google account: the app shows the Staff tab, step 2.9a) and `push_off` (kinds of push switched off). Balances, entitlements and flags join with their steps |
+| PATCH | `/me` | `{username?, avatar_id?, home_state?, language?, data_saver?, family_mode?, discoverable?, push_off?}`, all optional. `push_off` lists the kinds switched off, from `duels`, `friends` and `daily` (step 2.5c); the push job drops those (`muted`) on every device. The username needs an account and is chosen once (`USERNAME_LOCKED`; support changes it): 3–20 letters, digits or `_`, unique ignoring case (`USERNAME_TAKEN`), and filtered for offensive and official-looking names (`USERNAME_NOT_ALLOWED`). Restricted (13–17) accounts can't turn family mode off or become discoverable |
 | POST | `/me/age` | `{age_band: under_13 | 13_17 | 18_plus}`. One-time (`AGE_ALREADY_SET`; changes go through support). `under_13` is refused (`AGE_NOT_ALLOWED`). `13_17` makes the account restricted (doc 10 §3.3): family mode on, not discoverable; a guest who answers 13–17 becomes a restricted account when they sign up |
 | POST | `/me/consents` | `{source: onboarding | settings | web_banner, consents: [{purpose, granted, policy_version}]}`. Purposes: `terms`, `privacy`, `analytics`, `marketing_push`, `ads_personalisation`, `contacts`, `session_replay`. Each change is a new `consent_records` row (the history is kept) and a `consent_changed` event; `204` |
-| POST | `/me/devices` | Turns pushes on for this phone: `{platform: android, push_token, app_version?, model?}`; `204`. The app sends it on every start (FCM can change the token), and the token moves to whoever is signed in on the phone. A player keeps their 10 newest phones. 30 an hour. Web push (step 2.5c) and iOS (step 2.8) add their platforms |
-| DELETE | `/me/devices` | `{push_token}`: pushes off for this phone (on sign-out); `204` |
+| POST | `/me/devices` | Turns pushes on for this phone or browser; `204`. Android: `{platform: android, push_token, app_version?, model?}`. A browser (step 2.5c): `{platform: web, subscription: {endpoint, keys: {p256dh, auth}}, app_version?, browser?}`, what `PushSubscription.toJSON()` gives; the endpoint must be https at a browsers' push service (Google, Mozilla, Apple, Microsoft), anything else is `400`. Sent on every start (the token or subscription can change); it moves to whoever is signed in there. A player keeps their 10 newest. 30 an hour. iOS joins with its build (step 2.8) |
+| DELETE | `/me/devices` | `{push_token}` (the FCM token, or a browser's endpoint): pushes off there (on sign-out); `204` |
+| GET | `/push/web-key` | – → `{public_key}`: the VAPID public key browsers subscribe with, or `null` while web push is off |
 | GET | `/me/stats` | Per-category accuracy, best streak, duel W/L |
 | POST | `/me/delete` | Starts erasure (30-day SLA); returns a `dsar_id` |
 | POST | `/me/export` | DSAR access export (emailed / in-app download link) |
@@ -260,8 +261,8 @@ on (all answered) or (now >= endsAt): score all, phase = REVEAL (2.5 s) → LEAD
 | 4004 | Room full or locked | Show message |
 | 1006 (abnormal) | Network drop | Auto-reconnect with backoff 0.5 s, 1 s, 2 s, 4 s… up to 60 s using the reconnection token |
 
-## 4. Push payloads (FCM)
-The worker sends FCM HTTP v1 messages: a `notification` Android shows by itself, on the push's channel, and `data` for the app. One notification per duel, friend or Daily on the phone (`collapse_key` and `tag`); turn pushes go at high priority, and the TTL ends with the turn.
+## 4. Push payloads
+**Android (FCM).** The worker sends FCM HTTP v1 messages: a `notification` Android shows by itself, on the push's channel, and `data` for the app. One notification per duel, friend or Daily on the phone (`collapse_key` and `tag`); turn pushes go at high priority, and the TTL ends with the turn.
 ```json
 { "message": {
     "token": "…",
@@ -280,6 +281,8 @@ The worker sends FCM HTTP v1 messages: a `notification` Android shows by itself,
 | `daily_live` | 09:00 WAT | Players who played a Daily in the last week and not yet today (with their streak) | `daily`, `/daily/play` |
 
 `league_recap`, `party_invite` and `content_correction` come with leagues, party rooms and re-scoring. A player's waiting push about a duel is dropped once they act in it.
+
+**Browsers (Web Push, step 2.5c).** The worker POSTs to the subscription's endpoint: the JSON `{title, body, url, type, tag}` encrypted for that browser (`Content-Encoding: aes128gcm`, RFC 8291), `Authorization: vapid t=<ES256 JWT for the push service's origin>, k=<public key>` (RFC 8292), `TTL` (the push's lifetime), `Urgency` (`high` for turns) and `Topic` (from the collapse key, so a newer push about the same duel replaces a waiting one). `404`/`410` ends the subscription; `429` and `5xx` are tried again. The service worker (`/sw.js`) shows it with `tag` and opens `url`, in an open game window when there is one.
 
 ## 5. Deep links
 | URL | App route | Web fallback |

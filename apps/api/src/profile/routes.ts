@@ -31,6 +31,7 @@ interface MeRow {
   data_saver: boolean;
   family_mode: boolean;
   discoverable: boolean;
+  push_off: Me['push_off'];
   age_band: Me['age_band'];
   xp: string | number;
   created_at: Date;
@@ -39,7 +40,7 @@ interface MeRow {
 
 const ME_SQL = `
   SELECT u.id, u.username, u.status, u.avatar_id, u.home_state, u.language, u.data_saver, u.family_mode,
-         u.discoverable, u.age_band, u.xp, u.created_at, r.rating
+         u.discoverable, u.push_off, u.age_band, u.xp, u.created_at, r.rating
     FROM users u LEFT JOIN ratings r ON r.user_id = u.id AND r.scope = 'overall'
    WHERE u.id = $1`;
 
@@ -52,6 +53,7 @@ const SETTABLE = [
   'data_saver',
   'family_mode',
   'discoverable',
+  'push_off',
 ] as const;
 
 export function profileRoutes(app: FastifyInstance, deps: AppDeps): void {
@@ -114,6 +116,7 @@ export function profileRoutes(app: FastifyInstance, deps: AppDeps): void {
       ] as const) {
         if (body[key] !== undefined) changes[key] = body[key];
       }
+      if (body.push_off !== undefined) changes.push_off = [...new Set(body.push_off)].sort();
 
       const columns = SETTABLE.filter((c) => c in changes);
       if (columns.length === 0) return;
@@ -214,6 +217,7 @@ function toMe(row: MeRow, staff: boolean): Me {
     data_saver: row.data_saver,
     family_mode: row.family_mode,
     discoverable: row.discoverable,
+    push_off: row.push_off,
     age_band: row.age_band,
     level: progress.level,
     xp,

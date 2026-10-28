@@ -66,6 +66,11 @@ export default defineConfig(
     },
   },
   {
+    // The web app's service worker, served as it is (step 2.5c).
+    files: ['apps/app/public/**/*.js'],
+    languageOptions: { globals: { ...globals.serviceworker } },
+  },
+  {
     // The admin console (Next.js): server and browser code side by side.
     files: ['apps/admin/**/*.{ts,tsx}'],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },

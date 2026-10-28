@@ -19,6 +19,8 @@ describe('the web app from the API origin', () => {
     await writeFile(path.join(dir, 'index.html'), '<!doctype html><title>Who Sabi?</title>');
     await writeFile(path.join(dir, '_expo/static/js/entry-abc123.js'), 'console.log(1)');
     await writeFile(path.join(dir, 'favicon.ico'), 'icon');
+    await writeFile(path.join(dir, 'sw.js'), "self.addEventListener('push', () => {});");
+    await writeFile(path.join(dir, 'manifest.webmanifest'), '{"name":"Who Sabi?"}');
     t = await createTestApp({ WEB_APP_DIR: dir });
   });
   afterAll(() => t.close());
@@ -39,6 +41,16 @@ describe('the web app from the API origin', () => {
     expect(bundle.headers['cache-control']).toBe('public, max-age=31536000, immutable');
     const icon = await t.app.inject({ method: 'GET', url: '/favicon.ico' });
     expect(icon.headers['cache-control']).toBe('no-cache');
+  });
+
+  it('serves the service worker and the manifest as browsers need them (web push)', async () => {
+    const worker = await t.app.inject({ method: 'GET', url: '/sw.js' });
+    expect(worker.statusCode).toBe(200);
+    expect(worker.headers['content-type']).toContain('javascript');
+    // A new worker reaches browsers on their next visit.
+    expect(worker.headers['cache-control']).toBe('no-cache');
+    const manifest = await t.app.inject({ method: 'GET', url: '/manifest.webmanifest' });
+    expect(manifest.headers['content-type']).toContain('application/manifest+json');
   });
 
   it('keeps the API as it is: its routes, and problem+json for unknown API paths', async () => {
