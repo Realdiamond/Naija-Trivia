@@ -25,7 +25,8 @@ const HOUR = 3_600_000;
 let t: Awaited<ReturnType<typeof createTestApp>>;
 let deps: JobDeps;
 beforeAll(async () => {
-  t = await createTestApp();
+  // Code sends share one per-address limit across the test files; this file isn't testing it.
+  t = await createTestApp({ OTP_SENDS_PER_IP_PER_HOUR: '10000' });
   deps = {
     pool: t.pool,
     redis: t.redis,
@@ -236,6 +237,7 @@ describe('the ledger', () => {
         headers: access ? bearer(access) : {},
         payload: { phone: phone.typed, platform: 'android' },
       });
+      expect(sent.statusCode, sent.body).toBe(200);
       const res = await t.app.inject({
         method: 'POST',
         url: '/v1/auth/otp/verify',
