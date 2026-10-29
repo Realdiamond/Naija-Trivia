@@ -64,6 +64,8 @@ export async function eraseAccount(
     await client.query('DELETE FROM devices WHERE user_id = ANY($1)', [ids]);
     await client.query('DELETE FROM refresh_tokens WHERE user_id = ANY($1)', [ids]);
     await client.query('DELETE FROM user_notes WHERE user_id = $1', [userId]);
+    // What they wrote to support, and the address they gave for the answer.
+    await client.query('DELETE FROM support_tickets WHERE user_id = ANY($1)', [ids]);
     await client.query('DELETE FROM friendships WHERE user_a = $1 OR user_b = $1', [userId]);
     await client.query('DELETE FROM analytics_events WHERE user_pid = ANY($1)', [
       ids.map((id) => pseudonymousId(id, analyticsKey)),
@@ -88,52 +90,68 @@ export async function exportAccount(
             level, xp, signup_platform, created_at
        FROM users WHERE id = $1`,
   );
-  const [signIns, consents, duels, dailies, party, practice, packs, ledger, purchases, devices, notices] =
-    await Promise.all([
-      q(`SELECT provider, subject, created_at FROM auth_identities WHERE user_id = $1 ORDER BY created_at`),
-      q(
-        // How a parent or guardian agreed (step 2.8d), without their masked number or address.
-        `SELECT purpose, granted, policy_version, source, details->>'method' AS method, created_at
+  const [
+    signIns,
+    consents,
+    duels,
+    dailies,
+    party,
+    practice,
+    packs,
+    ledger,
+    purchases,
+    devices,
+    notices,
+    support,
+  ] = await Promise.all([
+    q(`SELECT provider, subject, created_at FROM auth_identities WHERE user_id = $1 ORDER BY created_at`),
+    q(
+      // How a parent or guardian agreed (step 2.8d), without their masked number or address.
+      `SELECT purpose, granted, policy_version, source, details->>'method' AS method, created_at
          FROM consent_records WHERE user_id = $1 ORDER BY id`,
-      ),
-      q(
-        `SELECT d.id, d.source, d.state, d.created_at, d.completed_at,
+    ),
+    q(
+      `SELECT d.id, d.source, d.state, d.created_at, d.completed_at,
               CASE WHEN d.player_a = $1 THEN d.score_a ELSE d.score_b END AS your_score,
               CASE WHEN d.player_a = $1 THEN d.score_b ELSE d.score_a END AS their_score,
               CASE WHEN d.winner_id IS NULL THEN NULL WHEN d.winner_id = $1 THEN 'won' ELSE 'lost' END AS result
          FROM duels d WHERE d.player_a = $1 OR d.player_b = $1 ORDER BY d.created_at`,
-      ),
-      q(
-        `SELECT c.play_date, r.score, r.correct_count, r.grid, r.streak, r.completed_at
+    ),
+    q(
+      `SELECT c.play_date, r.score, r.correct_count, r.grid, r.streak, r.completed_at
          FROM daily_results r JOIN daily_challenges c ON c.id = r.daily_id WHERE r.user_id = $1 ORDER BY c.play_date`,
-      ),
-      q(
-        `SELECT g.room_code, g.ended_at, r.rank, r.score, r.correct_count
+    ),
+    q(
+      `SELECT g.room_code, g.ended_at, r.rank, r.score, r.correct_count
          FROM party_results r JOIN party_games g ON g.id = r.game_id WHERE r.user_id = $1 ORDER BY g.started_at`,
-      ),
-      q(
-        `SELECT r.played_at, p.title AS pack, r.answered, r.correct, r.xp
+    ),
+    q(
+      `SELECT r.played_at, p.title AS pack, r.answered, r.correct, r.xp
          FROM practice_results r JOIN packs p ON p.id = r.pack_id WHERE r.user_id = $1 ORDER BY r.played_at`,
-      ),
-      q(
-        `SELECT p.title AS pack, u.coins, u.unlocked_at
+    ),
+    q(
+      `SELECT p.title AS pack, u.coins, u.unlocked_at
          FROM pack_unlocks u JOIN packs p ON p.id = u.pack_id WHERE u.user_id = $1 ORDER BY u.unlocked_at`,
-      ),
-      q(
-        `SELECT t.created_at, e.amount, a.currency, t.reason
+    ),
+    q(
+      `SELECT t.created_at, e.amount, a.currency, t.reason
          FROM ledger_entries e JOIN ledger_accounts a ON a.id = e.account_id
          JOIN ledger_transactions t ON t.id = e.transaction_id
         WHERE a.owner_user_id = $1 ORDER BY e.id`,
-      ),
-      q(
-        `SELECT store, product_id, coins, status, created_at FROM purchases WHERE user_id = $1 ORDER BY created_at`,
-      ),
-      q(`SELECT platform, model, browser, app_version, last_seen_at FROM devices WHERE user_id = $1`),
-      q(
-        `SELECT action, message, ends_at, created_at FROM moderation_actions
+    ),
+    q(
+      `SELECT store, product_id, coins, status, created_at FROM purchases WHERE user_id = $1 ORDER BY created_at`,
+    ),
+    q(`SELECT platform, model, browser, app_version, last_seen_at FROM devices WHERE user_id = $1`),
+    q(
+      `SELECT action, message, ends_at, created_at FROM moderation_actions
         WHERE target_user_id = $1 AND action IN ('warn', 'rename', 'ban', 'unban') ORDER BY id`,
-      ),
-    ]);
+    ),
+    q(
+      `SELECT topic, message, email, status, answer, created_at, answered_at FROM support_tickets
+          WHERE user_id = $1 ORDER BY created_at`,
+    ),
+  ]);
   return {
     exported_at: new Date(now).toISOString(),
     profile,
@@ -148,5 +166,6 @@ export async function exportAccount(
     purchases,
     devices,
     notices_from_the_team: notices,
+    messages_to_support: support,
   };
 }

@@ -540,6 +540,16 @@ Doc 18 §9 ("Segments"), §8 (exports with approval).
 - Left for later: using a segment as a dashboard filter, an experiment audience, or (v1.1) a push campaign audience
 - ✅ Tests: the API (each condition counted against known players; bad definitions; saving, the nightly count and the trend; exports asked, turned down, approved by someone else only, downloaded only by the asker, expiring after a day; all audited); the console in the browser (an analyst builds and saves a segment and asks to export it, an admin approves, the analyst downloads it)
 
+### Step 2.7p · Support ✅
+Doc 16 §3, doc 18 §13.
+
+- ✅ **Help** in the app (Settings → Help and support): the questions players ask most (duels, the Daily streak and its freeze, coins that didn't arrive, Practice offline, a wrong answer, deleting the account), in English and Pidgin, and **Write to us**: a topic, the message and an optional email; the app's version, the platform and the device go with it. The player's messages are listed with support's answers
+- ✅ Each message is kept (`support_tickets`) and, with `SUPPORT_INBOX` set, **emailed to the helpdesk's inbox** through Resend, with the player's email to reply to and a link to their page in the console. Whichever helpdesk the owner picks (Freshdesk, Zendesk or Crisp) takes email, so nothing waits on the choice. A message the inbox can't take is still kept, and the console says so. 5 an hour per player
+- ✅ The console's **Support** page (support, admins, owners): open messages oldest first, with the player, their app and device, the contact email masked, and whether it reached the helpdesk; answer in words the player reads in the app, starting from a **ready answer** (doc 16's macros, in English and Pidgin), or mark it answered by email; open it again. User 360's Support tab shows the player's messages. Audited
+- ✅ The messages are in the player's data download, deleted with the account, follow a guest into their account, and are kept 2 years by the retention job
+- Left for later: a push when support answers, ticket sync back from the helpdesk (once it's chosen), the in-app help centre's articles beyond the common questions, and the X DM watch
+- ✅ Tests: the API (a message kept with its app and emailed with the reply address and the link; kept when the inbox fails; short ones and too many refused; the queue for support only, the email masked; an answer the player reads; opened again; on User 360; in the data download and gone with the account; all audited); the console in the browser (support answers with a ready answer in Pidgin, and the player reads it); the app in the browser (a player reads a common question, writes to support, and reads the answer)
+
 ### Step 2.8a · Account deletion and data requests ✅
 NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the first.
 
@@ -618,7 +628,7 @@ GDD §2.6, UX §4 ("Offline"), TRD FR-WEB-3, PRD F18.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅, 2.7n ✅, 2.7o ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅, 2.7n ✅, 2.7o ✅, 2.7p ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅, 2.8f ✅, 2.8g ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |
@@ -633,6 +643,7 @@ These are for the team, not pull requests, and some steps wait on them.
 |---|---|---|
 | **3,600 approved questions** (≥ 600 in each of the six categories) | M2 (2,000), launch (3,600) | The critical path (doc 15 §5). Today: 114 drafts in the seed file, plus researched drafts in the [question bank](content/question-bank/README.md), none fact-checked yet. A daily job adds drafts; the team checks them in the workbook |
 | Google OAuth client IDs (Android, web) | 1.4, and 2.9a for sign-in on Android | Free in Google Cloud Console. A **web** client (its id goes in `GOOGLE_CLIENT_IDS` on the API and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in the app builds) and an **Android** client for package `ng.whosabi.app` with the SHA-1 of the app-signing certificate (Play Console → App integrity), plus one for the upload key while testing. Client ids are not secrets |
+| A helpdesk (Freshdesk, Zendesk or Crisp) and `help@whosabi.ng` | Before launch (2.7p is built) | Any of them takes email. Point `help@whosabi.ng` at the helpdesk and set `SUPPORT_INBOX` on the game app ([deploy guide](deploy/heroku.md)); until then, messages are only in the console's Support page |
 | Resend account and a sending domain, Turnstile keys | To switch email sign-in on (2.10 is built) | Free plans. Add the domain's DNS records Resend shows; the API key is a secret and goes into Heroku as `RESEND_API_KEY`. Turnstile (Cloudflare) gives a public site key for the web build and a secret for the API ([deploy guide](deploy/heroku.md#later)) |
 | Apple Developer Program and Apple sign-in ids | iOS build (2.8) | US$99 a year; `APPLE_AUDIENCES`. Not needed for Android or the web |
 | Expo account (EAS Build) | 1.4 | The free tier builds the Android app; its token goes in CI |

@@ -92,6 +92,8 @@ export const routes = {
   packUnlock: (id: string) => `${API_PREFIX}/packs/${encodeURIComponent(id)}/unlock`,
   packPractice: (id: string) => `${API_PREFIX}/packs/${encodeURIComponent(id)}/practice`,
   practiceResults: () => `${API_PREFIX}/practice/results`,
+  /** Writing to support from the app's Help screen, and the player's own messages (step 2.7p). */
+  supportTickets: () => `${API_PREFIX}/support/tickets`,
   /** Rewarded ads (step 2.4c): what one pays and how many more will pay today. */
   rewardedAds: () => `${API_PREFIX}/ads/rewarded`,
   walletHistory: (before?: string) =>
@@ -160,6 +162,10 @@ export const routes = {
     userDsar: (id: string) => `/admin/users/${encodeURIComponent(id)}/dsar`,
     complianceOverview: '/admin/compliance/overview',
     accessReview: '/admin/compliance/access-review',
+    /** Support's queue, and marking a message answered (step 2.7p). */
+    support: (status: 'open' | 'answered' = 'open') => `/admin/support?status=${status}`,
+    supportTicket: (id: string) => `/admin/support/${encodeURIComponent(id)}`,
+    userTickets: (id: string) => `/admin/users/${encodeURIComponent(id)}/tickets`,
     /** Packs in the Content module (step 2.8f). */
     packs: '/admin/packs',
     pack: (id: string) => `/admin/packs/${encodeURIComponent(id)}`,

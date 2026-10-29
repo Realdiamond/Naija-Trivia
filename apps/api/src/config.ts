@@ -16,6 +16,13 @@ const Env = z.object({
   ALERT_EMAILS: z.string().default(''),
   /** Threshold alerts to Slack: an incoming webhook URL. It is a secret: Heroku config only. */
   SLACK_ALERTS_WEBHOOK_URL: z.url().optional(),
+  /**
+   * Where players' messages from the app's Help screen are emailed (step 2.7p): the helpdesk's
+   * inbox (Freshdesk, Zendesk and Crisp all take email), e.g. help@whosabi.ng. Through Resend.
+   */
+  SUPPORT_INBOX: z.email().optional(),
+  /** The admin console, for links in support emails to the player's page. */
+  ADMIN_WEB_URL: z.url().default('https://admin.whosabi.ng'),
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   /**
@@ -118,6 +125,8 @@ export interface Config {
   release?: string;
   /** Where threshold alerts go besides staff phones (step 2.7m). */
   alertEmails: string[];
+  supportInbox?: string;
+  adminWebUrl: string;
   slackAlertsWebhookUrl?: string;
   databaseUrl: string;
   redisUrl: string;
@@ -192,6 +201,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     sentryDsn: e.SENTRY_DSN,
     release: e.HEROKU_SLUG_COMMIT,
     alertEmails: list(e.ALERT_EMAILS),
+    supportInbox: e.SUPPORT_INBOX,
+    adminWebUrl: e.ADMIN_WEB_URL.replace(/\/+$/, ''),
     slackAlertsWebhookUrl: e.SLACK_ALERTS_WEBHOOK_URL,
     databaseUrl: e.DATABASE_URL,
     redisUrl: e.REDIS_URL,

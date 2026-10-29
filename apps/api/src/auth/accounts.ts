@@ -237,6 +237,7 @@ export async function mergeGuestInto(
   );
   await client.query('DELETE FROM practice_sets WHERE user_id = $1', [g]);
   await client.query('UPDATE practice_results SET user_id = $2 WHERE user_id = $1', [g, x]);
+  await client.query('UPDATE support_tickets SET user_id = $2 WHERE user_id = $1', [g, x]);
   await client.query('UPDATE devices SET user_id = $2 WHERE user_id = $1', [g, x]);
   // Waiting pushes follow (the account's own waiting one wins where both have the same key).
   await client.query(

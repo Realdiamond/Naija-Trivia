@@ -91,6 +91,13 @@ const POLICY: Array<{
     oldest: 'SELECT min(created_at) AS at FROM question_reports',
   },
   {
+    rule: 'support_tickets',
+    data: 'Messages to support',
+    keep: '2 years',
+    by: 'retention job',
+    oldest: 'SELECT min(created_at) AS at FROM support_tickets',
+  },
+  {
     rule: 'consent_records',
     data: 'Consent records',
     keep: 'The account’s life and 6 years after',

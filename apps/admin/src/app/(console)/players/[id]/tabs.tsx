@@ -11,6 +11,7 @@ import {
   type AdminMoneyResponse,
   type AdminNotesResponse,
   type AdminSessionsResponse,
+  type AdminSupportTicket,
   type AdminUserSummary,
 } from '@whosabi/shared-types';
 import { adminApi } from '../../../../lib/api';
@@ -19,6 +20,7 @@ import { watDateTime } from '../../../../lib/format';
 import { StartDsar } from '../../compliance/Forms';
 import { ModerationActions } from './ModerationActions';
 import { NoteForm, SupportActions } from './SupportActions';
+import { Ticket } from '../../support/Ticket';
 
 const words = (s: string) => s.replaceAll('_', ' ');
 const signed = (n: number) => `${n > 0 ? '+' : '−'}${Math.abs(n).toLocaleString('en-NG')}`;
@@ -391,9 +393,24 @@ export async function SupportTab({
   canAct: boolean;
   canLogDsar: boolean;
 }) {
-  const n = await adminApi<AdminNotesResponse>(routes.admin.userNotes(userId));
+  const [n, tickets] = await Promise.all([
+    adminApi<AdminNotesResponse>(routes.admin.userNotes(userId)),
+    adminApi<{ tickets: AdminSupportTicket[] }>(routes.admin.userTickets(userId)),
+  ]);
   return (
     <div className="grid2" data-testid="support-tab">
+      <section className="card" style={{ gridColumn: '1 / -1' }}>
+        <h2>Messages to support</h2>
+        {tickets.tickets.length === 0 ? (
+          <Empty>None from the app&apos;s Help screen.</Empty>
+        ) : (
+          <div className="stack" data-testid="player-tickets">
+            {tickets.tickets.map((t) => (
+              <Ticket key={t.id} ticket={t} canAnswer={canAct} showPlayer={false} />
+            ))}
+          </div>
+        )}
+      </section>
       <section className="card">
         <h2>Staff notes</h2>
         <p className="muted small">Never shown to the player.</p>

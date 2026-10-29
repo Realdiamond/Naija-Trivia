@@ -127,6 +127,13 @@ describe('retention and compliance (step 2.7n)', () => {
     }
     for (const at of [OLD, RECENT]) {
       await t.pool.query(
+        `INSERT INTO support_tickets (id, user_id, topic, message, platform, created_at)
+         VALUES ($1, $2, 'other', 'Hello support', 'android', $3)`,
+        [newId('st'), a, at],
+      );
+    }
+    for (const at of [OLD, RECENT]) {
+      await t.pool.query(
         `INSERT INTO practice_sets (user_id, pack_id, week, question_ids, issued_at)
          VALUES ($1, 'pk_core_slang', $2, '{}', $3)`,
         [a, `W-${at.getTime()}`, at],
@@ -165,6 +172,7 @@ describe('retention and compliance (step 2.7n)', () => {
       'practice_results',
       'integrity_flags',
       'question_reports',
+      'support_tickets',
       'consent_records',
     ]);
     for (const n of Object.values(removed!)) expect(n).toBeGreaterThanOrEqual(1);
@@ -239,6 +247,7 @@ describe('retention and compliance (step 2.7n)', () => {
       'analytics_events',
       'integrity_flags',
       'question_reports',
+      'support_tickets',
       'consent_records',
       'admin_audit_log',
     ]);

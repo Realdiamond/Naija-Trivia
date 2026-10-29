@@ -20,6 +20,7 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
       : []),
     ...(me.permissions.includes('segments.manage') ? [{ href: '/segments', label: 'Segments' }] : []),
     ...(me.permissions.includes('players.search') ? [{ href: '/players', label: 'Players' }] : []),
+    ...(me.permissions.includes('players.support') ? [{ href: '/support', label: 'Support' }] : []),
     ...(me.permissions.includes('players.moderate') ? [{ href: '/integrity', label: 'Integrity' }] : []),
     ...(me.permissions.includes('liveops.daily') ? [{ href: '/daily', label: 'Daily' }] : []),
     ...(me.permissions.includes('liveops.flags') || me.permissions.includes('liveops.config')

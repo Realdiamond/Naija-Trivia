@@ -214,7 +214,10 @@ test('support leaves a note, grants coins within the limit and signs a player ou
   await expect(page.getByTestId('money-coins')).toHaveText('100');
   await expect(page.getByTestId('ledger')).toContainText('admin grant');
 
-  await page.getByRole('link', { name: 'Support', exact: true }).click();
+  await page
+    .getByRole('navigation', { name: 'Player' })
+    .getByRole('link', { name: 'Support', exact: true })
+    .click();
   await page.getByTestId('action-sign_out').check();
   await page.getByTestId('action-reason').fill('E2E: lost phone');
   await page.getByTestId('action-confirm').click();
@@ -649,6 +652,48 @@ test('an analyst builds and saves a segment, an admin approves its export, the a
   const download = page.waitForEvent('download');
   await mine.getByRole('link', { name: 'Download CSV' }).click();
   expect((await download).suggestedFilename()).toMatch(/^whosabi-segment-export-sx_.+\.csv$/);
+});
+
+test('support answers a message from the app with a ready answer, and the player reads it', async ({
+  page,
+  request,
+}) => {
+  const guest = await (
+    await request.post(`${API}/v1/auth/guest`, {
+      data: { device_id: randomBytes(24).toString('base64url'), platform: 'android' },
+    })
+  ).json();
+  const auth = { authorization: `Bearer ${guest.access}` };
+  const n = randomInt(1e9);
+  const sent = await request.post(`${API}/v1/support/tickets`, {
+    headers: { ...auth, 'x-app-version': '1.2.0' },
+    data: { topic: 'streak', message: `My streak of ${n} days went back to zero.`, device: 'Tecno Spark 10' },
+  });
+  expect(sent.status()).toBe(201);
+  const ticket = await sent.json();
+
+  const email = `e2e-support-${n}@whosabi.ng`;
+  addStaff(email, 'support');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page.getByTestId('staff-name')).toBeVisible();
+  await page.getByRole('link', { name: 'Support' }).click();
+  const card = page.getByTestId(`ticket-${ticket.id}`);
+  await expect(card).toContainText(`My streak of ${n} days went back to zero.`);
+  await expect(card).toContainText('android 1.2.0 · Tecno Spark 10');
+  await card.getByTestId('macro').selectOption({ label: 'Lost streak (Pidgin)' });
+  await expect(card.getByTestId('answer')).toHaveValue(/We don check your Daily streak/);
+  await card.getByTestId('send-answer').click();
+  await expect(page.getByTestId(`ticket-${ticket.id}`)).toHaveCount(0);
+
+  const mine = await (await request.get(`${API}/v1/support/tickets`, { headers: auth })).json();
+  expect(mine.tickets[0]).toMatchObject({ id: ticket.id, status: 'answered' });
+  expect(mine.tickets[0].answer).toContain('We don check your Daily streak');
+
+  // On the player's page too, answered.
+  await page.goto(`/players/${guest.user.id}?tab=support`);
+  await expect(page.getByTestId('player-tickets')).toContainText('Answered');
 });
 
 test('someone not on the staff list is turned away', async ({ page }) => {
