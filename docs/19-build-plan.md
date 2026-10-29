@@ -508,7 +508,7 @@ Doc 18 §9–10. The dashboards are split; this is the first part.
 - ✅ **Engagement & time**: players a day (DAU), WAU and MAU, stickiness, sessions and minutes a player, the share of Dailies finished, players and minutes by day, how long sessions last, time by screen (from players who allow behaviour analytics) and the busiest hours as a weekday-by-hour heatmap
 - ✅ **Growth & invites**: new players and sign-ups by day and platform (counted as the Overview counts them), where new players came from, how they signed up, invites shared by channel and opened by type (in the app or on the web), the K-factor, and how many new web players made an account or went on to play in the app
 - ✅ **Retention**: day 1, 7 and 30 for each week's new players, and the curve from day 0 to 30; a day counts only once it has passed for everyone in the week
-- Left for later (the next parts): Gameplay, Content performance, Monetisation, Economy, Funnels, Platforms & tech health and Integrity; the app version, state, source, age band and segment filters (app version and segment in 2.7q); exporting a chart; Explore (Metabase on ClickHouse, M3)
+- Left for later (the next parts): Gameplay, Content performance, Monetisation, Economy, Funnels, Platforms & tech health and Integrity; the app version, state, source, age band and segment filters (app version and segment in 2.7q); exporting a chart (2.7r); Explore (Metabase on ClickHouse, M3)
 - ✅ Tests: the API (who may; the range; each dashboard's numbers from known events, players and sign-ups, with the platform filter)
 
 ### Step 2.7k · Gameplay, Monetisation and Economy dashboards ✅
@@ -572,8 +572,15 @@ Doc 18 §9 ("Every dashboard shares the same filters"); left from steps 2.7j and
 
 - ✅ **App version** and **segment** filters on the dashboards about players' own activity: Engagement, Growth, Retention, Funnels and Tech health. A segment is its players now (a saved segment, step 2.7o), so it also covers state, age band, account, new players and the rest of its conditions; the app version narrows the events. Growth's new players and Retention's cohorts follow the segment (they joined before any version was chosen). Each dashboard says what it was narrowed to, with the segment's size
 - ✅ In the console, the filter bar gains **App version** and, for those who build segments, **Segment**; they carry from dashboard to dashboard, and the dashboards they don't narrow say so
-- Left for later: the acquisition source as a segment condition, filters on Gameplay, Content, Monetisation, Economy and Integrity (their numbers come from the game's own tables), exporting a chart, and Explore (Metabase on ClickHouse, M3)
+- Left for later: the acquisition source as a segment condition, filters on Gameplay, Content, Monetisation, Economy and Integrity (their numbers come from the game's own tables), and Explore (Metabase on ClickHouse, M3)
 - ✅ Tests: the API (Engagement by version, by segment and both, with what it says; Growth's new players, Retention's cohorts and a funnel by segment; an unknown segment refused, a bad version refused, Gameplay untouched); the console in the browser (an analyst narrows Engagement to the segment they saved and a version)
+
+### Step 2.7r · Exporting a dashboard ✅
+Doc 18 §8 and §9 ("Each chart can be exported").
+
+- ✅ **Download CSV** on every dashboard, with the same dates, platform, version, segment (and funnel) as on screen: every table on it, its summary first, one section each. A reason is required; the file says who exported it, when and why, and that it holds counts and shares only (players are never named, so no 24-hour link is needed). Audited
+- Left for later: a picture of a chart, and scheduled email reports (v1.1)
+- ✅ Tests: the API (the file's watermark and sections, the audit with the reason and filters, a reason required, someone without the dashboard refused); the console in the browser (an analyst downloads Retention for iOS with a reason)
 
 ### Step 2.8a · Account deletion and data requests ✅
 NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the first.
@@ -653,7 +660,7 @@ GDD §2.6, UX §4 ("Offline"), TRD FR-WEB-3, PRD F18.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅, 2.7n ✅, 2.7o ✅, 2.7p ✅, 2.7q ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅, 2.7n ✅, 2.7o ✅, 2.7p ✅, 2.7q ✅, 2.7r ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅, 2.8f ✅, 2.8g ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |

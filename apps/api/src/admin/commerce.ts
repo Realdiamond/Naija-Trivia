@@ -19,6 +19,7 @@ import type { AppDeps } from '../app';
 import { parse } from '../errors';
 import { writeAudit } from './audit';
 import { requireAdmin, type AdminDeps } from './context';
+import { csvCell } from './csv';
 
 const DAY = 86_400_000;
 /** West Africa Time is UTC+1 all year. */
@@ -57,13 +58,6 @@ const money = (rows: { currency: string | null; micros: string | null }[]): Mone
   const out: MoneyByCurrency = {};
   for (const r of rows) if (r.currency && r.micros !== null) out[r.currency] = Number(r.micros) / 1e6;
   return out;
-};
-
-const csvCell = (value: unknown) => {
-  let text = value === null || value === undefined ? '' : String(value);
-  // Text a spreadsheet would run as a formula is kept as text.
-  if (typeof value === 'string' && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 
 /** A time in Lagos, as finance reads it: 2026-10-29 14:05. */
