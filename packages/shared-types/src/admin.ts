@@ -76,6 +76,12 @@ export const AdminPermission = z.enum([
   'analytics.product',
   /** The Monetisation and Economy dashboards (step 2.7k). */
   'analytics.money',
+  /** Content performance (step 2.7l). */
+  'analytics.content',
+  /** Platforms & tech health (step 2.7l). */
+  'analytics.tech',
+  /** The Integrity dashboard (step 2.7l). */
+  'analytics.integrity',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 

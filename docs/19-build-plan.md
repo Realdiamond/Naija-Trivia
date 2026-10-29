@@ -503,6 +503,16 @@ Doc 18 §9–10. The second part of the dashboards, on the same page and filters
 - Left for later: Funnels, Content performance, Platforms & tech health and Integrity; ad revenue in naira (AdMob reports dollars); LTV by cohort; starter pack take-up (no starter pack yet)
 - ✅ Tests: the API (each dashboard's numbers from known duels, party games, Dailies, events, purchases and coins, with the platform filter; who may); the console in the browser (an analyst opens all six; finance sees only Monetisation and Economy)
 
+### Step 2.7l · Funnels, Content, Tech health and Integrity dashboards ✅
+Doc 18 §9–10. The last part of the MVP dashboards, on the same page and filters.
+
+- ✅ **Funnels** (`analytics.kpi`): ready-made funnels (first time, the Daily, a duel, a party room, a purchase) and one built on the page from 2 to 5 events in order; each step counts players who did it after the step before and within a window of the first (24 hours by default, up to a week), with the share of the first step and of the step before
+- ✅ **Content performance** for owners, admins, analysts, LiveOps and editors (`analytics.content`): answers and the share right, reports per 1,000 answers, the questions too easy (90% or more right) or too hard (15% or fewer) after 30 answers, each category's answers, time to answer and reports, and the 50 most-played questions linking to the question in the CMS
+- ✅ **Platforms & tech health** for owners, admins, analysts and on-call engineers (`analytics.tech`): cold starts (middle and slowest tenth, and by phone memory), app versions in use, sign-in codes verified by provider, pushes sent, received and opened by type, connections lost and restored by mode with the gap, and the web vitals (LCP, INP, CLS at the 75th percentile)
+- ✅ **Integrity** for owners, admins, analysts and moderators (`analytics.integrity`): the nightly checks' flags by day and kind with what became of them, flags open now, and moderators' actions; no platform filter
+- Left for later: crash-free sessions and API latency (from Sentry's API, with its key), ANRs, data used per match, the option each player picked (not in the events yet), appeals (no appeals yet)
+- ✅ Tests: the API (funnels in and out of the window, custom funnels and bad ones; each other dashboard's numbers from known answers, reports, events, flags and actions; who may); the console in the browser (an analyst builds a funnel and opens the rest)
+
 ### Step 2.8a · Account deletion and data requests ✅
 NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the first.
 
@@ -559,7 +569,7 @@ TRD §2 ("Crash / perf": Sentry), doc 18's `crash_free_sessions`.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |

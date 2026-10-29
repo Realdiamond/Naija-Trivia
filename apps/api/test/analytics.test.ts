@@ -7,12 +7,16 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { pseudonymousId } from '@whosabi/analytics/server';
 import type {
   AdminRole,
+  ContentBoard,
   EconomyBoard,
   EngagementBoard,
+  FunnelsBoard,
   GameplayBoard,
   GrowthBoard,
+  IntegrityBoard,
   MonetisationBoard,
   RetentionBoard,
+  TechBoard,
 } from '@whosabi/shared-types';
 import { SYSTEM_ADMIN_ID } from '../src/admin/permissions';
 import { AdminSessions } from '../src/admin/sessions';
@@ -24,8 +28,9 @@ import { bearer, createTestApp, signInGuest } from './helpers';
 const MINUTE = 60_000;
 /** An instant in May 2028 (a month no other test file plays in), at a WAT time of day. */
 const wat = (day: number, hour: number, minute = 0) => Date.UTC(2028, 4, day, hour - 1, minute);
-/** The same in July 2028, for the matches, money and coins. */
+/** The same in July 2028, for the matches, money and coins, and August for the rest. */
 const july = (day: number, hour: number) => Date.UTC(2028, 6, day, hour - 1);
+const august = (day: number, hour: number) => Date.UTC(2028, 7, day, hour - 1);
 const DAILY_ID = 9_000_701;
 
 let t: Awaited<ReturnType<typeof createTestApp>>;
@@ -42,9 +47,17 @@ beforeAll(async () => {
   );
   analyst = await staff(['analyst']);
 });
-const made = { duels: [] as string[], parties: [] as string[], players: [] as string[] };
+const made = {
+  duels: [] as string[],
+  parties: [] as string[],
+  players: [] as string[],
+  reports: [] as string[],
+};
 afterAll(async () => {
-  await t.pool.query("DELETE FROM analytics_events WHERE ts >= '2028-04-30' AND ts < '2028-08-01'");
+  await t.pool.query("DELETE FROM analytics_events WHERE ts >= '2028-04-30' AND ts < '2028-09-01'");
+  await t.pool.query('DELETE FROM question_reports WHERE id = ANY($1::bigint[])', [made.reports]);
+  await t.pool.query('DELETE FROM integrity_flags WHERE user_id = ANY($1)', [made.players]);
+  await t.pool.query('DELETE FROM moderation_actions WHERE target_user_id = ANY($1)', [made.players]);
   await t.pool.query('DELETE FROM duels WHERE id = ANY($1)', [made.duels]);
   await t.pool.query('DELETE FROM party_games WHERE id = ANY($1)', [made.parties]);
   await t.pool.query('DELETE FROM daily_results WHERE daily_id = $1', [DAILY_ID]);
@@ -645,5 +658,231 @@ describe('analytics dashboards (step 2.7j)', () => {
       '10,000 or more',
     ]);
     expect(e.balances[0]!.players).toBeGreaterThanOrEqual(2); // 60 and 30 coins
+  });
+
+  it('follows players through ready-made and custom funnels, within the window', async () => {
+    const step = (who: string, name: string, at: number) =>
+      event(name, at, { pid: who, platform: 'android' });
+    const [p1, p2, p3, p4] = [1, 2, 3, 4].map(() => `p_${randomUUID()}`) as [string, string, string, string];
+    await step(p1, 'store_viewed', august(1, 10));
+    await step(p1, 'purchase_started', august(1, 10) + 5 * MINUTE);
+    await step(p1, 'purchase_completed', august(1, 10) + 6 * MINUTE);
+    // 25 hours later: outside a 24-hour window, inside 48.
+    await step(p2, 'store_viewed', august(1, 11));
+    await step(p2, 'purchase_started', august(2, 12));
+    await step(p2, 'purchase_completed', august(2, 12) + MINUTE);
+    await step(p3, 'store_viewed', august(2, 9));
+    // Paying before looking at the shop doesn't count as the next step.
+    await step(p4, 'purchase_started', august(1, 8));
+    await step(p4, 'store_viewed', august(1, 9));
+    t.clock.t = august(3, 9);
+
+    const range = '?from=2028-08-01&to=2028-08-02';
+    const ready = await board<FunnelsBoard>('funnels', `${range}&funnel=purchase`);
+    expect(ready).toMatchObject({ funnel: 'purchase', window_hours: 24 });
+    expect(ready.steps.map((s) => [s.players, s.of_first, s.of_previous])).toEqual([
+      [4, null, null],
+      [1, 0.25, 0.25],
+      [1, 0.25, 1],
+    ]);
+    const longer = await board<FunnelsBoard>('funnels', `${range}&funnel=purchase&window=48`);
+    expect(longer.steps.map((s) => s.players)).toEqual([4, 2, 2]);
+    const custom = await board<FunnelsBoard>(
+      'funnels',
+      `${range}&funnel=custom&steps=store_viewed,purchase_completed`,
+    );
+    expect(custom).toMatchObject({ funnel: 'custom' });
+    expect(custom.steps).toEqual([
+      { label: 'store_viewed', events: ['store_viewed'], players: 4, of_first: null, of_previous: null },
+      {
+        label: 'purchase_completed',
+        events: ['purchase_completed'],
+        players: 1,
+        of_first: 0.25,
+        of_previous: 0.25,
+      },
+    ]);
+    // Left out, the first-time funnel; the page also gets the funnels and events to choose from.
+    const plain = await board<FunnelsBoard>('funnels', range);
+    expect(plain.funnel).toBe('first_time');
+    expect(plain.ready.map((f) => f.id)).toEqual(['first_time', 'daily', 'duel', 'party', 'purchase']);
+    expect(plain.events).toContain('store_viewed');
+
+    const get = (query: string) =>
+      t.app.inject({
+        method: 'GET',
+        url: `/admin/analytics/funnels${range}${query}`,
+        headers: bearer(analyst),
+      });
+    expect((await get('&funnel=custom&steps=store_viewed,nope')).statusCode).toBe(400);
+    expect((await get('&funnel=custom&steps=store_viewed')).statusCode).toBe(400);
+    expect((await get('&funnel=purchase&window=500')).statusCode).toBe(400);
+  });
+
+  it('shows how questions play: right answers, time, reports and the too easy (Content)', async () => {
+    const live = (
+      await t.pool.query<{ id: string; text: string; category_id: string; difficulty: number }>(
+        "SELECT id, text, category_id, difficulty FROM questions WHERE status = 'live' ORDER BY id LIMIT 2",
+      )
+    ).rows;
+    const [easy, hard] = live as [(typeof live)[0], (typeof live)[0]];
+    const who = { pid: `p_${randomUUID()}`, platform: 'android', source: 'server' as const };
+    for (let i = 0; i < 30; i++) {
+      await event('question_answered', august(3, 10), who, {
+        qid: easy.id,
+        category: easy.category_id,
+        correct: i < 28,
+        accepted_elapsed_ms: 2000,
+      });
+    }
+    for (let i = 0; i < 2; i++) {
+      await event('question_answered', august(4, 10), who, {
+        qid: hard.id,
+        category: hard.category_id,
+        correct: false,
+        accepted_elapsed_ms: 8000,
+      });
+    }
+    const report = await t.pool.query<{ id: string }>(
+      `INSERT INTO question_reports (question_id, reason, created_at) VALUES ($1, 'typo', $2) RETURNING id`,
+      [hard.id, new Date(august(4, 11))],
+    );
+    made.reports.push(report.rows[0]!.id);
+    t.clock.t = august(5, 9);
+
+    const c = await board<ContentBoard>('content', '?from=2028-08-03&to=2028-08-04', await staff(['editor']));
+    expect(c.summary).toEqual({
+      answers: 32,
+      questions_played: 2,
+      correct_rate: 28 / 32,
+      reports: 1,
+      reports_per_1k: (1 / 32) * 1000,
+      too_easy: 1,
+      too_hard: 0,
+    });
+    expect(c.questions).toEqual([
+      {
+        id: easy.id,
+        text: easy.text,
+        category: easy.category_id,
+        difficulty: easy.difficulty,
+        plays: 30,
+        correct_rate: 28 / 30,
+        avg_ms: 2000,
+        reports: 0,
+        flag: 'too_easy',
+      },
+      {
+        id: hard.id,
+        text: hard.text,
+        category: hard.category_id,
+        difficulty: hard.difficulty,
+        plays: 2,
+        correct_rate: 0,
+        avg_ms: 8000,
+        reports: 1,
+        flag: null,
+      },
+    ]);
+    expect(c.categories.find((x) => x.category === hard.category_id)?.reports).toBe(1);
+    const get = (name: string, roles: AdminRole[]) =>
+      staff(roles).then((token) =>
+        t.app.inject({ method: 'GET', url: `/admin/analytics/${name}`, headers: bearer(token) }),
+      );
+    expect((await get('content', ['moderator'])).statusCode).toBe(403);
+    expect((await get('content', ['liveops'])).statusCode).toBe(200);
+  });
+
+  it('shows cold starts, sign-in codes, pushes, reconnects, web vitals and versions (Tech health)', async () => {
+    const phone = { pid: `p_${randomUUID()}`, platform: 'android' };
+    const opened = async (ms: number, ram: number) => {
+      await t.pool.query(
+        `INSERT INTO analytics_events (event_id, event, source, ts, user_pid, platform, app_version, ram_mb, props)
+         VALUES ($1, 'app_opened', 'client', $2, $3, 'android', '1.0.0', $4, $5)`,
+        [
+          `e_${randomUUID()}`,
+          new Date(august(5, 10)),
+          phone.pid,
+          ram,
+          JSON.stringify({ cold_start_ms: ms, source: 'organic' }),
+        ],
+      );
+    };
+    await opened(1000, 1500);
+    await opened(2000, 1500);
+    await opened(3000, 6000);
+    const server = { ...phone, source: 'server' as const };
+    await event('otp_sent', august(5, 11), server, { provider: 'termii' });
+    await event('otp_sent', august(5, 11), server, { provider: 'termii' });
+    await event('otp_verified', august(5, 11), server, { provider: 'termii' });
+    await event('push_sent', august(5, 12), server, { type: 'daily_live' });
+    await event('push_sent', august(5, 12), server, { type: 'daily_live' });
+    await event('push_opened', august(5, 12), phone, { type: 'daily_live' });
+    await event('connection_lost', august(6, 9), phone, { mode: 'duel' });
+    await event('connection_lost', august(6, 9), phone, { mode: 'duel' });
+    await event('connection_restored', august(6, 9), phone, { mode: 'duel', gap_ms: 4000 });
+    const web = { anon: `a_${randomUUID()}`, platform: 'web' };
+    await event('web_vitals', august(6, 10), web, { lcp_ms: 2000, inp_ms: 100 });
+    await event('web_vitals', august(6, 10), web, { lcp_ms: 3000, inp_ms: 300, cls: 0.1 });
+    t.clock.t = august(7, 9);
+
+    const tech = await board<TechBoard>('tech', '?from=2028-08-05&to=2028-08-06', await staff(['engineer']));
+    expect(tech.summary).toEqual({
+      cold_start_p50_ms: 2000,
+      cold_start_p90_ms: 2800,
+      otp_success: 0.5,
+      push_opened: 0.5,
+      reconnected: 0.5,
+      web_lcp_p75_ms: 2750,
+      web_inp_p75_ms: 250,
+      web_cls_p75: 0.1,
+    });
+    expect(tech.cold_start_by_ram).toEqual([
+      { ram: 'Under 2 GB', opens: 2, p50_ms: 1500 },
+      { ram: '4 GB or more', opens: 1, p50_ms: 3000 },
+    ]);
+    expect(tech.versions).toEqual([{ platform: 'android', app_version: '1.0.0', players: 1 }]);
+    expect(tech.otp).toEqual([{ provider: 'termii', sent: 2, verified: 1, failed: 0 }]);
+    expect(tech.push).toEqual([{ type: 'daily_live', sent: 2, received: 0, opened: 1 }]);
+    expect(tech.connection).toEqual([{ mode: 'duel', lost: 2, restored: 1, gap_p50_ms: 4000 }]);
+  });
+
+  it("shows the nightly checks' flags and moderators' actions (Integrity)", async () => {
+    t.clock.t = august(6, 9);
+    const player = await julyPlayer();
+    const flag = (kind: string, status: string) =>
+      t.pool.query(
+        `INSERT INTO integrity_flags (user_id, kind, score, evidence, status, created_at)
+         VALUES ($1, $2, 0.9, '{}', $3, $4)`,
+        [player, kind, status, new Date(august(7, 3))],
+      );
+    await flag('accuracy_outlier', 'open');
+    await flag('accuracy_outlier', 'dismissed');
+    await flag('timing_anomaly', 'actioned');
+    await t.pool.query(
+      `INSERT INTO moderation_actions (target_user_id, action, reason, actor, created_at)
+       VALUES ($1, 'warn', 'Too fast', 'adm_test', $2)`,
+      [player, new Date(august(8, 10))],
+    );
+    t.clock.t = august(9, 9);
+
+    const moderator = await staff(['moderator']);
+    const i = await board<IntegrityBoard>(
+      'integrity',
+      '?from=2028-08-07&to=2028-08-08&platform=web',
+      moderator,
+    );
+    expect(i.platform).toBe('all');
+    expect(i.summary).toMatchObject({ flags: 3, dismissed: 1, actioned: 1, actions: 1 });
+    expect(i.summary.open_now).toBeGreaterThanOrEqual(1);
+    expect(i.days).toEqual([
+      { day: '2028-08-07', flags: 3, actions: 0 },
+      { day: '2028-08-08', flags: 0, actions: 1 },
+    ]);
+    expect(i.kinds).toEqual([
+      { kind: 'accuracy_outlier', flags: 2, open: 1, dismissed: 1, actioned: 0 },
+      { kind: 'timing_anomaly', flags: 1, open: 0, dismissed: 0, actioned: 1 },
+    ]);
+    expect(i.actions).toEqual([{ action: 'warn', count: 1 }]);
   });
 });

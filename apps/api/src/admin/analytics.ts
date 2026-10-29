@@ -1,6 +1,7 @@
 /**
- * The analytics dashboards (doc 18 §9–10, build plan steps 2.7j–2.7k): Engagement & time, Growth
- * & invites, Retention, Gameplay, Monetisation and Economy over a range of WAT days and a
+ * The analytics dashboards (doc 18 §9–10, build plan steps 2.7j–2.7l): Engagement & time, Growth
+ * & invites, Retention, Funnels, Gameplay, Content performance, Monetisation, Economy, Platforms
+ * & tech health and Integrity over a range of WAT days and a
  * platform. Straight from Postgres at launch volumes, like the Overview: activity from
  * `analytics_events`, new players and sign-ups from `users` and `auth_identities` (so the numbers
  * match the Overview, AD-6), matches, purchases and coins from the game's own tables. ClickHouse
@@ -8,6 +9,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import { isEventName, TRACKING_PLAN } from '@whosabi/analytics';
 import { pseudonymousId } from '@whosabi/analytics/server';
 import { addDays, daysBetween, isoWeekStart, watDate } from '@whosabi/game-rules';
 import {
@@ -16,15 +18,21 @@ import {
   AnalyticsBoard,
   AnalyticsQuery,
   ErrorCode,
+  FUNNEL_MAX_STEPS,
+  READY_FUNNELS,
   type AnalyticsRange,
   type AnalyticsResponse,
+  type ContentBoard,
   type EconomyBoard,
   type EngagementBoard,
+  type FunnelsBoard,
   type GameplayBoard,
   type GrowthBoard,
+  type IntegrityBoard,
   type MonetisationBoard,
   type MoneyByCurrency,
   type RetentionBoard,
+  type TechBoard,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
 import { ApiError, parse } from '../errors';
@@ -33,7 +41,11 @@ import { requireAdmin, type AdminDeps } from './context';
 const WAT = 3_600_000;
 const MINUTE = 60_000;
 /** One player, signed in or not, in the analytics events (as on the Overview). */
-const PLAYER = "coalesce(nullif(user_pid, ''), nullif(anon_id, ''))";
+const playerIn = (table?: string) => {
+  const column = (name: string) => (table ? `${table}.${name}` : name);
+  return `coalesce(nullif(${column('user_pid')}, ''), nullif(${column('anon_id')}, ''))`;
+};
+const PLAYER = playerIn();
 const LAGOS_DAY = "(ts AT TIME ZONE 'Africa/Lagos')::date";
 /** Everyone but the Sabi Bot, counted as the Overview counts new players. */
 const PLAYING = "status <> 'bot'";
@@ -57,6 +69,10 @@ const PARTY_SIZES = [
 /** Balance buckets: each starts where the one before ends (`width_bucket` bounds). */
 const BALANCE_BUCKETS = ['1–99', '100–499', '500–1,999', '2,000–9,999', '10,000 or more'];
 const BALANCE_BOUNDS = [100, 500, 2_000, 10_000];
+/** Content performance flags a question after this many answers, if nearly all or few get it right. */
+const FLAG_MIN_PLAYS = 30;
+const TOO_EASY = 0.9;
+const TOO_HARD = 0.15;
 
 const SESSION_BUCKETS = [
   ['Under 1 min', MINUTE],
@@ -455,9 +471,9 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
            FROM daily_results WHERE ${span('completed_at')} GROUP BY 1, 2`,
         at,
       ),
-      pool.query<{ category: string; n: number; right: number }>(
+      pool.query<{ category: string; n: number; hits: number }>(
         `SELECT props->>'category' AS category, count(*)::int AS n,
-                count(*) FILTER (WHERE (props->>'correct')::boolean)::int AS right
+                count(*) FILTER (WHERE (props->>'correct')::boolean)::int AS hits
            ${events} AND event = 'question_answered' GROUP BY 1 ORDER BY 2 DESC`,
         args,
       ),
@@ -493,7 +509,7 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
       outcomeCounts.set(outcome, (outcomeCounts.get(outcome) ?? 0) + o.n);
     }
     const answered = answers.rows.reduce((sum, a) => sum + a.n, 0);
-    const right = answers.rows.reduce((sum, a) => sum + a.right, 0);
+    const right = answers.rows.reduce((sum, a) => sum + a.hits, 0);
     return {
       board: 'gameplay',
       from: r.from,
@@ -524,7 +540,7 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
       categories: answers.rows.map((a) => ({
         category: a.category,
         answers: a.n,
-        correct_rate: a.right / a.n,
+        correct_rate: a.hits / a.n,
       })),
       lifelines: lifelines.rows.map((l) => ({ type: l.type, with_coins: l.coins, with_ads: l.ads })),
     };
@@ -704,10 +720,313 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
     };
   }
 
+  async function funnels(r: Range, query: AnalyticsQuery): Promise<FunnelsBoard> {
+    const id = query.funnel;
+    let funnel: string;
+    let steps: Array<{ label: string; events: string[] }>;
+    if (id === 'custom') {
+      const names = (query.steps ?? '')
+        .split(',')
+        .map((e) => e.trim())
+        .filter(Boolean);
+      const unknown = names.filter((e) => !isEventName(e));
+      if (names.length < 2 || names.length > FUNNEL_MAX_STEPS || unknown.length > 0) {
+        throw badRange(
+          `A funnel takes 2 to ${FUNNEL_MAX_STEPS} known events${unknown.length ? `, not ${unknown.join(', ')}` : ''}.`,
+        );
+      }
+      funnel = 'custom';
+      steps = names.map((e) => ({ label: e, events: [e] }));
+    } else {
+      funnel = id && READY_FUNNELS[id] ? id : 'first_time';
+      steps = READY_FUNNELS[funnel]!.steps;
+    }
+    const window = query.window ?? 24;
+
+    // Step 1 in the range; each next step after the step before, within the window of step 1.
+    const ctes = steps.map((_, i) =>
+      i === 0
+        ? `s0 AS (SELECT ${PLAYER} AS p, min(ts) AS first, min(ts) AS t FROM analytics_events
+                   WHERE event = ANY($4) AND ts >= $1 AND ts < $2 AND ($3::text IS NULL OR platform = $3)
+                     AND ${PLAYER} IS NOT NULL
+                   GROUP BY 1)`
+        : `s${i} AS (SELECT s.p, s.first, min(e.ts) AS t FROM s${i - 1} s
+                     JOIN analytics_events e ON ${playerIn('e')} = s.p
+                    WHERE e.event = ANY($${i + 4}) AND e.ts >= s.t AND e.ts < s.first + make_interval(hours => $${steps.length + 4})
+                      AND ($3::text IS NULL OR e.platform = $3)
+                    GROUP BY s.p, s.first)`,
+    );
+    const counted = await pool.query<Record<string, number>>(
+      `WITH ${ctes.join(',\n')}
+       SELECT ${steps.map((_, i) => `(SELECT count(*) FROM s${i})::int AS n${i}`).join(', ')}`,
+      [r.start, r.end, r.platformOrNull, ...steps.map((s) => s.events), window],
+    );
+    const players = steps.map((_, i) => counted.rows[0]![`n${i}`] ?? 0);
+    return {
+      board: 'funnels',
+      from: r.from,
+      to: r.to,
+      platform: r.platform,
+      funnel,
+      window_hours: window,
+      steps: steps.map((s, i) => ({
+        label: s.label,
+        events: [...s.events],
+        players: players[i]!,
+        of_first: i === 0 ? null : share(players[i]!, players[0]!),
+        of_previous: i === 0 ? null : share(players[i]!, players[i - 1]!),
+      })),
+      ready: Object.entries(READY_FUNNELS).map(([key, f]) => ({ id: key, title: f.title })),
+      events: Object.keys(TRACKING_PLAN).sort(),
+    };
+  }
+
+  async function content(r: Range): Promise<ContentBoard> {
+    const args = [r.start, r.end, r.platformOrNull];
+    const answers = `analytics_events WHERE event = 'question_answered' AND ts >= $1 AND ts < $2
+                       AND ($3::text IS NULL OR platform = $3)`;
+    const [totals, categories, questions, reports] = await Promise.all([
+      pool.query<{ answers: number; questions: number; hits: number; too_easy: number; too_hard: number }>(
+        `WITH q AS (SELECT props->>'qid' AS id, count(*) AS n,
+                           count(*) FILTER (WHERE (props->>'correct')::boolean) AS hits
+                      FROM ${answers} GROUP BY 1)
+         SELECT coalesce(sum(n), 0)::int AS answers, count(*)::int AS questions, coalesce(sum(hits), 0)::int AS hits,
+                count(*) FILTER (WHERE n >= ${FLAG_MIN_PLAYS} AND hits >= n * ${TOO_EASY})::int AS too_easy,
+                count(*) FILTER (WHERE n >= ${FLAG_MIN_PLAYS} AND hits <= n * ${TOO_HARD})::int AS too_hard
+           FROM q`,
+        args,
+      ),
+      pool.query<{ category: string; n: number; hits: number; avg_ms: number }>(
+        `SELECT props->>'category' AS category, count(*)::int AS n,
+                count(*) FILTER (WHERE (props->>'correct')::boolean)::int AS hits,
+                avg((props->>'accepted_elapsed_ms')::int)::float AS avg_ms
+           FROM ${answers} GROUP BY 1 ORDER BY 2 DESC`,
+        args,
+      ),
+      pool.query<{
+        id: string;
+        text: string | null;
+        category: string;
+        difficulty: number | null;
+        n: number;
+        hits: number;
+        avg_ms: number;
+        reports: number;
+      }>(
+        `WITH a AS (SELECT props->>'qid' AS id, min(props->>'category') AS category, count(*)::int AS n,
+                           count(*) FILTER (WHERE (props->>'correct')::boolean)::int AS hits,
+                           avg((props->>'accepted_elapsed_ms')::int)::float AS avg_ms
+                      FROM ${answers} GROUP BY 1 ORDER BY 3 DESC, 1 LIMIT 50)
+         SELECT a.*, q.text, q.difficulty,
+                (SELECT count(*) FROM question_reports r
+                  WHERE r.question_id = a.id AND r.created_at >= $1 AND r.created_at < $2)::int AS reports
+           FROM a LEFT JOIN questions q ON q.id = a.id
+          ORDER BY a.n DESC, a.id`,
+        args,
+      ),
+      // Reports come from every platform.
+      pool.query<{ category: string; n: number }>(
+        `SELECT q.category_id AS category, count(*)::int AS n
+           FROM question_reports r JOIN questions q ON q.id = r.question_id
+          WHERE r.created_at >= $1 AND r.created_at < $2 GROUP BY 1`,
+        [r.start, r.end],
+      ),
+    ]);
+    const t = totals.rows[0]!;
+    const reportsBy = new Map(reports.rows.map((x) => [x.category, x.n]));
+    const reportCount = reports.rows.reduce((sum, x) => sum + x.n, 0);
+    const flag = (n: number, hits: number): 'too_easy' | 'too_hard' | null =>
+      n < FLAG_MIN_PLAYS
+        ? null
+        : hits >= n * TOO_EASY
+          ? 'too_easy'
+          : hits <= n * TOO_HARD
+            ? 'too_hard'
+            : null;
+    return {
+      board: 'content',
+      from: r.from,
+      to: r.to,
+      platform: r.platform,
+      summary: {
+        answers: t.answers,
+        questions_played: t.questions,
+        correct_rate: share(t.hits, t.answers),
+        reports: reportCount,
+        reports_per_1k: t.answers > 0 ? (reportCount / t.answers) * 1000 : null,
+        too_easy: t.too_easy,
+        too_hard: t.too_hard,
+      },
+      categories: categories.rows.map((c) => ({
+        category: c.category,
+        answers: c.n,
+        correct_rate: c.hits / c.n,
+        avg_ms: Math.round(c.avg_ms),
+        reports: reportsBy.get(c.category) ?? 0,
+      })),
+      questions: questions.rows.map((q) => ({
+        id: q.id,
+        text: q.text ?? '(no longer in the bank)',
+        category: q.category,
+        difficulty: q.difficulty ?? 0,
+        plays: q.n,
+        correct_rate: q.hits / q.n,
+        avg_ms: Math.round(q.avg_ms),
+        reports: q.reports,
+        flag: flag(q.n, q.hits),
+      })),
+    };
+  }
+
+  async function tech(r: Range): Promise<TechBoard> {
+    const args = [r.start, r.end, r.platformOrNull];
+    const events = `FROM analytics_events WHERE ts >= $1 AND ts < $2 AND ($3::text IS NULL OR platform = $3)`;
+    const [starts, byRam, versions, otp, push, connection, vitals] = await Promise.all([
+      pool.query<{ p50: number | null; p90: number | null }>(
+        `SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY (props->>'cold_start_ms')::int) AS p50,
+                percentile_cont(0.9) WITHIN GROUP (ORDER BY (props->>'cold_start_ms')::int) AS p90
+           ${events} AND event = 'app_opened' AND props ? 'cold_start_ms'`,
+        args,
+      ),
+      pool.query<{ ram: string; opens: number; p50: number | null }>(
+        `SELECT CASE WHEN ram_mb = 0 THEN 'Not reported' WHEN ram_mb < 2048 THEN 'Under 2 GB'
+                     WHEN ram_mb < 3072 THEN '2–3 GB' WHEN ram_mb < 4096 THEN '3–4 GB' ELSE '4 GB or more' END AS ram,
+                count(*)::int AS opens,
+                percentile_cont(0.5) WITHIN GROUP (ORDER BY (props->>'cold_start_ms')::int) AS p50
+           ${events} AND event = 'app_opened' AND props ? 'cold_start_ms'
+          GROUP BY 1 ORDER BY min(ram_mb)`,
+        args,
+      ),
+      pool.query<{ platform: string; app_version: string; players: number }>(
+        `SELECT platform, app_version, count(DISTINCT ${PLAYER})::int AS players
+           ${events} AND source = 'client' AND app_version <> '' GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 12`,
+        args,
+      ),
+      pool.query<{ provider: string; sent: number; verified: number; failed: number }>(
+        `SELECT props->>'provider' AS provider,
+                count(*) FILTER (WHERE event = 'otp_sent')::int AS sent,
+                count(*) FILTER (WHERE event = 'otp_verified')::int AS verified,
+                count(*) FILTER (WHERE event = 'otp_failed')::int AS failed
+           ${events} AND event IN ('otp_sent', 'otp_verified', 'otp_failed') GROUP BY 1 ORDER BY 2 DESC`,
+        args,
+      ),
+      pool.query<{ type: string; sent: number; received: number; opened: number }>(
+        `SELECT props->>'type' AS type,
+                count(*) FILTER (WHERE event = 'push_sent')::int AS sent,
+                count(*) FILTER (WHERE event = 'push_received')::int AS received,
+                count(*) FILTER (WHERE event = 'push_opened')::int AS opened
+           ${events} AND event IN ('push_sent', 'push_received', 'push_opened') GROUP BY 1 ORDER BY 2 DESC`,
+        args,
+      ),
+      pool.query<{ mode: string; lost: number; restored: number; gap: number | null }>(
+        `SELECT props->>'mode' AS mode,
+                count(*) FILTER (WHERE event = 'connection_lost')::int AS lost,
+                count(*) FILTER (WHERE event = 'connection_restored')::int AS restored,
+                percentile_cont(0.5) WITHIN GROUP (ORDER BY (props->>'gap_ms')::int)
+                  FILTER (WHERE event = 'connection_restored') AS gap
+           ${events} AND event IN ('connection_lost', 'connection_restored') GROUP BY 1 ORDER BY 2 DESC`,
+        args,
+      ),
+      pool.query<{ lcp: number | null; inp: number | null; cls: number | null }>(
+        `SELECT percentile_cont(0.75) WITHIN GROUP (ORDER BY (props->>'lcp_ms')::int) AS lcp,
+                percentile_cont(0.75) WITHIN GROUP (ORDER BY (props->>'inp_ms')::int) AS inp,
+                percentile_cont(0.75) WITHIN GROUP (ORDER BY (props->>'cls')::float) AS cls
+           ${events} AND event = 'web_vitals'`,
+        args,
+      ),
+    ]);
+    const sum = <T>(rows: T[], key: keyof T) => rows.reduce((total, row) => total + Number(row[key]), 0);
+    const v = vitals.rows[0]!;
+    return {
+      board: 'tech',
+      from: r.from,
+      to: r.to,
+      platform: r.platform,
+      summary: {
+        cold_start_p50_ms: starts.rows[0]!.p50,
+        cold_start_p90_ms: starts.rows[0]!.p90,
+        otp_success: share(sum(otp.rows, 'verified'), sum(otp.rows, 'sent')),
+        push_opened: share(sum(push.rows, 'opened'), sum(push.rows, 'sent')),
+        reconnected: share(sum(connection.rows, 'restored'), sum(connection.rows, 'lost')),
+        web_lcp_p75_ms: v.lcp,
+        web_inp_p75_ms: v.inp,
+        web_cls_p75: v.cls,
+      },
+      cold_start_by_ram: byRam.rows.map((x) => ({ ram: x.ram, opens: x.opens, p50_ms: x.p50 })),
+      versions: versions.rows,
+      otp: otp.rows,
+      push: push.rows,
+      connection: connection.rows.map((c) => ({
+        mode: c.mode,
+        lost: c.lost,
+        restored: c.restored,
+        gap_p50_ms: c.gap,
+      })),
+    };
+  }
+
+  async function integrity(r: Range): Promise<IntegrityBoard> {
+    const at = [r.start, r.end];
+    const [flags, open, actions] = await Promise.all([
+      pool.query<{ day: string; kind: string; status: string; n: number }>(
+        `SELECT to_char((created_at AT TIME ZONE 'Africa/Lagos')::date, 'YYYY-MM-DD') AS day, kind, status,
+                count(*)::int AS n
+           FROM integrity_flags WHERE created_at >= $1 AND created_at < $2 GROUP BY 1, 2, 3`,
+        at,
+      ),
+      pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM integrity_flags WHERE status = 'open'`),
+      pool.query<{ day: string; action: string; n: number }>(
+        `SELECT to_char((created_at AT TIME ZONE 'Africa/Lagos')::date, 'YYYY-MM-DD') AS day, action,
+                count(*)::int AS n
+           FROM moderation_actions WHERE created_at >= $1 AND created_at < $2 GROUP BY 1, 2`,
+        at,
+      ),
+    ]);
+    const kinds = new Map<
+      string,
+      { kind: string; flags: number; open: number; dismissed: number; actioned: number }
+    >();
+    const flagDays = new Map<string, number>();
+    for (const f of flags.rows) {
+      const k = kinds.get(f.kind) ?? { kind: f.kind, flags: 0, open: 0, dismissed: 0, actioned: 0 };
+      k.flags += f.n;
+      if (f.status === 'open' || f.status === 'dismissed' || f.status === 'actioned') k[f.status] += f.n;
+      kinds.set(f.kind, k);
+      flagDays.set(f.day, (flagDays.get(f.day) ?? 0) + f.n);
+    }
+    const byAction = new Map<string, number>();
+    const actionDays = new Map<string, number>();
+    for (const a of actions.rows) {
+      byAction.set(a.action, (byAction.get(a.action) ?? 0) + a.n);
+      actionDays.set(a.day, (actionDays.get(a.day) ?? 0) + a.n);
+    }
+    const all = [...kinds.values()];
+    return {
+      board: 'integrity',
+      from: r.from,
+      to: r.to,
+      // Flags and actions know no platforms.
+      platform: 'all',
+      summary: {
+        flags: all.reduce((total, k) => total + k.flags, 0),
+        open_now: open.rows[0]!.n,
+        dismissed: all.reduce((total, k) => total + k.dismissed, 0),
+        actioned: all.reduce((total, k) => total + k.actioned, 0),
+        actions: [...byAction.values()].reduce((total, n) => total + n, 0),
+      },
+      days: r.days
+        .filter((day) => day <= r.today)
+        .map((day) => ({ day, flags: flagDays.get(day) ?? 0, actions: actionDays.get(day) ?? 0 })),
+      kinds: all.sort((a, b) => b.flags - a.flags),
+      actions: [...byAction].sort((a, b) => b[1] - a[1]).map(([action, count]) => ({ action, count })),
+    };
+  }
+
   app.get('/admin/analytics/:board', async (request): Promise<AnalyticsResponse> => {
     const { board } = parse(Params, request.params);
     await requireAdmin(request, ctx, ANALYTICS_BOARD_PERMISSION[board]);
-    const range = rangeOf(parse(AnalyticsQuery, request.query), clock.now());
+    const query = parse(AnalyticsQuery, request.query);
+    const range = rangeOf(query, clock.now());
     switch (board) {
       case 'engagement':
         return engagement(range);
@@ -721,6 +1040,14 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
         return monetisation(range);
       case 'economy':
         return economy(range);
+      case 'funnels':
+        return funnels(range, query);
+      case 'content':
+        return content(range);
+      case 'tech':
+        return tech(range);
+      case 'integrity':
+        return integrity(range);
     }
   });
 }

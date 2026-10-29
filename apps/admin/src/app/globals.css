@@ -774,3 +774,8 @@ label.check {
 .filters {
   margin: 12px 0 4px;
 }
+.funnel-picks a[aria-current='page'] {
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+}
