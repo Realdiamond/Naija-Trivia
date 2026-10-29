@@ -35,6 +35,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'liveops.config',
     'compliance.view',
     'compliance.erase',
+    'commerce.view',
   ],
   admin: [
     ...PLAYER_SUPPORT,
@@ -47,6 +48,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'liveops.daily',
     'liveops.config',
     'compliance.view',
+    'commerce.view',
   ],
   dpo: [
     ...PLAYER_SUPPORT.filter((p) => p !== 'players.support'),
@@ -64,7 +66,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
   fact_checker: ['content.view', 'content.write', 'content.review'],
   // Writers see and edit their own questions only.
   writer: ['content.view', 'content.write'],
-  finance: [],
+  finance: ['overview.view', 'commerce.view'],
   sponsor_manager: [],
   // On call: the live numbers and rooms (doc 18 §6), and the kill switches (§8).
   engineer: ['overview.view', 'live.manage', 'liveops.flags'],

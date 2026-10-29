@@ -157,6 +157,11 @@ describe('a friend duel', () => {
     expect(duel.next?.action === 'pick_category' && duel.next.offered).toHaveLength(3);
     expect(await getDuel(b, duel.id)).toMatchObject({ you: 'b', your_turn: false, next: { action: 'wait' } });
 
+    // Other files' answers stay in Redis too, so each question's item rating is compared with before.
+    const ratingBefore = new Map<string, number>();
+    for (const key of await t.redis.keys('qstat:*')) {
+      ratingBefore.set(key, Number(await t.redis.hget(key, 'd_delta')));
+    }
     expect(await playTurn(a, duel.id)).toBe(3);
     // Each answer also moves its question's item rating (step 2.6b).
     const answered = await t.pool.query<{ question_id: string }>(
@@ -165,7 +170,8 @@ describe('a friend duel', () => {
     );
     expect(answered.rows).toHaveLength(3);
     for (const { question_id } of answered.rows) {
-      expect(Number(await t.redis.hget(`qstat:${question_id}`, 'd_delta'))).not.toBe(0);
+      const key = `qstat:${question_id}`;
+      expect(Number(await t.redis.hget(key, 'd_delta'))).not.toBe(ratingBefore.get(key) ?? 0);
     }
     let seenByB = await getDuel(b, duel.id);
     expect(seenByB).toMatchObject({

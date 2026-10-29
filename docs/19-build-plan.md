@@ -475,6 +475,15 @@ Doc 18 §11, doc 16 §2.
 - Left for later: flash packs themselves (with packs), Live Party Nights, other events' rewards, experiments, and push campaigns (v1.1)
 - ✅ Tests: game rules (when an event runs; double XP for one category, all, or several at once); the API (who may, refusals, the running ones per platform, ending early, the list, the audit log; a duel paying double XP); the console in the browser (LiveOps schedules a banner that reaches the apps, then ends it); the app in the browser (a banner and Weekend Wahala on Home, closing one, tapping one)
 
+### Step 2.7i · Commerce ✅
+Doc 18 §13, doc 11.
+
+- ✅ The console's **Commerce** page for owners, admins and finance (`commerce.view`): money in today, in 7 and in 30 days (real purchases only, refunded ones left out), each day's naira for 30 days, packs side by side, and the purchases themselves (all, refunds only, store tests shown or not) with whether the coins arrived; a link to the player for staff who can see players
+- ✅ **Each month as CSV for finance** (the last three months on the page): purchase, time in Lagos, store, pack, store transaction, price, currency, coins, state, refund time, store test or not, and the player as their pseudonymous id. Every export is in the audit log
+- ✅ **Purchases without their coins**: the page shows how many paid purchases older than 10 minutes never reached the player's balance, and the nightly ledger check raises a staff alert about them
+- Left for later: reconciling against RevenueCat's own records (needs its API key), chargebacks, subscriptions (the Sabi Pass, v1.1) and Paystack (v1.1)
+- ✅ Tests: the API (who may; totals that leave out store tests and refunds; refunds; missing coins; filters; the CSV with pseudonymous players; the nightly alert); the console in the browser (finance sees a purchase and its refund and downloads the month)
+
 ### Step 2.8a · Account deletion and data requests ✅
 NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the first.
 
@@ -531,7 +540,7 @@ TRD §2 ("Crash / perf": Sentry), doc 18's `crash_free_sessions`.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |

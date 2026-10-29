@@ -286,14 +286,14 @@ describe('the ledger', () => {
     t.clock.t = Date.UTC(2026, 11, 1, 1, 0, 0);
     expect(await checkLedger(deps)).toBeNull();
     t.clock.t = Date.UTC(2026, 11, 1, 3, 30, 0);
-    expect(await checkLedger(deps)).toEqual({ unbalanced: 0, drifted: 0 });
+    expect(await checkLedger(deps)).toMatchObject({ unbalanced: 0, drifted: 0 });
     expect(await checkLedger(deps)).toBeNull();
 
     const account = `user:${p.id}:coins`;
     await t.pool.query('UPDATE ledger_accounts SET balance = balance + 5 WHERE id = $1', [account]);
     try {
       t.clock.t = Date.UTC(2026, 11, 2, 3, 30, 0);
-      expect(await checkLedger(deps)).toEqual({ unbalanced: 0, drifted: 1 });
+      expect(await checkLedger(deps)).toMatchObject({ unbalanced: 0, drifted: 1 });
       const alerts = await t.pool.query(
         "SELECT kind, title, body FROM staff_alerts WHERE dedupe_key = 'ledger:2026-12-02'",
       );

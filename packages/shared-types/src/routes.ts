@@ -158,6 +158,9 @@ export const routes = {
     flags: () => '/admin/flags',
     flag: (key: string) => `/admin/flags/${encodeURIComponent(key)}`,
     banner: () => '/admin/banner',
+    /** Store purchases, refunds and the export for finance (step 2.7i). */
+    commerce: (query = '') => `/admin/commerce${query}`,
+    commerceExport: (month: string) => `/admin/commerce/export?month=${encodeURIComponent(month)}`,
     /** Home banners and events (step 2.7h). */
     events: () => '/admin/events',
     eventEnd: (id: number) => `/admin/events/${id}/end`,
