@@ -40,6 +40,7 @@ import { adminEventRoutes } from './events';
 import { adminLiveOpsRoutes } from './liveops';
 import { adminModerationRoutes } from './moderation';
 import { adminPlayer360Routes } from './player360';
+import { adminSegmentRoutes } from './segments';
 import { adminPlayerRoutes } from './players';
 import { AdminSessions } from './sessions';
 
@@ -290,6 +291,7 @@ export function adminRoutes(app: FastifyInstance, deps: AppDeps): void {
   adminAnalyticsRoutes(app, deps, ctx);
   adminAlertRuleRoutes(app, deps, ctx);
   adminComplianceOverviewRoutes(app, deps, ctx);
+  adminSegmentRoutes(app, deps, ctx);
   adminModerationRoutes(app, deps, ctx);
   adminDailyRoutes(app, deps, ctx);
   adminComplianceRoutes(app, deps, ctx);

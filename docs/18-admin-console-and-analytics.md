@@ -86,6 +86,7 @@ Staff sign in with Google Workspace SSO, with 2-step verification enforced. Role
 - Built in step 2.7l: Funnels with the KPI dashboards (`analytics.kpi`); Content performance for owners, admins, analysts, LiveOps and editors (`analytics.content`); Platforms & tech health for owners, admins, analysts and on-call engineers (`analytics.tech`); Integrity for owners, admins, analysts and moderators (`analytics.integrity`).
 - Built in step 2.7m: threshold alert rules for owners and admins (`alerts.manage`).
 - Built in step 2.7n: data kept, consent rates and the staff list for the DPO, owners and admins (`compliance.view`); recording the quarterly access review for the DPO and owners (`compliance.review`).
+- Built in step 2.7o: segments for owners, admins, analysts and growth (`segments.manage`); approving a segment export for owners and admins, never their own (`segments.approve`).
 - Built in step 2.8a: the data request queue for the DPO, owners and admins (`compliance.view`); erasing an account for the DPO and owners (`compliance.erase`); support logs requests.
 - Contractor access expires on its own (`expires_at`).
 - The DPO reviews every staff account and role each quarter.

@@ -86,6 +86,10 @@ export const AdminPermission = z.enum([
   'alerts.manage',
   /** Record the quarterly review of staff access (step 2.7n): the DPO and owners. */
   'compliance.review',
+  /** Build, count and save segments of players, and ask to export one (step 2.7o). */
+  'segments.manage',
+  /** Approve or turn down someone else's segment export (step 2.7o). */
+  'segments.approve',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 
