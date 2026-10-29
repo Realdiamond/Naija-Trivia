@@ -1,7 +1,7 @@
 /**
  * LiveOps in the console (doc 18 §8 and §11, build plan step 2.7c): flags and kill switches, the
  * in-app status banner, and (step 2.7g, `liveops.config`) the game and economy values with their
- * history and one-click rollback. Owners, admins, LiveOps and on-call engineers (`liveops.flags`);
+ * history and one-click rollback, and (step 2.7t) the ones the apps use set apart for a platform. Owners, admins, LiveOps and on-call engineers (`liveops.flags`);
  * every change needs a reason, goes in the audit log, and a kill switch flipped is announced to
  * the staff alerts. The banner's history is in `config_history`.
  */
@@ -11,6 +11,7 @@ import { DEFAULT_CONFIG, KILL_SWITCHES, TUNABLE, tunable, type ConfigKey } from 
 import {
   AdminBannerUpdate,
   AdminConfigChange,
+  AdminConfigPlatformChange,
   AdminConfigRollback,
   AdminFlagUpdate,
   ErrorCode,
@@ -25,7 +26,7 @@ import {
 import type { AppDeps } from '../app';
 import { withTransaction, type PoolClient } from '../db';
 import { ApiError, conflict, notFound, parse } from '../errors';
-import { BANNER_KEY, tunedValue } from '../liveops/store';
+import { BANNER_KEY, platformKey, platformValue, tunedValue } from '../liveops/store';
 import { raiseStaffAlert } from './alerts';
 import { writeAudit } from './audit';
 import { requireAdmin, type AdminDeps } from './context';
@@ -182,10 +183,26 @@ export function adminLiveOpsRoutes(app: FastifyInstance, deps: AppDeps, ctx: Adm
       updated_at: Date;
     }>(
       `SELECT c.key, c.value, a.name AS changed_by, c.updated_at
-       FROM app_config c LEFT JOIN admin_users a ON a.id = c.updated_by WHERE c.key = ANY($1)`,
+       FROM app_config c LEFT JOIN admin_users a ON a.id = c.updated_by
+      WHERE c.key = ANY($1) OR c.key LIKE '%@%'`,
       [TUNABLE.map((t) => t.key)],
     );
     const byKey = new Map(rows.rows.map((r) => [r.key, r]));
+    const apart = new Map<string, AdminConfigValue['platforms']>();
+    for (const row of rows.rows) {
+      const own = platformValue(row.key);
+      const value = own ? tunedValue(own.key, row.value) : null;
+      if (!own || value === null) continue;
+      apart.set(own.key, [
+        ...(apart.get(own.key) ?? []),
+        {
+          platform: own.platform,
+          value,
+          changed_by: row.changed_by,
+          changed_at: row.updated_at.toISOString(),
+        },
+      ]);
+    }
     return {
       values: TUNABLE.map((t): AdminConfigValue => {
         const row = byKey.get(t.key);
@@ -199,6 +216,7 @@ export function adminLiveOpsRoutes(app: FastifyInstance, deps: AppDeps, ctx: Adm
           client: t.client ?? false,
           changed_by: row?.changed_by ?? null,
           changed_at: row?.updated_at.toISOString() ?? null,
+          platforms: (apart.get(t.key) ?? []).sort((a, b) => a.platform.localeCompare(b.platform)),
         };
       }),
     };
@@ -268,6 +286,74 @@ export function adminLiveOpsRoutes(app: FastifyInstance, deps: AppDeps, ctx: Adm
         action: 'change_config',
       }),
     );
+    liveops.forget();
+    return configList();
+  });
+
+  /**
+   * A value for the players on one platform (step 2.7t), or back to the shared value with `value:
+   * null`. Kept beside the value as `key@platform`, with its own history and audit entry.
+   */
+  app.post('/admin/config/:key/platform', async (request): Promise<AdminConfigResponse> => {
+    const admin = await requireAdmin(request, ctx, 'liveops.config');
+    const t = known(parse(KeyParams, request.params).key);
+    const body = parse(AdminConfigPlatformChange, request.body);
+    if (!t.client) {
+      throw new ApiError(
+        400,
+        ErrorCode.validation,
+        'Not by platform',
+        `${t.label} is the same on every platform: the server alone uses it.`,
+      );
+    }
+    if (body.value !== null && (body.value < t.min || body.value > t.max)) {
+      throw new ApiError(
+        400,
+        ErrorCode.validation,
+        'Out of range',
+        `${t.label}: between ${t.min} and ${t.max}.`,
+      );
+    }
+    const key = platformKey(t.key, body.platform);
+    await withTransaction(pool, async (client) => {
+      const before = await client.query<{ value: unknown }>(
+        'SELECT value FROM app_config WHERE key = $1 FOR UPDATE',
+        [key],
+      );
+      const old = before.rows[0] ? tunedValue(t.key, before.rows[0].value) : null;
+      if (old === body.value) {
+        throw conflict(
+          ErrorCode.conflict,
+          'Nothing to change',
+          body.value === null ? 'It is the same as everywhere already.' : `It is ${body.value} already.`,
+        );
+      }
+      const at = new Date(clock.now());
+      if (body.value === null) {
+        await client.query('DELETE FROM app_config WHERE key = $1', [key]);
+      } else {
+        await client.query(
+          `INSERT INTO app_config (key, value, updated_by, updated_at) VALUES ($1, $2, $3, $4)
+           ON CONFLICT (key) DO UPDATE SET value = $2, updated_by = $3, updated_at = $4`,
+          [key, JSON.stringify(body.value), admin.id, at],
+        );
+      }
+      await client.query(
+        `INSERT INTO config_history (key, old_value, new_value, changed_by, reason, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [key, JSON.stringify(old), JSON.stringify(body.value), admin.id, body.reason, at],
+      );
+      await writeAudit(client, {
+        actor: admin.id,
+        action: body.value === null ? 'clear_platform_config' : 'change_platform_config',
+        entity: 'config',
+        entityId: key,
+        reason: body.reason,
+        before: { value: old },
+        after: { value: body.value },
+        ip: request.ip,
+      });
+    });
     liveops.forget();
     return configList();
   });

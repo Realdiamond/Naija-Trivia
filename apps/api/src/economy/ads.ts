@@ -119,8 +119,6 @@ export async function rewardAd(
   deps: Pick<AppDeps, 'pool' | 'clock' | 'events'> & Partial<Pick<AppDeps, 'liveops'>>,
   cb: SsvCallback,
 ): Promise<AdRewardOutcome> {
-  const config = await configOf(deps);
-  const coins = config['econ.rewarded_ad_coins'];
   // Google's "verify URL" check, and anything not ours, carries no player or a placement we don't pay.
   if (!cb.userId || (cb.customData ?? 'coins') !== 'coins') return 'not_ours';
   const userId = cb.userId;
@@ -132,6 +130,8 @@ export async function rewardAd(
     );
     if (!user.rows[0]) return { outcome: 'not_ours' as const };
     const platform = user.rows[0].last_platform ?? 'android';
+    // What the player's app said a video pays: it can differ by platform (step 2.7t).
+    const config = await configOf(deps, platform);
     const paidToday = await rewardedToday(client, userId, now);
     const inserted = await client.query(
       `INSERT INTO ad_rewards (reward_ref, source, user_id, ad_unit, reward_item, reward_amount, received_at)
@@ -141,7 +141,7 @@ export async function rewardAd(
     if (inserted.rowCount === 0) return { outcome: 'duplicate' as const };
     if (paidToday >= config['ads.rewarded_daily_cap']) return { outcome: 'capped' as const };
     const key = `ad:${cb.transactionId}`;
-    const change = await grantCoins(client, userId, coins, {
+    const change = await grantCoins(client, userId, config['econ.rewarded_ad_coins'], {
       key,
       reason: 'rewarded_ad',
       refType: 'ad',
@@ -153,11 +153,11 @@ export async function rewardAd(
         WHERE reward_ref = $1`,
       [cb.transactionId, key],
     );
-    return { outcome: 'granted' as const, change, platform };
+    return { outcome: 'granted' as const, change, platform, coins: config['econ.rewarded_ad_coins'] };
   });
   if (result.outcome === 'granted') {
     const ctx: EventContext = { userId, platform: result.platform };
-    await deps.events.emit('ad_reward_granted', { format: 'rewarded', amount: coins }, ctx);
+    await deps.events.emit('ad_reward_granted', { format: 'rewarded', amount: result.coins }, ctx);
     const change = result.change as CoinChange | null;
     if (change) {
       await deps.events.emit(

@@ -220,4 +220,23 @@ describe('lifelines in duels (step 2.4b)', () => {
     expect([notYours.statusCode, notYours.json().code]).toEqual([409, 'TURN_NOT_YOURS']);
     expect(await wallet(a)).toBe(500);
   });
+
+  it("charges the price on the player's platform (step 2.7t)", async () => {
+    await t.pool.query(
+      `INSERT INTO app_config (key, value) VALUES ('econ.lifeline_fifty@android', '10')
+       ON CONFLICT (key) DO UPDATE SET value = '10'`,
+    );
+    try {
+      t.clock.advance(11_000); // past the 10 s the API keeps the values
+      const a = await player(500);
+      const id = await duelFor(a);
+      const { seq } = await fourOptionQuestion(a, id);
+      const res = await lifeline(a, id, 'fifty', 1, seq);
+      expect(res.statusCode, res.body).toBe(200);
+      expect((res.json() as LifelineResponse).coins).toBe(490);
+    } finally {
+      await t.pool.query("DELETE FROM app_config WHERE key = 'econ.lifeline_fifty@android'");
+      t.clock.advance(11_000);
+    }
+  });
 });

@@ -105,8 +105,8 @@ export function economyRoutes(app: FastifyInstance, deps: AppDeps, adKeys: AdKey
   });
 
   app.get('/v1/ads/rewarded', async (request): Promise<RewardedAdStatus> => {
-    const { userId } = requireAuth(request);
-    const config = await deps.liveops.values();
+    const { userId, platform } = requireAuth(request);
+    const config = await deps.liveops.values(platform);
     return {
       coins: config['econ.rewarded_ad_coins'],
       left_today: await rewardedLeft(deps.pool, userId, deps.clock.now(), config['ads.rewarded_daily_cap']),

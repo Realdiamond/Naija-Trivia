@@ -582,6 +582,23 @@ Doc 18 §8 and §9 ("Each chart can be exported").
 - Left for later: a picture of a chart, and scheduled email reports (v1.1)
 - ✅ Tests: the API (the file's watermark and sections, the audit with the reason and filters, a reason required, someone without the dashboard refused); the console in the browser (an analyst downloads Retention for iOS with a reason)
 
+### Step 2.7s · Experiments ✅
+Doc 13 §4, doc 18 §11.
+
+- ✅ **Assignment**: a running experiment takes a stable share of the players it is for (a platform, an app version at least the one named) and splits them into variants by weight, both by hashing the experiment's key with the player's id, so a player keeps their variant on every device. Players get their variants with the config (`experiments` in `GET /v1/config`); visitors without an account aren't in any
+- ✅ **In the app**, `useExperiment(key)` gives the variant (null: show the control) and logs `experiment_exposed` the first time in a session it changes what the player sees
+- ✅ **In the console** (LiveOps › Experiments, `liveops.config`): write one down as a draft with its hypothesis, variants and weights (the first is the control), who it's for, the primary metric and guardrails; start it and stop it with a reason. Variants and audience can't change once it has started. Each variant shows the players who saw it while it ran. Audited
+- Left for later: results with confidence intervals (v1.1); segments as an audience; the first experiments themselves (doc 13 §4), each a small change in the screen it tests
+- ✅ Tests: the rules (a player keeps their variant; weights; the share, platform and version; only while running); the API (a draft changed, refused once running; a variant in the config, the same every time, not for other platforms; exposures counted once a player; stopped and gone; audited; who may); the console in the browser (LiveOps writes one down, starts it, a player gets a variant, stops it)
+
+### Step 2.7t · Values by platform ✅
+Doc 18 §11 ("changes can target a platform, an app version or a segment").
+
+- ✅ The values the apps show and use (lifeline prices, rewarded video coins, ads between games) can be **set apart for one platform**: LiveOps sets one for Android, iPhone or web players with a reason, and puts them back on the shared value the same way. The shared value can still move; the platform's own stays until it is put back. Each is kept beside the value, with its own history and audit entry
+- ✅ What a player sees is what they pay: the apps get their platform's values with the config, a lifeline costs the price on the platform it was used from, and a rewarded video pays what it is worth on the player's platform
+- Left for later: app version and segment targeting (the server would need each player's app version or segments wherever it charges or pays, which it doesn't keep yet), and values only the server uses (duel and Daily coins), which stay the same everywhere
+- ✅ Tests: the API (set apart for web, the shared value moving under it, refusals, put back, audited; a rewarded video and a lifeline at the platform's value); the console in the browser (LiveOps sets a lifeline price for web only and puts it back)
+
 ### Step 2.8a · Account deletion and data requests ✅
 NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the first.
 
@@ -660,7 +677,7 @@ GDD §2.6, UX §4 ("Offline"), TRD FR-WEB-3, PRD F18.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅, 2.7n ✅, 2.7o ✅, 2.7p ✅, 2.7q ✅, 2.7r ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅, 2.7n ✅, 2.7o ✅, 2.7p ✅, 2.7q ✅, 2.7r ✅, 2.7s ✅, 2.7t ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅, 2.8f ✅, 2.8g ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |

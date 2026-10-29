@@ -120,6 +120,24 @@ describe('rewarded ads (step 2.4c)', () => {
     expect(await get<Wallet>(p, '/v1/wallet')).toEqual({ coins: 0, gems: 0 });
   });
 
+  it("pays what a video is worth on the player's platform (step 2.7t)", async () => {
+    const p = await player();
+    await t.pool.query(
+      `INSERT INTO app_config (key, value) VALUES ('econ.rewarded_ad_coins@android', '40')
+       ON CONFLICT (key) DO UPDATE SET value = '40'`,
+    );
+    try {
+      t.clock.advance(11_000); // past the 10 s the API keeps the values
+      expect((await get<RewardedAdStatus>(p, '/v1/ads/rewarded')).coins).toBe(40);
+      expect((await ssv(callback({ userId: p.id }))).json()).toEqual({ outcome: 'granted' });
+      expect((await get<Wallet>(p, '/v1/wallet')).coins).toBe(40);
+      expect(await eventsOf(p.id, 'ad_reward_granted')).toEqual([{ format: 'rewarded', amount: 40 }]);
+    } finally {
+      await t.pool.query("DELETE FROM app_config WHERE key = 'econ.rewarded_ad_coins@android'");
+      t.clock.advance(11_000);
+    }
+  });
+
   it("fetches Google's keys once a day, and again for a key it hasn't seen", async () => {
     let now = 0;
     let fetches = 0;

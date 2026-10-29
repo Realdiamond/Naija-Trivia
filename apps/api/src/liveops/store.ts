@@ -1,6 +1,7 @@
 /**
  * Flags, kill switches, the status banner (doc 18 §11, build plan step 2.7c), the game and
- * economy values staff tuned (step 2.7g) and the Home banners and events running (step 2.7h),
+ * economy values staff tuned (step 2.7g; some set apart for a platform, step 2.7t) and the Home
+ * banners and events running (step 2.7h),
  * worked out on the server. Each API process keeps them for 10 seconds and apps look again every 45, so a
  * kill switch reaches every player within a minute (doc 18 AD-7); a change made through this
  * process applies here at once.
@@ -14,7 +15,9 @@ import {
   MAX_HOME_BANNERS,
   TUNABLE,
   tunable,
+  variantFor,
   XP_BOOST_MULTIPLIER,
+  type Experiment,
   type Flag,
   type FlagAudience,
   type FlagPlatform,
@@ -49,8 +52,12 @@ interface Snapshot {
   banner: StatusBanner | null;
   /** The defaults with staff's changes on top (step 2.7g). */
   values: GameConfig;
+  /** The same with each platform's own values on top (step 2.7t). */
+  byPlatform: Record<FlagPlatform, GameConfig>;
   /** Running, or starting before the next look at the database (step 2.7h). */
   events: EventRow[];
+  /** Running experiments (step 2.7s). */
+  experiments: Experiment[];
 }
 
 const live = (e: EventRow, now: number) =>
@@ -65,6 +72,19 @@ export function tunedValue(key: string, value: unknown): number | null {
 }
 
 const PLATFORMS: readonly FlagPlatform[] = ['android', 'ios', 'web'];
+
+/**
+ * A value set apart for one platform (step 2.7t) is kept beside the value, as `key@platform`.
+ * Only the values the apps show and use can be: the server charges and pays those by the
+ * player's platform too, so what a player sees is what they pay.
+ */
+export const platformKey = (key: string, platform: FlagPlatform) => `${key}@${platform}`;
+
+export function platformValue(row: string): { key: string; platform: FlagPlatform } | null {
+  const [key, platform, extra] = row.split('@');
+  if (extra !== undefined || !key || !PLATFORMS.includes(platform as FlagPlatform)) return null;
+  return tunable(key)?.client ? { key, platform: platform as FlagPlatform } : null;
+}
 
 /** Who is asking: the signed-in player, or what the app says about itself. */
 export function audienceOf(request: FastifyRequest): FlagAudience {
@@ -91,7 +111,7 @@ export class LiveOpsStore {
   private async current(): Promise<Snapshot> {
     const now = this.now();
     if (this.snapshot && now - this.snapshot.at < CACHE_MS) return this.snapshot;
-    const [flags, config, events] = await Promise.all([
+    const [flags, config, events, experiments] = await Promise.all([
       this.pool.query<{ key: string; enabled: boolean; rules: Flag['rules'] }>(
         'SELECT key, enabled, rules FROM feature_flags',
       ),
@@ -103,13 +123,20 @@ export class LiveOpsStore {
           ORDER BY starts_at DESC, id DESC LIMIT 50`,
         [new Date(now), new Date(now + CACHE_MS)],
       ),
+      this.pool.query<Experiment>(
+        "SELECT key, status, variants, audience FROM experiments WHERE status = 'running'",
+      ),
     ]);
     const values: Record<string, number> = { ...DEFAULT_CONFIG };
+    const own: Record<FlagPlatform, Record<string, number>> = { android: {}, ios: {}, web: {} };
     let banner: unknown = null;
     for (const row of config.rows) {
       if (row.key === BANNER_KEY) banner = row.value;
       const tuned = tunedValue(row.key, row.value);
       if (tuned !== null) values[row.key] = tuned;
+      const apart = platformValue(row.key);
+      const value = apart ? tunedValue(apart.key, row.value) : null;
+      if (apart && value !== null) own[apart.platform][apart.key] = value;
     }
     const shown = StatusBanner.safeParse(banner);
     this.snapshot = {
@@ -117,7 +144,13 @@ export class LiveOpsStore {
       flags: new Map(flags.rows.map((f) => [f.key, f])),
       banner: shown.success ? shown.data : null,
       values: values as GameConfig,
+      byPlatform: {
+        android: { ...values, ...own.android } as GameConfig,
+        ios: { ...values, ...own.ios } as GameConfig,
+        web: { ...values, ...own.web } as GameConfig,
+      },
       events: events.rows,
+      experiments: experiments.rows,
     };
     return this.snapshot;
   }
@@ -146,9 +179,28 @@ export class LiveOpsStore {
     const keys = new Set<string>([...KILL_SWITCHES, ...snap.flags.keys()]);
     const flags: Record<string, boolean> = {};
     for (const key of [...keys].sort()) flags[key] = await this.isOn(key, who);
+    const mine = who.platform ? snap.byPlatform[who.platform] : snap.values;
     const values: Record<string, number> = {};
-    for (const t of TUNABLE) if (t.client) values[t.key] = snap.values[t.key];
-    return { flags, banner: snap.banner, home: this.home(snap, who), values, refresh_s: CONFIG_REFRESH_S };
+    for (const t of TUNABLE) if (t.client) values[t.key] = mine[t.key];
+    const experiments: Record<string, string> = {};
+    for (const e of snap.experiments) {
+      const variant = variantFor(e, who);
+      if (variant) experiments[e.key] = variant;
+    }
+    return {
+      flags,
+      banner: snap.banner,
+      home: this.home(snap, who),
+      values,
+      experiments,
+      refresh_s: CONFIG_REFRESH_S,
+    };
+  }
+
+  /** A player's variant in a running experiment, for the server's own code; null when not in it. */
+  async variant(key: string, who: FlagAudience): Promise<string | null> {
+    const experiment = (await this.current()).experiments.find((e) => e.key === key);
+    return experiment ? variantFor(experiment, who) : null;
   }
 
   /** The Home banners running now for this platform, newest first. */
@@ -179,13 +231,17 @@ export class LiveOpsStore {
       .map((e) => ({ category: e.category_id, multiplier: XP_BOOST_MULTIPLIER }));
   }
 
-  /** The game and economy values in force (step 2.7g). */
-  async values(): Promise<GameConfig> {
-    return (await this.current()).values;
+  /** The game and economy values in force (step 2.7g), for a player on `platform` if given (step 2.7t). */
+  async values(platform?: FlagPlatform | null): Promise<GameConfig> {
+    const snap = await this.current();
+    return platform ? snap.byPlatform[platform] : snap.values;
   }
 }
 
 /** The values in force, or the defaults for callers without the store (some jobs and tests). */
-export async function configOf(deps: { liveops?: LiveOpsStore }): Promise<GameConfig> {
-  return deps.liveops ? deps.liveops.values() : DEFAULT_CONFIG;
+export async function configOf(
+  deps: { liveops?: LiveOpsStore },
+  platform?: FlagPlatform | null,
+): Promise<GameConfig> {
+  return deps.liveops ? deps.liveops.values(platform) : DEFAULT_CONFIG;
 }

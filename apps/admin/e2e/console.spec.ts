@@ -361,6 +361,34 @@ test('LiveOps changes a coin value with a reason and rolls it back', async ({ pa
   await expect(page.getByTestId('config-now-econ-rewarded_ad_coins')).toHaveText('25');
 });
 
+test('LiveOps sets a lifeline price for web players only, and puts it back', async ({ page, request }) => {
+  const email = `e2e-platform-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'liveops');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page).toHaveURL(/\/overview$/);
+  await page.getByRole('link', { name: 'LiveOps' }).click();
+
+  const skipOn = async (platform: string) =>
+    (await (await request.get(`${API}/v1/config`, { headers: { 'x-platform': platform } })).json()).values[
+      'econ.lifeline_skip'
+    ];
+  await page.getByTestId('config-change-econ-lifeline_skip').click();
+  await page.getByTestId('config-econ-lifeline_skip-platform-name').selectOption('web');
+  await page.getByTestId('config-econ-lifeline_skip-platform-value').fill('70');
+  await page.getByTestId('config-econ-lifeline_skip-platform-reason').fill('E2E: web promo');
+  await page.getByTestId('config-econ-lifeline_skip-platform-save').click();
+  await expect(page.getByTestId('config-econ-lifeline_skip-on-web')).toContainText('Web: 70');
+  expect(await skipOn('web')).toBe(70);
+  expect(await skipOn('android')).toBe(100);
+
+  await page.getByTestId('config-econ-lifeline_skip-platform-reason').fill('E2E: promo over');
+  await page.getByTestId('config-econ-lifeline_skip-platform-clear').click();
+  await expect(page.getByTestId('config-econ-lifeline_skip-on-web')).toHaveCount(0);
+  expect(await skipOn('web')).toBe(100);
+});
+
 test('LiveOps schedules a Home banner that reaches the apps at once, and ends it', async ({
   page,
   request,
@@ -394,6 +422,54 @@ test('LiveOps schedules a Home banner that reaches the apps at once, and ends it
   await row.getByPlaceholder('Reason').fill('E2E: pack pulled');
   await row.getByRole('button', { name: 'End now' }).click();
   await expect(row.getByText('Ended')).toBeVisible();
+});
+
+test('LiveOps writes down an experiment, starts it for every player, and stops it', async ({
+  page,
+  request,
+}) => {
+  const email = `e2e-experiments-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'liveops');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page).toHaveURL(/\/overview$/);
+  await page.getByRole('link', { name: 'LiveOps' }).click();
+
+  const key = `e2e.timer${randomInt(1e6)}`;
+  await page.getByTestId('experiment-new').click();
+  await page.getByTestId('experiment-key').fill(key);
+  await page.getByTestId('experiment-description').fill('Duel timer: 15 s or 12 s');
+  await page.getByTestId('experiment-hypothesis').fill('A shorter timer makes duels feel quicker');
+  await page.getByTestId('experiment-variants').fill('control:50, twelve:50');
+  await page.getByTestId('experiment-metric').fill('duel_completed');
+  await page.getByTestId('experiment-save').click();
+  await expect(page.getByTestId('experiment-done')).toBeVisible();
+
+  const id = key.replaceAll('.', '-');
+  const row = page.getByTestId(`experiment-${id}`);
+  await expect(page.getByTestId(`experiment-state-${id}`)).toHaveText('Draft');
+  await row.getByPlaceholder('Reason').fill('E2E: two weeks');
+  await row.getByRole('button', { name: 'Start' }).click();
+  await expect(page.getByTestId(`experiment-state-${id}`)).toHaveText('Running');
+
+  const guest = await (
+    await request.post(`${API}/v1/auth/guest`, {
+      data: { device_id: randomBytes(24).toString('base64url'), platform: 'web' },
+    })
+  ).json();
+  const variantOf = async () =>
+    (
+      await (
+        await request.get(`${API}/v1/config`, { headers: { authorization: `Bearer ${guest.access}` } })
+      ).json()
+    ).experiments[key];
+  expect(['control', 'twelve']).toContain(await variantOf());
+
+  await row.getByPlaceholder('Reason').fill('E2E: enough data');
+  await row.getByRole('button', { name: 'Stop' }).click();
+  await expect(page.getByTestId(`experiment-state-${id}`)).toHaveText('Stopped');
+  expect(await variantOf()).toBeUndefined();
 });
 
 test('finance sees a purchase and its refund in Commerce, and downloads the month', async ({

@@ -1,13 +1,16 @@
 /**
  * LiveOps (doc 18 §11): flags and kill switches and the in-app status banner (build plan step
  * 2.7c, `liveops.flags`), the game and economy values with their history and rollback (step
- * 2.7g, `liveops.config`), and Home banners and events (step 2.7h, `liveops.config`). Apps look again every 45 seconds, so a change reaches every player
- * within a minute (AD-7); switching a kill switch is announced in the staff alerts.
+ * 2.7g, `liveops.config`), Home banners and events (step 2.7h) and experiments (step 2.7s), both
+ * `liveops.config` too. Apps look again every 45 seconds, so a change reaches every player within a
+ * minute (AD-7); switching a kill switch is announced in the staff alerts.
  */
 import {
   routes,
   type AdminBannerResponse,
   type AdminConfigResponse,
+  type AdminExperiment,
+  type AdminExperimentsResponse,
   type AdminFlag,
   type AdminFlagsResponse,
   type AdminLiveEventsResponse,
@@ -16,7 +19,16 @@ import {
 import { CATEGORY_NAME } from '../../../lib/content';
 import { AdminApiError, adminApi } from '../../../lib/api';
 import { watDateTime } from '../../../lib/format';
-import { BannerForm, ConfigForm, EndEventForm, EventForm, FlagForm } from './Forms';
+import {
+  BannerForm,
+  ConfigForm,
+  EndEventForm,
+  EventForm,
+  ExperimentForm,
+  ExperimentMoveForm,
+  FlagForm,
+  PlatformConfigForm,
+} from './Forms';
 
 function who(flag: AdminFlag): string {
   if (!flag.enabled) return 'Off for everyone';
@@ -31,6 +43,7 @@ function who(flag: AdminFlag): string {
 }
 
 const dashed = (key: string) => key.replaceAll('.', '-');
+const PLATFORM_NAME = { android: 'Android', ios: 'iPhone', web: 'Web' } as const;
 
 function Flags({ flags, banner }: { flags: AdminFlagsResponse; banner: AdminBannerResponse }) {
   return (
@@ -98,7 +111,8 @@ function Values({ config }: { config: AdminConfigResponse }) {
     <section className="card">
       <h2>Game and economy values</h2>
       <p className="muted small">
-        Change one without a release. Every change keeps its reason and can be rolled back. The game&apos;s
+        Change one without a release. Every change keeps its reason and can be rolled back. The ones the apps
+        use can differ on one platform; players there are charged and paid that value too. The game&apos;s
         other numbers (timers, scoring, room sizes) stay as written for now.
       </p>
       <table data-testid="config">
@@ -122,11 +136,24 @@ function Values({ config }: { config: AdminConfigResponse }) {
                   {v.value === v.default ? 'the default' : `default ${v.default}`}
                   {v.changed_by ? ` · ${v.changed_by}, ${watDateTime(v.changed_at)}` : ''}
                 </div>
+                {v.platforms.map((p) => (
+                  <div
+                    key={p.platform}
+                    className="small"
+                    data-testid={`config-${dashed(v.key)}-on-${p.platform}`}
+                  >
+                    {PLATFORM_NAME[p.platform]}: <b>{p.value}</b>
+                    <span className="muted">
+                      {p.changed_by ? ` · ${p.changed_by}, ${watDateTime(p.changed_at)}` : ''}
+                    </span>
+                  </div>
+                ))}
               </td>
               <td>
                 <details>
                   <summary data-testid={`config-change-${dashed(v.key)}`}>Change</summary>
                   <ConfigForm value={v} />
+                  {v.client ? <PlatformConfigForm value={v} /> : null}
                 </details>
               </td>
             </tr>
@@ -190,6 +217,86 @@ function Events({ events }: { events: AdminLiveEventsResponse }) {
   );
 }
 
+function audienceOf(e: AdminExperiment): string {
+  const parts = [
+    e.audience.platforms?.length ? e.audience.platforms.join(', ') : 'every platform',
+    e.audience.min_app_version ? `from ${e.audience.min_app_version}` : null,
+    `${e.audience.percent}% of players`,
+  ].filter(Boolean);
+  return parts.join(' · ');
+}
+
+const STATUS: Record<AdminExperiment['status'], string> = {
+  draft: 'Draft',
+  running: 'Running',
+  stopped: 'Stopped',
+};
+
+function Experiments({ experiments }: { experiments: AdminExperimentsResponse }) {
+  return (
+    <section className="card">
+      <h2>Experiments</h2>
+      <p className="muted small">
+        A share of players gets each variant, the same one on every device. Players count once the app shows
+        them their variant. Variants and who gets them are fixed once it starts; read the results on the
+        dashboards with the primary metric and guardrails.
+      </p>
+      <table data-testid="experiments">
+        <thead>
+          <tr>
+            <th>Experiment</th>
+            <th>Who</th>
+            <th>Variants · players who saw it</th>
+            <th>State</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {experiments.experiments.map((e) => (
+            <tr key={e.key} data-testid={`experiment-${e.key.replaceAll('.', '-')}`}>
+              <td>
+                {e.description}
+                <div className="mono muted small">{e.key}</div>
+                <div className="muted small">
+                  {e.hypothesis} · measured by <span className="mono">{e.primary_metric}</span>
+                  {e.guardrails.length ? `, watching ${e.guardrails.join(', ')}` : ''} · {e.created_by}
+                </div>
+              </td>
+              <td className="small">{audienceOf(e)}</td>
+              <td className="small">
+                {e.variants.map((v, i) => (
+                  <div key={v.key}>
+                    <span className="mono">{v.key}</span> ({v.weight}){i === 0 ? ' control' : ''} ·{' '}
+                    <b>{e.exposed[v.key] ?? 0}</b>
+                  </div>
+                ))}
+              </td>
+              <td className="small">
+                <span
+                  className={e.status === 'running' ? 'badge' : 'badge off'}
+                  data-testid={`experiment-state-${e.key.replaceAll('.', '-')}`}
+                >
+                  {STATUS[e.status]}
+                </span>
+                {e.started_at ? <div className="muted">from {watDateTime(e.started_at)}</div> : null}
+                {e.stopped_at ? <div className="muted">to {watDateTime(e.stopped_at)}</div> : null}
+              </td>
+              <td>
+                {e.status === 'draft' ? <ExperimentMoveForm experimentKey={e.key} to="start" /> : null}
+                {e.status === 'running' ? <ExperimentMoveForm experimentKey={e.key} to="stop" /> : null}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <details>
+        <summary data-testid="experiment-new">Write one down</summary>
+        <ExperimentForm />
+      </details>
+    </section>
+  );
+}
+
 export default async function LiveOps() {
   const me = await adminApi<AdminProfile>('/admin/me');
   const canFlags = me.permissions.includes('liveops.flags');
@@ -198,12 +305,14 @@ export default async function LiveOps() {
   let banner: AdminBannerResponse | null;
   let config: AdminConfigResponse | null;
   let events: AdminLiveEventsResponse | null;
+  let experiments: AdminExperimentsResponse | null;
   try {
-    [flags, banner, config, events] = await Promise.all([
+    [flags, banner, config, events, experiments] = await Promise.all([
       canFlags ? adminApi<AdminFlagsResponse>(routes.admin.flags()) : null,
       canFlags ? adminApi<AdminBannerResponse>(routes.admin.banner()) : null,
       canConfig ? adminApi<AdminConfigResponse>(routes.admin.config()) : null,
       canConfig ? adminApi<AdminLiveEventsResponse>(routes.admin.events()) : null,
+      canConfig ? adminApi<AdminExperimentsResponse>(routes.admin.experiments()) : null,
     ]);
   } catch (e) {
     return <p className="error">{e instanceof AdminApiError ? e.message : 'Could not load LiveOps.'}</p>;
@@ -219,6 +328,7 @@ export default async function LiveOps() {
       {flags && banner ? <Flags flags={flags} banner={banner} /> : null}
       {events ? <Events events={events} /> : null}
       {config ? <Values config={config} /> : null}
+      {experiments ? <Experiments experiments={experiments} /> : null}
     </>
   );
 }

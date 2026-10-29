@@ -161,6 +161,7 @@ export const routes = {
     configValue: (key: string) => `/admin/config/${encodeURIComponent(key)}`,
     configHistory: (key: string) => `/admin/config/${encodeURIComponent(key)}/history`,
     configRollback: (key: string) => `/admin/config/${encodeURIComponent(key)}/rollback`,
+    configPlatform: (key: string) => `/admin/config/${encodeURIComponent(key)}/platform`,
     /** Compliance: data requests, exports and erasure (step 2.8a). */
     dsar: (status?: string) => `/admin/dsar${status ? `?status=${encodeURIComponent(status)}` : ''}`,
     userDsar: (id: string) => `/admin/users/${encodeURIComponent(id)}/dsar`,
@@ -187,6 +188,9 @@ export const routes = {
     flags: () => '/admin/flags',
     flag: (key: string) => `/admin/flags/${encodeURIComponent(key)}`,
     banner: () => '/admin/banner',
+    /** Experiments (step 2.7s). */
+    experiments: () => '/admin/experiments',
+    experiment: (key: string) => `/admin/experiments/${encodeURIComponent(key)}`,
     /** Store purchases, refunds and the export for finance (step 2.7i). */
     commerce: (query = '') => `/admin/commerce${query}`,
     commerceExport: (month: string) => `/admin/commerce/export?month=${encodeURIComponent(month)}`,

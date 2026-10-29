@@ -93,7 +93,7 @@ Product, business and content dashboards live in the admin console ([doc 18 §9]
 | **Integrity** | Trust & safety | Accuracy z-score outliers, timing anomalies, bans, appeals |
 
 ## 4. Experimentation framework
-- Experiments run on our own flags (admin console › LiveOps › Experiments), each with a pre-registered hypothesis, primary metric, guardrails and minimum detectable effect. Assignment hashes the experiment key with the user ID, so a player gets the same variant on every platform; exposures are logged as `experiment_exposed`. Until the experiments UI ships (v1.1), results are read in Explore.
+- Experiments run on our own flags (admin console › LiveOps › Experiments), each with a pre-registered hypothesis, primary metric, guardrails and minimum detectable effect. Assignment hashes the experiment key with the user ID, so a player gets the same variant on every platform; exposures are logged as `experiment_exposed`. LiveOps writes experiments down, starts and stops them in the console (step 2.7s), which counts the players who saw each variant; until the results UI ships (v1.1), results are read on the dashboards and in Explore.
 - **Default guardrails:** D7 retention, crash-free rate, reports/1k, session length.
 - Minimum run: 14 days (two full weekly cycles, since Nigerian usage peaks Friday–Sunday).
 - **First experiments:**
