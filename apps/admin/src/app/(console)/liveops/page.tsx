@@ -27,6 +27,7 @@ import {
   ExperimentForm,
   ExperimentMoveForm,
   FlagForm,
+  PlatformConfigForm,
 } from './Forms';
 
 function who(flag: AdminFlag): string {
@@ -42,6 +43,7 @@ function who(flag: AdminFlag): string {
 }
 
 const dashed = (key: string) => key.replaceAll('.', '-');
+const PLATFORM_NAME = { android: 'Android', ios: 'iPhone', web: 'Web' } as const;
 
 function Flags({ flags, banner }: { flags: AdminFlagsResponse; banner: AdminBannerResponse }) {
   return (
@@ -109,7 +111,8 @@ function Values({ config }: { config: AdminConfigResponse }) {
     <section className="card">
       <h2>Game and economy values</h2>
       <p className="muted small">
-        Change one without a release. Every change keeps its reason and can be rolled back. The game&apos;s
+        Change one without a release. Every change keeps its reason and can be rolled back. The ones the apps
+        use can differ on one platform; players there are charged and paid that value too. The game&apos;s
         other numbers (timers, scoring, room sizes) stay as written for now.
       </p>
       <table data-testid="config">
@@ -133,11 +136,24 @@ function Values({ config }: { config: AdminConfigResponse }) {
                   {v.value === v.default ? 'the default' : `default ${v.default}`}
                   {v.changed_by ? ` · ${v.changed_by}, ${watDateTime(v.changed_at)}` : ''}
                 </div>
+                {v.platforms.map((p) => (
+                  <div
+                    key={p.platform}
+                    className="small"
+                    data-testid={`config-${dashed(v.key)}-on-${p.platform}`}
+                  >
+                    {PLATFORM_NAME[p.platform]}: <b>{p.value}</b>
+                    <span className="muted">
+                      {p.changed_by ? ` · ${p.changed_by}, ${watDateTime(p.changed_at)}` : ''}
+                    </span>
+                  </div>
+                ))}
               </td>
               <td>
                 <details>
                   <summary data-testid={`config-change-${dashed(v.key)}`}>Change</summary>
                   <ConfigForm value={v} />
+                  {v.client ? <PlatformConfigForm value={v} /> : null}
                 </details>
               </td>
             </tr>

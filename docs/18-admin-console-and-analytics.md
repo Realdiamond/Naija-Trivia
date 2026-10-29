@@ -238,7 +238,7 @@ Each metric has one definition, used by every dashboard, export and alert. All d
 | Tool | What it does |
 |---|---|
 | Daily scheduler | Calendar of the next 30 Dailies; swap questions until 22:00 WAT the day before; preview exactly what players will see |
-| Remote config | Every game and economy value (GDD §10) with its current value, history, diff and one-click rollback; changes can target a platform, an app version or a segment |
+| Remote config | Every game and economy value (GDD §10) with its current value, history, diff and one-click rollback; changes can target a platform, an app version or a segment. Built in steps 2.7g and 2.7t: the values the apps use (lifeline prices, rewarded video coins, ad pacing) can be set apart for one platform, and players there are charged and paid that value; app version and segment targeting come later |
 | Flags & kill switches | On/off and percentage rollouts by platform and version; kill switches for ads, shop, party rooms, Question Factory and web purchases |
 | Experiments | Variants and weights, audience, primary metric and guardrails. Assignment hashes the experiment key with the user ID, so a player always sees the same variant on every device; exposures are logged as events. Built in step 2.7s: write one down as a draft, start and stop it with a reason; variants and audience are fixed once it starts; the players who saw each variant are counted. Results with confidence intervals arrive in the v1.1 UI |
 | Banners & status | Home banners and the in-app status banner ("Party rooms are having issues. Duels still work") |

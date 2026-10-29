@@ -161,6 +161,7 @@ export const routes = {
     configValue: (key: string) => `/admin/config/${encodeURIComponent(key)}`,
     configHistory: (key: string) => `/admin/config/${encodeURIComponent(key)}/history`,
     configRollback: (key: string) => `/admin/config/${encodeURIComponent(key)}/rollback`,
+    configPlatform: (key: string) => `/admin/config/${encodeURIComponent(key)}/platform`,
     /** Compliance: data requests, exports and erasure (step 2.8a). */
     dsar: (status?: string) => `/admin/dsar${status ? `?status=${encodeURIComponent(status)}` : ''}`,
     userDsar: (id: string) => `/admin/users/${encodeURIComponent(id)}/dsar`,

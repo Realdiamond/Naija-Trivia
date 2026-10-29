@@ -14,6 +14,7 @@ import {
   saveConfig,
   saveExperiment,
   saveFlag,
+  savePlatformConfig,
   scheduleEvent,
   type FormState,
 } from './actions';
@@ -182,6 +183,67 @@ export function ConfigForm({ value }: { value: AdminConfigValue }) {
         </button>
       ) : null}
       <Outcome state={state} testId={`config-${id}`} />
+    </form>
+  );
+}
+
+/** The same value for the players on one platform only (step 2.7t). */
+export function PlatformConfigForm({ value }: { value: AdminConfigValue }) {
+  const [state, action, pending] = useActionState(savePlatformConfig.bind(null, value.key), IDLE);
+  const id = value.key.replaceAll('.', '-');
+  return (
+    <form action={action} className="inline" data-testid={`config-${id}-platform`}>
+      <label>
+        Only on
+        <select name="platform" defaultValue="web" data-testid={`config-${id}-platform-name`}>
+          <option value="android">Android</option>
+          <option value="ios">iPhone</option>
+          <option value="web">Web</option>
+        </select>
+      </label>
+      <label>
+        Value ({value.min}–{value.max})
+        <input
+          name="value"
+          type="number"
+          min={value.min}
+          max={value.max}
+          defaultValue={value.value}
+          data-testid={`config-${id}-platform-value`}
+        />
+      </label>
+      <label>
+        Reason
+        <input
+          name="reason"
+          required
+          minLength={3}
+          maxLength={300}
+          data-testid={`config-${id}-platform-reason`}
+        />
+      </label>
+      <button
+        className="primary"
+        type="submit"
+        name="intent"
+        value="set"
+        disabled={pending}
+        data-testid={`config-${id}-platform-save`}
+      >
+        Save for that platform
+      </button>
+      {value.platforms.length ? (
+        <button
+          type="submit"
+          name="intent"
+          value="clear"
+          disabled={pending}
+          data-testid={`config-${id}-platform-clear`}
+        >
+          Same as everywhere
+        </button>
+      ) : null}
+      <Outcome state={state} testId={`config-${id}-platform`} />
     </form>
   );
 }

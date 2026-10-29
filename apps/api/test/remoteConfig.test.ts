@@ -23,8 +23,8 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   // Values are shared by every test file: leave the defaults in force.
-  await t.pool.query('DELETE FROM app_config WHERE key = ANY($1)', [KEYS]);
-  await t.pool.query('DELETE FROM config_history WHERE key = ANY($1)', [KEYS]);
+  await t.pool.query("DELETE FROM app_config WHERE key = ANY($1) OR key LIKE '%@%'", [KEYS]);
+  await t.pool.query("DELETE FROM config_history WHERE key = ANY($1) OR key LIKE '%@%'", [KEYS]);
   await t.close();
 });
 
@@ -124,5 +124,75 @@ describe('game and economy values (step 2.7g)', () => {
     );
     const store = new LiveOpsStore(t.pool, t.clock.now);
     expect((await store.values())['econ.level_up_coins']).toBe(DEFAULT_CONFIG['econ.level_up_coins']);
+  });
+});
+
+describe('values by platform (step 2.7t)', () => {
+  it('sets a value the apps use apart for one platform, and puts it back', async () => {
+    const liveops = await staff(['liveops'], 'Platform LiveOps');
+    const url = '/admin/config/econ.lifeline_skip';
+    const skipFor = async (platform: 'android' | 'web') => {
+      const guest = await signInGuest(t.app, platform);
+      return ((await get(guest.access, '/v1/config')).json() as ClientConfig).values['econ.lifeline_skip'];
+    };
+    const anonymous = async (platform: string) =>
+      (
+        (
+          await t.app.inject({ method: 'GET', url: '/v1/config', headers: { 'x-platform': platform } })
+        ).json() as ClientConfig
+      ).values['econ.lifeline_skip'];
+
+    const set = await post(liveops, `${url}/platform`, { platform: 'web', value: 50, reason: 'Web promo' });
+    expect(set.statusCode, set.body).toBe(200);
+    expect(valueOf(set.json() as AdminConfigResponse, 'econ.lifeline_skip')).toMatchObject({
+      value: 100,
+      platforms: [{ platform: 'web', value: 50, changed_by: 'Platform LiveOps' }],
+    });
+    expect(await skipFor('web')).toBe(50);
+    expect(await anonymous('web')).toBe(50);
+    expect(await skipFor('android')).toBe(100);
+
+    // The shared value moves; the web's own stays.
+    await post(liveops, url, { value: 120, reason: 'Skip is too cheap' });
+    expect(await skipFor('android')).toBe(120);
+    expect(await skipFor('web')).toBe(50);
+
+    // Refused: the same again, out of range, or a value only the server uses.
+    expect(
+      (await post(liveops, `${url}/platform`, { platform: 'web', value: 50, reason: 'Again' })).statusCode,
+    ).toBe(409);
+    expect(
+      (await post(liveops, `${url}/platform`, { platform: 'web', value: 5000, reason: 'Too much' }))
+        .statusCode,
+    ).toBe(400);
+    const serverOnly = await post(liveops, '/admin/config/econ.win_coins/platform', {
+      platform: 'web',
+      value: 10,
+      reason: 'Web wins',
+    });
+    expect([serverOnly.statusCode, serverOnly.json().detail]).toEqual([
+      400,
+      'Coins for winning a duel is the same on every platform: the server alone uses it.',
+    ]);
+
+    const back = await post(liveops, `${url}/platform`, {
+      platform: 'web',
+      value: null,
+      reason: 'Promo over',
+    });
+    expect(valueOf(back.json() as AdminConfigResponse, 'econ.lifeline_skip').platforms).toEqual([]);
+    expect(await skipFor('web')).toBe(120);
+    expect(
+      (await post(liveops, `${url}/platform`, { platform: 'web', value: null, reason: 'Again' })).statusCode,
+    ).toBe(409);
+
+    const audit = await t.pool.query(
+      "SELECT action, reason FROM admin_audit_log WHERE entity = 'config' AND entity_id = 'econ.lifeline_skip@web' ORDER BY id",
+    );
+    expect(audit.rows).toEqual([
+      { action: 'change_platform_config', reason: 'Web promo' },
+      { action: 'clear_platform_config', reason: 'Promo over' },
+    ]);
+    await post(liveops, `${url}/rollback`, { reason: 'Back to the default' });
   });
 });

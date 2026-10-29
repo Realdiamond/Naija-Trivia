@@ -7,6 +7,7 @@
 import { revalidatePath } from 'next/cache';
 import {
   routes,
+  type AdminConfigPlatformChange,
   type AdminExperimentInput,
   type AdminFlagRule,
   type AdminFlagUpdate,
@@ -89,6 +90,27 @@ export async function saveConfig(key: string, _state: FormState, form: FormData)
   }
   revalidatePath('/liveops');
   return { done: rollback ? 'Rolled back.' : 'Saved. Players get it within a minute.', error: null };
+}
+
+/** A value for one platform's players (step 2.7t), or back to the shared one. */
+export async function savePlatformConfig(key: string, _state: FormState, form: FormData): Promise<FormState> {
+  const clear = form.get('intent') === 'clear';
+  const platform = text(form, 'platform');
+  if (platform !== 'android' && platform !== 'ios' && platform !== 'web') {
+    return { done: null, error: 'Pick a platform.' };
+  }
+  const body: AdminConfigPlatformChange = {
+    platform,
+    value: clear ? null : Number(text(form, 'value')),
+    reason: text(form, 'reason'),
+  };
+  try {
+    await adminApi(routes.admin.configPlatform(key), { method: 'POST', body });
+  } catch (e) {
+    return failed(e);
+  }
+  revalidatePath('/liveops');
+  return { done: clear ? 'Back to the shared value.' : 'Saved for that platform.', error: null };
 }
 
 /** A time typed in the console's date and time box, in Lagos time (WAT, UTC+1). */

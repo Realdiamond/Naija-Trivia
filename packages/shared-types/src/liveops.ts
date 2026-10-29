@@ -120,6 +120,15 @@ export const AdminConfigValue = z.object({
   client: z.boolean(),
   changed_by: z.string().nullable(),
   changed_at: z.iso.datetime().nullable(),
+  /** Values set apart for one platform (step 2.7t); only the ones the apps use (`client`) can be. */
+  platforms: z.array(
+    z.object({
+      platform: z.enum(['android', 'ios', 'web']),
+      value: z.number().int(),
+      changed_by: z.string().nullable(),
+      changed_at: z.iso.datetime(),
+    }),
+  ),
 });
 export type AdminConfigValue = z.infer<typeof AdminConfigValue>;
 export const AdminConfigResponse = z.object({ values: z.array(AdminConfigValue) });
@@ -130,6 +139,13 @@ export const AdminConfigChange = z.object({
   reason: z.string().trim().min(3).max(300),
 });
 export type AdminConfigChange = z.infer<typeof AdminConfigChange>;
+/** A value for players on one platform (step 2.7t); `value: null` puts them back on the shared one. */
+export const AdminConfigPlatformChange = z.object({
+  platform: z.enum(['android', 'ios', 'web']),
+  value: z.number().int().nullable(),
+  reason: z.string().trim().min(3).max(300),
+});
+export type AdminConfigPlatformChange = z.infer<typeof AdminConfigPlatformChange>;
 /** Back to the value before the latest change. */
 export const AdminConfigRollback = z.object({ reason: z.string().trim().min(3).max(300) });
 

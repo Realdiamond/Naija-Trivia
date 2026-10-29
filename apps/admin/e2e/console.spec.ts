@@ -361,6 +361,34 @@ test('LiveOps changes a coin value with a reason and rolls it back', async ({ pa
   await expect(page.getByTestId('config-now-econ-rewarded_ad_coins')).toHaveText('25');
 });
 
+test('LiveOps sets a lifeline price for web players only, and puts it back', async ({ page, request }) => {
+  const email = `e2e-platform-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'liveops');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page).toHaveURL(/\/overview$/);
+  await page.getByRole('link', { name: 'LiveOps' }).click();
+
+  const skipOn = async (platform: string) =>
+    (await (await request.get(`${API}/v1/config`, { headers: { 'x-platform': platform } })).json()).values[
+      'econ.lifeline_skip'
+    ];
+  await page.getByTestId('config-change-econ-lifeline_skip').click();
+  await page.getByTestId('config-econ-lifeline_skip-platform-name').selectOption('web');
+  await page.getByTestId('config-econ-lifeline_skip-platform-value').fill('70');
+  await page.getByTestId('config-econ-lifeline_skip-platform-reason').fill('E2E: web promo');
+  await page.getByTestId('config-econ-lifeline_skip-platform-save').click();
+  await expect(page.getByTestId('config-econ-lifeline_skip-on-web')).toContainText('Web: 70');
+  expect(await skipOn('web')).toBe(70);
+  expect(await skipOn('android')).toBe(100);
+
+  await page.getByTestId('config-econ-lifeline_skip-platform-reason').fill('E2E: promo over');
+  await page.getByTestId('config-econ-lifeline_skip-platform-clear').click();
+  await expect(page.getByTestId('config-econ-lifeline_skip-on-web')).toHaveCount(0);
+  expect(await skipOn('web')).toBe(100);
+});
+
 test('LiveOps schedules a Home banner that reaches the apps at once, and ends it', async ({
   page,
   request,

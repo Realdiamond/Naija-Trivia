@@ -513,7 +513,8 @@ export class DuelService {
       }
       if (type === 'fifty' && q.options.length !== 4) throw notAllowed('50/50 needs four options.');
 
-      const cost = lifelineCost(type, await configOf(this.deps));
+      // The price the player's app showed: lifeline prices can differ by platform (step 2.7t).
+      const cost = lifelineCost(type, await configOf(this.deps, ctx.platform));
       const paid = await spendCoins(client, viewer, cost, {
         key: `lifeline:${duel.id}:${viewer}:${type}`,
         reason: 'lifeline',
