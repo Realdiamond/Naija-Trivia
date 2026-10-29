@@ -1,7 +1,7 @@
 /**
- * Analytics dashboards (doc 18 §9, build plan step 2.7j): Engagement & time, Growth & invites and
- * Retention, each over a range of WAT days and a platform. Every number follows its one definition
- * in doc 18 §10. Players are counted, never named.
+ * Analytics dashboards (doc 18 §9, build plan steps 2.7j–2.7k): Engagement & time, Growth &
+ * invites, Retention, Gameplay, Monetisation and Economy, each over a range of WAT days and a
+ * platform. Every number follows its one definition in doc 18 §10. Players are counted, never named.
  */
 import Link from 'next/link';
 import {
@@ -11,8 +11,12 @@ import {
   type AdminProfile,
   type AnalyticsBoard,
   type AnalyticsResponse,
+  type EconomyBoard,
   type EngagementBoard,
+  type GameplayBoard,
   type GrowthBoard,
+  type MonetisationBoard,
+  type MoneyByCurrency,
   type RetentionBoard,
 } from '@whosabi/shared-types';
 import { AdminApiError, adminApi } from '../../../lib/api';
@@ -22,7 +26,12 @@ const TITLES: Record<AnalyticsBoard, string> = {
   engagement: 'Engagement & time',
   growth: 'Growth & invites',
   retention: 'Retention',
+  gameplay: 'Gameplay',
+  monetisation: 'Monetisation',
+  economy: 'Economy',
 };
+/** Dashboards whose numbers come from places that know no platform. */
+const EVERY_PLATFORM: readonly AnalyticsBoard[] = ['economy'];
 const PLATFORMS = [
   ['all', 'All platforms'],
   ['android', 'Android'],
@@ -33,6 +42,14 @@ const PLATFORMS = [
 const n = (value: number) => value.toLocaleString('en-NG');
 const pct = (share: number | null) => (share === null ? '—' : `${Math.round(share * 1000) / 10}%`);
 const one = (value: number) => (Math.round(value * 10) / 10).toLocaleString('en-NG');
+const naira = (value: number) => `₦${Math.round(value).toLocaleString('en-NG')}`;
+const money = (m: MoneyByCurrency) => {
+  const entries = Object.entries(m);
+  if (entries.length === 0) return '—';
+  return entries
+    .map(([currency, value]) => (currency === 'NGN' ? naira(value) : `${currency} ${one(value)}`))
+    .join(' + ');
+};
 
 function Tile({
   title,
@@ -258,6 +275,228 @@ function Retention({ b }: { b: RetentionBoard }) {
   );
 }
 
+function Gameplay({ b, platform }: { b: GameplayBoard; platform: string }) {
+  const last = b.days.at(-1)?.day;
+  return (
+    <>
+      {platform !== 'all' ? (
+        <p className="muted small">
+          Matches count every platform; answers and lifelines are from the platform you chose.
+        </p>
+      ) : null}
+      <div className="tiles six">
+        <Tile title="Duels finished" value={n(b.summary.duels_finished)} testId="duels-finished" />
+        <Tile title="Forfeited" value={pct(b.summary.forfeit_rate)} note="of the duels finished" />
+        <Tile
+          title="A duel takes"
+          value={b.summary.duel_hours_median === null ? '—' : `${one(b.summary.duel_hours_median)} h`}
+          note="start to finish, the middle duel"
+        />
+        <Tile
+          title="Party games"
+          value={n(b.summary.party_games)}
+          note={
+            b.summary.party_players_avg === null
+              ? undefined
+              : `${one(b.summary.party_players_avg)} players · ${pct(b.summary.web_guest_share)} web guests`
+          }
+          testId="party-games"
+        />
+        <Tile title="Dailies finished" value={n(b.summary.dailies_finished)} testId="dailies-finished" />
+        <Tile title="Answers right" value={pct(b.summary.correct_rate)} />
+      </div>
+      <div className="grid2">
+        <section className="card">
+          <h2>Duels finished a day</h2>
+          <DayBars
+            rows={b.days.map((d) => ({ day: d.day, value: d.duels }))}
+            label="Duels finished a day"
+            lastLabel={last?.slice(5)}
+          />
+          <h2>Dailies finished a day</h2>
+          <DayBars
+            rows={b.days.map((d) => ({ day: d.day, value: d.dailies }))}
+            label="Dailies finished a day"
+            lastLabel={last?.slice(5)}
+          />
+          <h2>Categories</h2>
+          <BarList
+            rows={b.categories.map((c) => ({
+              label: `${c.category} · ${pct(c.correct_rate)} right`,
+              value: c.answers,
+            }))}
+            testId="categories"
+            empty="No answers in this range."
+          />
+        </section>
+        <section className="card">
+          <h2>Duels started: what became of them</h2>
+          <BarList
+            rows={b.duel_outcomes.map((o) => ({ label: o.outcome, value: o.duels }))}
+            testId="duel-outcomes"
+            empty="No duels started in this range."
+          />
+          <h2>How duels started</h2>
+          <BarList
+            rows={b.duel_sources.map((d) => ({ label: d.source, value: d.duels }))}
+            empty="No duels yet."
+          />
+          <h2>Party sizes</h2>
+          <BarList rows={b.party_sizes.map((p) => ({ label: `${p.size} players`, value: p.games }))} />
+          <h2>Daily scores</h2>
+          <BarList
+            rows={b.daily_scores.map((d) => ({ label: `${d.correct} of 7`, value: d.players }))}
+            testId="daily-scores"
+          />
+          <h2>Lifelines</h2>
+          <BarList
+            rows={b.lifelines.map((l) => ({
+              label: `${l.type} · ${n(l.with_coins)} with coins, ${n(l.with_ads)} with ads`,
+              value: l.with_coins + l.with_ads,
+            }))}
+            empty="No lifelines used in this range."
+          />
+        </section>
+      </div>
+    </>
+  );
+}
+
+function Monetisation({ b }: { b: MonetisationBoard }) {
+  const last = b.days.at(-1)?.day;
+  const s = b.summary;
+  return (
+    <>
+      <div className="tiles six">
+        <Tile
+          title="Store money"
+          value={naira(s.store_revenue_ngn)}
+          note={`${n(s.purchases)} purchases · ${n(s.refunds)} refunds`}
+          testId="store-revenue"
+        />
+        <Tile
+          title="Players who paid"
+          value={n(s.payers)}
+          note={`${pct(s.payer_conversion)} of players`}
+          testId="payers"
+        />
+        <Tile
+          title="ARPPU"
+          value={s.arppu_ngn === null ? '—' : naira(s.arppu_ngn)}
+          note="per player who paid"
+        />
+        <Tile
+          title="ARPDAU"
+          value={s.arpdau_ngn === null ? '—' : `₦${one(s.arpdau_ngn)}`}
+          note="store money per player a day"
+        />
+        <Tile
+          title="Ad money"
+          value={money(s.ad_revenue)}
+          note={`AdMob's estimate · ${n(s.ads_shown)} ads shown${s.fill_rate === null ? '' : `, ${pct(s.fill_rate)} filled`}`}
+          testId="ad-revenue"
+        />
+        <Tile
+          title="Rewarded ads"
+          value={n(s.rewarded_views)}
+          note={s.rewarded_per_dau === null ? undefined : `${one(s.rewarded_per_dau)} per player a day`}
+          testId="rewarded"
+        />
+      </div>
+      <div className="grid2">
+        <section className="card">
+          <h2>Store naira a day</h2>
+          <DayBars
+            rows={b.days.map((d) => ({ day: d.day, value: Math.round(d.store_ngn) }))}
+            label="Store naira a day"
+            lastLabel={last?.slice(5)}
+          />
+          <h2>Rewarded ads a day</h2>
+          <DayBars
+            rows={b.days.map((d) => ({ day: d.day, value: d.rewarded_views }))}
+            label="Rewarded ads a day"
+            lastLabel={last?.slice(5)}
+          />
+        </section>
+        <section className="card">
+          <h2>Packs</h2>
+          <BarList
+            rows={b.by_product.map((p) => ({
+              label: `${p.product_id} · ${naira(p.revenue_ngn)}`,
+              value: p.purchases,
+            }))}
+            testId="packs"
+            empty="No purchases in this range."
+          />
+          <h2>Ads shown</h2>
+          <BarList
+            rows={b.ad_placements.map((p) => ({ label: `${p.format} · ${p.placement}`, value: p.shown }))}
+            empty="No ads shown in this range."
+          />
+          <p className="muted small">Real purchases only, as on Commerce; store tests are left out.</p>
+        </section>
+      </div>
+    </>
+  );
+}
+
+function Economy({ b }: { b: EconomyBoard }) {
+  const last = b.days.at(-1)?.day;
+  const s = b.summary;
+  return (
+    <>
+      <p className="muted small">Coins on players&apos; balances, from every platform.</p>
+      <div className="tiles four">
+        <Tile title="Coins earned" value={n(s.earned)} testId="coins-earned" />
+        <Tile title="Coins spent" value={n(s.spent)} testId="coins-spent" />
+        <Tile
+          title="Earned ÷ spent"
+          value={s.inflation === null ? '—' : s.inflation.toFixed(2)}
+          note="above 1, coins pile up"
+          testId="inflation"
+        />
+        <Tile
+          title="Players with coins"
+          value={n(s.holders)}
+          note={s.balance_median === null ? undefined : `${n(s.balance_median)} coins in the middle`}
+        />
+      </div>
+      <div className="grid2">
+        <section className="card">
+          <h2>Coins earned a day</h2>
+          <DayBars
+            rows={b.days.map((d) => ({ day: d.day, value: d.earned }))}
+            label="Coins earned a day"
+            lastLabel={last?.slice(5)}
+          />
+          <h2>Coins spent a day</h2>
+          <DayBars
+            rows={b.days.map((d) => ({ day: d.day, value: d.spent }))}
+            label="Coins spent a day"
+            lastLabel={last?.slice(5)}
+          />
+        </section>
+        <section className="card">
+          <h2>Where coins came from</h2>
+          <BarList
+            rows={b.sources.map((x) => ({ label: x.reason, value: x.coins }))}
+            testId="coin-sources"
+            empty="No coins earned in this range."
+          />
+          <h2>Where coins went</h2>
+          <BarList
+            rows={b.sinks.map((x) => ({ label: x.reason, value: x.coins }))}
+            testId="coin-sinks"
+            empty="No coins spent in this range."
+          />
+          <h2>Balances today</h2>
+          <BarList rows={b.balances.map((x) => ({ label: `${x.bucket} coins`, value: x.players }))} />
+        </section>
+      </div>
+    </>
+  );
+}
+
 export default async function Analytics({
   searchParams,
 }: {
@@ -292,7 +531,7 @@ export default async function Analytics({
         <h1>Analytics</h1>
         <p className="muted">
           {data.from} to {data.to} (WAT)
-          {platform === 'all' ? '' : ` · ${PLATFORMS.find(([p]) => p === platform)![1]}`}
+          {data.platform === 'all' ? '' : ` · ${PLATFORMS.find(([p]) => p === data.platform)![1]}`}
         </p>
       </div>
       <nav className="tabs" aria-label="Dashboards">
@@ -312,21 +551,28 @@ export default async function Analytics({
           To
           <input type="date" name="to" defaultValue={data.to} />
         </label>
-        <label>
-          Platform
-          <select name="platform" defaultValue={platform}>
-            {PLATFORMS.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {EVERY_PLATFORM.includes(board) ? (
+          <input type="hidden" name="platform" value={platform} />
+        ) : (
+          <label>
+            Platform
+            <select name="platform" defaultValue={platform}>
+              {PLATFORMS.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <button type="submit">Show</button>
       </form>
       {data.board === 'engagement' ? <Engagement b={data} /> : null}
       {data.board === 'growth' ? <Growth b={data} /> : null}
       {data.board === 'retention' ? <Retention b={data} /> : null}
+      {data.board === 'gameplay' ? <Gameplay b={data} platform={platform} /> : null}
+      {data.board === 'monetisation' ? <Monetisation b={data} /> : null}
+      {data.board === 'economy' ? <Economy b={data} /> : null}
     </>
   );
 }

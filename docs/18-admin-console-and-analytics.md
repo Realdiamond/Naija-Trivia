@@ -82,6 +82,7 @@ Staff sign in with Google Workspace SSO, with 2-step verification enforced. Role
 - Built in step 2.7h: Home banners and events for owners, admins and LiveOps (`liveops.config`).
 - Built in step 2.7i: Commerce (purchases, refunds, the monthly export) for owners, admins and finance (`commerce.view`).
 - Built in step 2.7j: the KPI dashboards (Engagement & time, Growth & invites, Retention) for owners, admins, analysts, growth and viewers (`analytics.kpi`).
+- Built in step 2.7k: the Gameplay dashboard for owners, admins, analysts and LiveOps (`analytics.product`); Monetisation and Economy for owners, admins, analysts and finance (`analytics.money`).
 - Built in step 2.8a: the data request queue for the DPO, owners and admins (`compliance.view`); erasing an account for the DPO and owners (`compliance.erase`); support logs requests.
 - Contractor access expires on its own (`expires_at`).
 - The DPO reviews every staff account and role each quarter.

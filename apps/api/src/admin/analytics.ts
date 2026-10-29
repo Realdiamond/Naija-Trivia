@@ -1,9 +1,10 @@
 /**
- * The analytics dashboards (doc 18 §9–10, build plan step 2.7j): Engagement & time, Growth &
- * invites and Retention over a range of WAT days and a platform. Straight from Postgres at
- * launch volumes, like the Overview: activity from `analytics_events`, new players and sign-ups
- * from `users` and `auth_identities` (so the numbers match the Overview, AD-6). ClickHouse takes
- * over in M3 behind the same responses. Counts only; nobody is named.
+ * The analytics dashboards (doc 18 §9–10, build plan steps 2.7j–2.7k): Engagement & time, Growth
+ * & invites, Retention, Gameplay, Monetisation and Economy over a range of WAT days and a
+ * platform. Straight from Postgres at launch volumes, like the Overview: activity from
+ * `analytics_events`, new players and sign-ups from `users` and `auth_identities` (so the numbers
+ * match the Overview, AD-6), matches, purchases and coins from the game's own tables. ClickHouse
+ * takes over in M3 behind the same responses. Counts only; nobody is named.
  */
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
@@ -17,8 +18,12 @@ import {
   ErrorCode,
   type AnalyticsRange,
   type AnalyticsResponse,
+  type EconomyBoard,
   type EngagementBoard,
+  type GameplayBoard,
   type GrowthBoard,
+  type MonetisationBoard,
+  type MoneyByCurrency,
   type RetentionBoard,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
@@ -33,6 +38,25 @@ const LAGOS_DAY = "(ts AT TIME ZONE 'Africa/Lagos')::date";
 /** Everyone but the Sabi Bot, counted as the Overview counts new players. */
 const PLAYING = "status <> 'bot'";
 const RETENTION_DAYS = 30;
+/** Each store's platform, for the platform filter on purchases. */
+const STORE_PLATFORM = "CASE store WHEN 'play' THEN 'android' WHEN 'app_store' THEN 'ios' ELSE 'web' END";
+
+const DUEL_OUTCOMES: Record<string, string> = {
+  complete: 'Finished',
+  forfeit: 'Forfeited',
+  declined: 'Declined',
+  cancelled: 'Cancelled',
+};
+const PARTY_SIZES = [
+  ['2', 2],
+  ['3–4', 4],
+  ['5–8', 8],
+  ['9–15', 15],
+  ['16 or more', Infinity],
+] as const;
+/** Balance buckets: each starts where the one before ends (`width_bucket` bounds). */
+const BALANCE_BUCKETS = ['1–99', '100–499', '500–1,999', '2,000–9,999', '10,000 or more'];
+const BALANCE_BOUNDS = [100, 500, 2_000, 10_000];
 
 const SESSION_BUCKETS = [
   ['Under 1 min', MINUTE],
@@ -383,12 +407,320 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
     };
   }
 
+  /** Days up to today in the range, each with the row the query found for it, or none. */
+  function eachDay<T extends { day: string }>(
+    r: Range,
+    rows: T[],
+  ): Array<{ day: string; row: T | undefined }> {
+    const byDay = new Map(rows.map((row) => [row.day, row]));
+    return r.days.filter((day) => day <= r.today).map((day) => ({ day, row: byDay.get(day) }));
+  }
+
+  async function gameplay(r: Range): Promise<GameplayBoard> {
+    const span = (column: string) => `${column} >= $1 AND ${column} < $2`;
+    const at = [r.start, r.end];
+    const args = [r.start, r.end, r.platformOrNull];
+    const events = `FROM analytics_events WHERE ts >= $1 AND ts < $2 AND ($3::text IS NULL OR platform = $3)`;
+    const [duels, outcomes, sources, parties, dailies, answers, lifelines] = await Promise.all([
+      pool.query<{ day: string; duels: number; forfeits: number; hours: number | null }>(
+        `SELECT to_char(day, 'YYYY-MM-DD') AS day, count(*)::int AS duels,
+                count(*) FILTER (WHERE state = 'forfeit')::int AS forfeits,
+                percentile_cont(0.5) WITHIN GROUP (ORDER BY hours) AS hours
+           FROM (SELECT (completed_at AT TIME ZONE 'Africa/Lagos')::date AS day, state,
+                        extract(epoch FROM completed_at - created_at) / 3600 AS hours
+                   FROM duels WHERE state IN ('complete', 'forfeit') AND ${span('completed_at')}) d
+          GROUP BY ROLLUP (day)`,
+        at,
+      ),
+      pool.query<{ state: string; n: number }>(
+        `SELECT state::text, count(*)::int AS n FROM duels WHERE ${span('created_at')} GROUP BY 1`,
+        at,
+      ),
+      pool.query<{ source: string; n: number }>(
+        `SELECT source, count(*)::int AS n FROM duels WHERE ${span('created_at')} GROUP BY 1 ORDER BY 2 DESC`,
+        at,
+      ),
+      pool.query<{ day: string; players: number; guests: number }>(
+        `SELECT to_char((g.ended_at AT TIME ZONE 'Africa/Lagos')::date, 'YYYY-MM-DD') AS day,
+                count(r.player_ref)::int AS players,
+                count(r.player_ref) FILTER (WHERE r.kind = 'web_guest')::int AS guests
+           FROM party_games g LEFT JOIN party_results r ON r.game_id = g.id
+          WHERE ${span('g.ended_at')}
+          GROUP BY g.id, 1`,
+        at,
+      ),
+      pool.query<{ day: string; correct: number; n: number }>(
+        `SELECT to_char((completed_at AT TIME ZONE 'Africa/Lagos')::date, 'YYYY-MM-DD') AS day,
+                correct_count AS correct, count(*)::int AS n
+           FROM daily_results WHERE ${span('completed_at')} GROUP BY 1, 2`,
+        at,
+      ),
+      pool.query<{ category: string; n: number; right: number }>(
+        `SELECT props->>'category' AS category, count(*)::int AS n,
+                count(*) FILTER (WHERE (props->>'correct')::boolean)::int AS right
+           ${events} AND event = 'question_answered' GROUP BY 1 ORDER BY 2 DESC`,
+        args,
+      ),
+      pool.query<{ type: string; coins: number; ads: number }>(
+        `SELECT props->>'type' AS type,
+                count(*) FILTER (WHERE props->>'paid_with' = 'coins')::int AS coins,
+                count(*) FILTER (WHERE props->>'paid_with' = 'ad')::int AS ads
+           ${events} AND event = 'lifeline_used' GROUP BY 1 ORDER BY count(*) DESC`,
+        args,
+      ),
+    ]);
+
+    const total = duels.rows.find((d) => d.day === null);
+    const perDay = duels.rows.filter((d) => d.day !== null);
+    const partyDays = new Map<string, number>();
+    for (const g of parties.rows) partyDays.set(g.day, (partyDays.get(g.day) ?? 0) + 1);
+    const dailyDays = new Map<string, number>();
+    const scores = Array.from({ length: 8 }, (_, correct) => ({ correct, players: 0 }));
+    for (const d of dailies.rows) {
+      dailyDays.set(d.day, (dailyDays.get(d.day) ?? 0) + d.n);
+      if (d.correct >= 0 && d.correct <= 7) scores[d.correct]!.players += d.n;
+    }
+    const partyPlayers = parties.rows.reduce((sum, g) => sum + g.players, 0);
+    const partyGuests = parties.rows.reduce((sum, g) => sum + g.guests, 0);
+    const sizes = PARTY_SIZES.map(([size]) => ({ size, games: 0 }));
+    for (const g of parties.rows) {
+      const i = PARTY_SIZES.findIndex(([, most]) => g.players <= most);
+      if (i >= 0) sizes[i]!.games += 1;
+    }
+    const outcomeCounts = new Map<string, number>();
+    for (const o of outcomes.rows) {
+      const outcome = DUEL_OUTCOMES[o.state] ?? 'Still going';
+      outcomeCounts.set(outcome, (outcomeCounts.get(outcome) ?? 0) + o.n);
+    }
+    const answered = answers.rows.reduce((sum, a) => sum + a.n, 0);
+    const right = answers.rows.reduce((sum, a) => sum + a.right, 0);
+    return {
+      board: 'gameplay',
+      from: r.from,
+      to: r.to,
+      platform: r.platform,
+      summary: {
+        duels_finished: total?.duels ?? 0,
+        forfeit_rate: total ? share(total.forfeits, total.duels) : null,
+        duel_hours_median: total?.hours ?? null,
+        party_games: parties.rows.length,
+        party_players_avg: parties.rows.length ? partyPlayers / parties.rows.length : null,
+        web_guest_share: share(partyGuests, partyPlayers),
+        dailies_finished: scores.reduce((sum, d) => sum + d.players, 0),
+        correct_rate: share(right, answered),
+      },
+      days: eachDay(r, perDay).map(({ day, row }) => ({
+        day,
+        duels: row?.duels ?? 0,
+        party_games: partyDays.get(day) ?? 0,
+        dailies: dailyDays.get(day) ?? 0,
+      })),
+      duel_outcomes: [...outcomeCounts]
+        .sort((a, b) => b[1] - a[1])
+        .map(([outcome, n]) => ({ outcome, duels: n })),
+      duel_sources: sources.rows.map((d) => ({ source: d.source, duels: d.n })),
+      party_sizes: sizes,
+      daily_scores: scores,
+      categories: answers.rows.map((a) => ({
+        category: a.category,
+        answers: a.n,
+        correct_rate: a.right / a.n,
+      })),
+      lifelines: lifelines.rows.map((l) => ({ type: l.type, with_coins: l.coins, with_ads: l.ads })),
+    };
+  }
+
+  async function monetisation(r: Range): Promise<MonetisationBoard> {
+    const args = [r.start, r.end, r.platformOrNull];
+    const real = `environment = 'production' AND ($3::text IS NULL OR ${STORE_PLATFORM} = $3)`;
+    const events = `FROM analytics_events WHERE ts >= $1 AND ts < $2 AND ($3::text IS NULL OR platform = $3)`;
+    const [bought, refunds, products, payers, players, ads, adMoney, placements] = await Promise.all([
+      pool.query<{ day: string; n: number; micros: string | null }>(
+        `SELECT to_char((created_at AT TIME ZONE 'Africa/Lagos')::date, 'YYYY-MM-DD') AS day, count(*)::int AS n,
+                sum(price_micros) FILTER (WHERE status = 'completed' AND currency = 'NGN') AS micros
+           FROM purchases WHERE ${real} AND status <> 'pending' AND created_at >= $1 AND created_at < $2
+          GROUP BY 1`,
+        args,
+      ),
+      pool.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM purchases WHERE ${real} AND refunded_at >= $1 AND refunded_at < $2`,
+        args,
+      ),
+      pool.query<{ product_id: string; n: number; micros: string | null }>(
+        `SELECT product_id, count(*)::int AS n, sum(price_micros) FILTER (WHERE currency = 'NGN') AS micros
+           FROM purchases WHERE ${real} AND status = 'completed' AND created_at >= $1 AND created_at < $2
+          GROUP BY 1 ORDER BY 2 DESC`,
+        args,
+      ),
+      pool.query<{ n: number }>(
+        `SELECT count(DISTINCT user_id)::int AS n FROM purchases
+          WHERE ${real} AND status = 'completed' AND created_at >= $1 AND created_at < $2`,
+        args,
+      ),
+      // Players active in the range, and player-days (the sum of each day's DAU).
+      pool.query<{ players: number; player_days: number }>(
+        `SELECT count(DISTINCT ${PLAYER})::int AS players,
+                count(DISTINCT (${PLAYER}, ${LAGOS_DAY})) FILTER (WHERE ${PLAYER} IS NOT NULL)::int AS player_days
+           ${events}`,
+        args,
+      ),
+      pool.query<{ day: string; shown: number; asked: number; rewarded: number }>(
+        `SELECT to_char(${LAGOS_DAY}, 'YYYY-MM-DD') AS day,
+                count(*) FILTER (WHERE event = 'ad_shown')::int AS shown,
+                count(*) FILTER (WHERE event = 'ad_requested')::int AS asked,
+                count(*) FILTER (WHERE event = 'ad_reward_granted')::int AS rewarded
+           ${events} AND event IN ('ad_shown', 'ad_requested', 'ad_reward_granted') GROUP BY 1`,
+        args,
+      ),
+      pool.query<{ currency: string; micros: string }>(
+        `SELECT props->>'currency' AS currency, sum((props->>'value_micros')::bigint) AS micros
+           ${events} AND event = 'ad_paid' GROUP BY 1`,
+        args,
+      ),
+      pool.query<{ format: string; placement: string; n: number }>(
+        `SELECT props->>'format' AS format, props->>'placement' AS placement, count(*)::int AS n
+           ${events} AND event = 'ad_shown' GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 12`,
+        args,
+      ),
+    ]);
+
+    const naira = (micros: string | null) => (micros === null ? 0 : Number(micros) / 1e6);
+    const adDays = new Map(ads.rows.map((a) => [a.day, a]));
+    const days = eachDay(r, bought.rows).map(({ day, row }) => ({
+      day,
+      store_ngn: naira(row?.micros ?? null),
+      purchases: row?.n ?? 0,
+      rewarded_views: adDays.get(day)?.rewarded ?? 0,
+      ads_shown: adDays.get(day)?.shown ?? 0,
+    }));
+    const revenue = bought.rows.reduce((sum, d) => sum + naira(d.micros), 0);
+    const payerCount = payers.rows[0]!.n;
+    const { players: active, player_days: playerDays } = players.rows[0]!;
+    const shown = ads.rows.reduce((sum, a) => sum + a.shown, 0);
+    const asked = ads.rows.reduce((sum, a) => sum + a.asked, 0);
+    const rewarded = ads.rows.reduce((sum, a) => sum + a.rewarded, 0);
+    const adRevenue: MoneyByCurrency = {};
+    for (const a of adMoney.rows) adRevenue[a.currency] = Number(a.micros) / 1e6;
+    return {
+      board: 'monetisation',
+      from: r.from,
+      to: r.to,
+      platform: r.platform,
+      summary: {
+        store_revenue_ngn: revenue,
+        purchases: bought.rows.reduce((sum, d) => sum + d.n, 0),
+        refunds: refunds.rows[0]!.n,
+        payers: payerCount,
+        payer_conversion: share(payerCount, active),
+        arppu_ngn: payerCount > 0 ? revenue / payerCount : null,
+        arpdau_ngn: playerDays > 0 ? revenue / playerDays : null,
+        ad_revenue: adRevenue,
+        ads_shown: shown,
+        fill_rate: share(shown, asked),
+        rewarded_views: rewarded,
+        rewarded_per_dau: playerDays > 0 ? rewarded / playerDays : null,
+      },
+      days,
+      by_product: products.rows.map((p) => ({
+        product_id: p.product_id,
+        purchases: p.n,
+        revenue_ngn: naira(p.micros),
+      })),
+      ad_placements: placements.rows.map((p) => ({ format: p.format, placement: p.placement, shown: p.n })),
+    };
+  }
+
+  async function economy(r: Range): Promise<EconomyBoard> {
+    const [moves, balances] = await Promise.all([
+      // Coins on players' balances, by day and reason; a guest's coins moving into an account are neither.
+      pool.query<{ day: string; reason: string; earned: string; spent: string }>(
+        `SELECT to_char((e.created_at AT TIME ZONE 'Africa/Lagos')::date, 'YYYY-MM-DD') AS day, t.reason,
+                coalesce(sum(e.amount) FILTER (WHERE e.amount > 0), 0) AS earned,
+                coalesce(-sum(e.amount) FILTER (WHERE e.amount < 0), 0) AS spent
+           FROM ledger_entries e
+           JOIN ledger_accounts a ON a.id = e.account_id
+           JOIN ledger_transactions t ON t.id = e.transaction_id
+          WHERE a.owner_user_id IS NOT NULL AND a.currency = 'coins' AND t.reason <> 'merge'
+            AND e.created_at >= $1 AND e.created_at < $2
+          GROUP BY 1, 2`,
+        [r.start, r.end],
+      ),
+      // Today's balances, counted in the database: a few rows however many players hold coins.
+      pool.query<{ bucket: number; players: number; holders: number; median: number | null }>(
+        `SELECT width_bucket(a.balance, $1::bigint[]) AS bucket, count(*)::int AS players,
+                sum(count(*)) OVER ()::int AS holders,
+                (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY h.balance)
+                   FROM ledger_accounts h JOIN users hu ON hu.id = h.owner_user_id
+                  WHERE h.currency = 'coins' AND h.balance > 0 AND hu.status <> 'bot') AS median
+           FROM ledger_accounts a JOIN users u ON u.id = a.owner_user_id
+          WHERE a.currency = 'coins' AND a.balance > 0 AND u.status <> 'bot'
+          GROUP BY 1`,
+        [BALANCE_BOUNDS],
+      ),
+    ]);
+
+    const byDay = new Map<string, { day: string; earned: number; spent: number }>();
+    const sources = new Map<string, number>();
+    const sinks = new Map<string, number>();
+    for (const m of moves.rows) {
+      const earned = Number(m.earned);
+      const spent = Number(m.spent);
+      const d = byDay.get(m.day) ?? { day: m.day, earned: 0, spent: 0 };
+      d.earned += earned;
+      d.spent += spent;
+      byDay.set(m.day, d);
+      if (earned) sources.set(m.reason, (sources.get(m.reason) ?? 0) + earned);
+      if (spent) sinks.set(m.reason, (sinks.get(m.reason) ?? 0) + spent);
+    }
+    const earned = [...sources.values()].reduce((sum, n) => sum + n, 0);
+    const spent = [...sinks.values()].reduce((sum, n) => sum + n, 0);
+    const held = balances.rows[0];
+    const sorted = (m: Map<string, number>) =>
+      [...m].sort((a, b) => b[1] - a[1]).map(([reason, coins]) => ({ reason, coins }));
+    return {
+      board: 'economy',
+      from: r.from,
+      to: r.to,
+      // The ledger knows no platforms: every platform, always.
+      platform: 'all',
+      summary: {
+        earned,
+        spent,
+        inflation: spent > 0 ? earned / spent : null,
+        holders: held?.holders ?? 0,
+        balance_median: held?.median ?? null,
+      },
+      days: eachDay(r, [...byDay.values()]).map(({ day, row }) => ({
+        day,
+        earned: row?.earned ?? 0,
+        spent: row?.spent ?? 0,
+      })),
+      sources: sorted(sources),
+      sinks: sorted(sinks),
+      balances: BALANCE_BUCKETS.map((bucket, i) => ({
+        bucket,
+        players: balances.rows.find((b) => b.bucket === i)?.players ?? 0,
+      })),
+    };
+  }
+
   app.get('/admin/analytics/:board', async (request): Promise<AnalyticsResponse> => {
     const { board } = parse(Params, request.params);
     await requireAdmin(request, ctx, ANALYTICS_BOARD_PERMISSION[board]);
     const range = rangeOf(parse(AnalyticsQuery, request.query), clock.now());
-    if (board === 'engagement') return engagement(range);
-    if (board === 'growth') return growth(range);
-    return retention(range);
+    switch (board) {
+      case 'engagement':
+        return engagement(range);
+      case 'growth':
+        return growth(range);
+      case 'retention':
+        return retention(range);
+      case 'gameplay':
+        return gameplay(range);
+      case 'monetisation':
+        return monetisation(range);
+      case 'economy':
+        return economy(range);
+    }
   });
 }

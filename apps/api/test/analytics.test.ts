@@ -5,15 +5,28 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { pseudonymousId } from '@whosabi/analytics/server';
-import type { AdminRole, EngagementBoard, GrowthBoard, RetentionBoard } from '@whosabi/shared-types';
+import type {
+  AdminRole,
+  EconomyBoard,
+  EngagementBoard,
+  GameplayBoard,
+  GrowthBoard,
+  MonetisationBoard,
+  RetentionBoard,
+} from '@whosabi/shared-types';
 import { SYSTEM_ADMIN_ID } from '../src/admin/permissions';
 import { AdminSessions } from '../src/admin/sessions';
+import { withTransaction } from '../src/db';
+import { grantCoins, spendCoins } from '../src/economy/ledger';
 import { newId } from '../src/ids';
 import { bearer, createTestApp, signInGuest } from './helpers';
 
 const MINUTE = 60_000;
 /** An instant in May 2028 (a month no other test file plays in), at a WAT time of day. */
 const wat = (day: number, hour: number, minute = 0) => Date.UTC(2028, 4, day, hour - 1, minute);
+/** The same in July 2028, for the matches, money and coins. */
+const july = (day: number, hour: number) => Date.UTC(2028, 6, day, hour - 1);
+const DAILY_ID = 9_000_701;
 
 let t: Awaited<ReturnType<typeof createTestApp>>;
 let sessions: AdminSessions;
@@ -29,10 +42,32 @@ beforeAll(async () => {
   );
   analyst = await staff(['analyst']);
 });
+const made = { duels: [] as string[], parties: [] as string[], players: [] as string[] };
 afterAll(async () => {
-  await t.pool.query("DELETE FROM analytics_events WHERE ts >= '2028-04-30' AND ts < '2028-07-01'");
+  await t.pool.query("DELETE FROM analytics_events WHERE ts >= '2028-04-30' AND ts < '2028-08-01'");
+  await t.pool.query('DELETE FROM duels WHERE id = ANY($1)', [made.duels]);
+  await t.pool.query('DELETE FROM party_games WHERE id = ANY($1)', [made.parties]);
+  await t.pool.query('DELETE FROM daily_results WHERE daily_id = $1', [DAILY_ID]);
+  await t.pool.query('DELETE FROM daily_challenges WHERE id = $1', [DAILY_ID]);
+  await t.pool.query('DELETE FROM purchases WHERE user_id = ANY($1)', [made.players]);
+  const txs = (
+    await t.pool.query<{ transaction_id: string }>(
+      `SELECT DISTINCT e.transaction_id FROM ledger_entries e JOIN ledger_accounts a ON a.id = e.account_id
+        WHERE a.owner_user_id = ANY($1)`,
+      [made.players],
+    )
+  ).rows.map((r) => r.transaction_id);
+  await t.pool.query('DELETE FROM ledger_entries WHERE transaction_id = ANY($1)', [txs]);
+  await t.pool.query('DELETE FROM ledger_transactions WHERE id = ANY($1)', [txs]);
+  await t.pool.query('DELETE FROM ledger_accounts WHERE owner_user_id = ANY($1)', [made.players]);
   await t.close();
 });
+
+async function julyPlayer(platform: 'android' | 'ios' | 'web' = 'android'): Promise<string> {
+  const id = (await signInGuest(t.app, platform)).user.id;
+  made.players.push(id);
+  return id;
+}
 
 async function staff(roles: AdminRole[]): Promise<string> {
   const id = newId('adm');
@@ -301,5 +336,314 @@ describe('analytics dashboards (step 2.7j)', () => {
     // iPhone players: nobody new.
     const ios = await board<RetentionBoard>('retention', '?from=2028-05-15&to=2028-05-15&platform=ios');
     expect(ios).toMatchObject({ summary: { d1: null, d7: null, d30: null }, cohorts: [] });
+  });
+  it('shows matches, Daily scores, categories and lifelines (Gameplay)', async () => {
+    t.clock.t = july(1, 9);
+    const [a, b] = [await julyPlayer(), await julyPlayer()];
+    const duel = async (state: string, source: string, started: number, finished: number | null) => {
+      const id = newId('d');
+      made.duels.push(id);
+      await t.pool.query(
+        `INSERT INTO duels (id, player_a, player_b, source, state, created_at, completed_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [id, a, b, source, state, new Date(started), finished === null ? null : new Date(finished)],
+      );
+    };
+    await duel('complete', 'friend', july(3, 10), july(3, 12)); // 2 hours
+    await duel('complete', 'random', july(3, 9), july(4, 9)); // 24 hours
+    await duel('forfeit', 'friend', july(4, 8), july(4, 10)); // 2 hours
+    await duel('declined', 'link', july(4, 11), null);
+    await duel('wait_b_r1r2', 'bot', july(4, 12), null);
+
+    const party = async (results: Array<string | null>) => {
+      const id = newId('pg');
+      made.parties.push(id);
+      await t.pool.query(
+        `INSERT INTO party_games (id, room_code, host_user_id, settings, player_count, started_at, ended_at, questions)
+         VALUES ($1, 'ABCDE', $2, '{}', $3, $4, $5, 10)`,
+        [id, a, results.length, new Date(july(3, 20)), new Date(july(3, 21))],
+      );
+      for (const [i, user] of results.entries()) {
+        await t.pool.query(
+          `INSERT INTO party_results (game_id, player_ref, user_id, rank, score, correct_count, name, kind)
+           VALUES ($1, $2, $3, $4, 100, 3, 'Ada', $5)`,
+          [id, user ?? `guest:Ada#${i}`, user, i + 1, user ? 'app' : 'web_guest'],
+        );
+      }
+    };
+    await party([a, b, null]);
+    await party([null, null]);
+
+    await t.pool.query(
+      `INSERT INTO daily_challenges (id, play_date, question_ids, locked) VALUES ($1, '2028-07-03', $2, true)`,
+      [DAILY_ID, ['q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7']],
+    );
+    for (const [user, correct] of [
+      [a, 7],
+      [b, 5],
+    ] as const) {
+      await t.pool.query(
+        `INSERT INTO daily_results (daily_id, user_id, correct_count, score, total_ms, grid, completed_at)
+         VALUES ($1, $2, $3, 900, 60000, 'GGGGGGG', $4)`,
+        [DAILY_ID, user, correct, new Date(july(3, 8))],
+      );
+    }
+
+    const onAndroid = { pid: pid(a), platform: 'android', source: 'server' as const };
+    const onWeb = { pid: pid(b), platform: 'web', source: 'server' as const };
+    for (const correct of [true, false, true]) {
+      await event('question_answered', july(3, 10), onAndroid, { category: 'music', correct });
+    }
+    await event('question_answered', july(4, 10), onWeb, { category: 'sports', correct: false });
+    await event('lifeline_used', july(3, 10), onAndroid, { type: 'fifty', paid_with: 'coins', mode: 'duel' });
+    await event('lifeline_used', july(4, 10), onWeb, { type: 'skip', paid_with: 'ad', mode: 'duel' });
+    t.clock.t = july(5, 9);
+
+    const g = await board<GameplayBoard>('gameplay', '?from=2028-07-03&to=2028-07-04');
+    expect(g.summary).toEqual({
+      duels_finished: 3,
+      forfeit_rate: 1 / 3,
+      duel_hours_median: 2,
+      party_games: 2,
+      party_players_avg: 2.5,
+      web_guest_share: 3 / 5,
+      dailies_finished: 2,
+      correct_rate: 0.5,
+    });
+    expect(g.days).toEqual([
+      { day: '2028-07-03', duels: 1, party_games: 2, dailies: 2 },
+      { day: '2028-07-04', duels: 2, party_games: 0, dailies: 0 },
+    ]);
+    expect(g.duel_outcomes).toEqual(
+      expect.arrayContaining([
+        { outcome: 'Finished', duels: 2 },
+        { outcome: 'Forfeited', duels: 1 },
+        { outcome: 'Declined', duels: 1 },
+        { outcome: 'Still going', duels: 1 },
+      ]),
+    );
+    expect(g.duel_outcomes[0]).toEqual({ outcome: 'Finished', duels: 2 });
+    expect(g.duel_sources[0]).toEqual({ source: 'friend', duels: 2 });
+    expect(g.party_sizes.slice(0, 2)).toEqual([
+      { size: '2', games: 1 },
+      { size: '3–4', games: 1 },
+    ]);
+    expect(g.daily_scores[7]).toEqual({ correct: 7, players: 1 });
+    expect(g.daily_scores[5]).toEqual({ correct: 5, players: 1 });
+    expect(g.categories).toEqual([
+      { category: 'music', answers: 3, correct_rate: 2 / 3 },
+      { category: 'sports', answers: 1, correct_rate: 0 },
+    ]);
+    expect(g.lifelines).toEqual(
+      expect.arrayContaining([
+        { type: 'fifty', with_coins: 1, with_ads: 0 },
+        { type: 'skip', with_coins: 0, with_ads: 1 },
+      ]),
+    );
+
+    // On Android only: the answers and lifelines from there; matches still count everywhere.
+    const android = await board<GameplayBoard>('gameplay', '?from=2028-07-03&to=2028-07-04&platform=android');
+    expect(android.categories).toEqual([{ category: 'music', answers: 3, correct_rate: 2 / 3 }]);
+    expect(android.lifelines).toEqual([{ type: 'fifty', with_coins: 1, with_ads: 0 }]);
+    expect(android.summary.duels_finished).toBe(3);
+    expect(
+      (
+        await t.app.inject({
+          method: 'GET',
+          url: '/admin/analytics/gameplay',
+          headers: bearer(await staff(['finance'])),
+        })
+      ).statusCode,
+    ).toBe(403);
+  });
+
+  it('shows store money, payers, ARPDAU and ads (Monetisation)', async () => {
+    t.clock.t = july(9, 9);
+    const [a, b] = [await julyPlayer('android'), await julyPlayer('ios')];
+    const purchase = async (
+      user: string,
+      fields: {
+        store: string;
+        product: string;
+        naira: number;
+        at: number;
+        status?: string;
+        environment?: string;
+        refunded?: number;
+      },
+    ) =>
+      t.pool.query(
+        `INSERT INTO purchases (id, user_id, store, product_id, store_tx_id, price_micros, currency, status, coins,
+                                environment, created_at, refunded_at)
+         VALUES ($1, $2, $3, $4, $5, $6, 'NGN', $7, 1000, $8, $9, $10)`,
+        [
+          newId('pu'),
+          user,
+          fields.store,
+          fields.product,
+          `GPA.${randomUUID()}`,
+          fields.naira * 1_000_000,
+          fields.status ?? 'completed',
+          fields.environment ?? 'production',
+          new Date(fields.at),
+          fields.refunded ? new Date(fields.refunded) : null,
+        ],
+      );
+    await purchase(a, { store: 'play', product: 'coins_medium', naira: 800, at: july(10, 10) });
+    await purchase(b, { store: 'app_store', product: 'coins_large', naira: 1500, at: july(11, 10) });
+    await purchase(a, {
+      store: 'play',
+      product: 'coins_small',
+      naira: 300,
+      at: july(10, 11),
+      status: 'refunded',
+      refunded: july(11, 9),
+    });
+    await purchase(a, {
+      store: 'play',
+      product: 'coins_small',
+      naira: 300,
+      at: july(10, 12),
+      environment: 'sandbox',
+    });
+
+    const onA = { pid: pid(a), platform: 'android' };
+    await event('session_started', july(10, 9), { ...onA, session: 'ma1' }, { source: 'launch' });
+    await event('session_started', july(11, 9), { ...onA, session: 'ma2' }, { source: 'launch' });
+    await event(
+      'session_started',
+      july(10, 9),
+      { pid: pid(b), platform: 'ios', session: 'mb1' },
+      { source: 'launch' },
+    );
+    await event(
+      'session_started',
+      july(10, 9),
+      { anon: `a_${randomUUID()}`, platform: 'web', session: 'mc1' },
+      { source: 'launch' },
+    );
+    // An event with nobody on it (an invite opened before sign-in) is no player-day.
+    await event(
+      'invite_opened',
+      july(10, 13),
+      { platform: 'android', source: 'server' },
+      { type: 'duel', has_app: false, opened_in: 'web' },
+    );
+    for (let i = 0; i < 4; i++)
+      await event('ad_requested', july(10, 10), onA, { format: 'rewarded', placement: 'lifeline' });
+    await event('ad_shown', july(10, 10), onA, { format: 'rewarded', placement: 'lifeline' });
+    await event('ad_shown', july(10, 10), onA, { format: 'rewarded', placement: 'lifeline' });
+    await event('ad_shown', july(11, 10), onA, { format: 'interstitial', placement: 'results' });
+    await event('ad_paid', july(10, 10), onA, {
+      value_micros: 1_500_000,
+      currency: 'USD',
+      precision: 'estimated',
+      format: 'rewarded',
+    });
+    await event('ad_paid', july(11, 10), onA, {
+      value_micros: 500_000,
+      currency: 'USD',
+      precision: 'estimated',
+      format: 'interstitial',
+    });
+    await event(
+      'ad_reward_granted',
+      july(10, 10),
+      { ...onA, source: 'server' },
+      { format: 'rewarded', amount: 20 },
+    );
+    await event(
+      'ad_reward_granted',
+      july(11, 10),
+      { ...onA, source: 'server' },
+      { format: 'rewarded', amount: 20 },
+    );
+    t.clock.t = july(12, 9);
+
+    const m = await board<MonetisationBoard>(
+      'monetisation',
+      '?from=2028-07-10&to=2028-07-11',
+      await staff(['finance']),
+    );
+    expect(m.summary).toEqual({
+      store_revenue_ngn: 2300,
+      purchases: 3,
+      refunds: 1,
+      payers: 2,
+      payer_conversion: 2 / 3,
+      arppu_ngn: 1150,
+      arpdau_ngn: 2300 / 4,
+      ad_revenue: { USD: 2 },
+      ads_shown: 3,
+      fill_rate: 0.75,
+      rewarded_views: 2,
+      rewarded_per_dau: 0.5,
+    });
+    expect(m.days).toEqual([
+      { day: '2028-07-10', store_ngn: 800, purchases: 2, rewarded_views: 1, ads_shown: 2 },
+      { day: '2028-07-11', store_ngn: 1500, purchases: 1, rewarded_views: 1, ads_shown: 1 },
+    ]);
+    expect(m.by_product).toEqual(
+      expect.arrayContaining([
+        { product_id: 'coins_medium', purchases: 1, revenue_ngn: 800 },
+        { product_id: 'coins_large', purchases: 1, revenue_ngn: 1500 },
+      ]),
+    );
+    expect(m.by_product).toHaveLength(2);
+    expect(m.ad_placements[0]).toEqual({ format: 'rewarded', placement: 'lifeline', shown: 2 });
+
+    // Google Play only: its purchases and Android's players and ads.
+    const android = await board<MonetisationBoard>(
+      'monetisation',
+      '?from=2028-07-10&to=2028-07-11&platform=android',
+    );
+    expect(android.summary).toMatchObject({
+      store_revenue_ngn: 800,
+      purchases: 2,
+      refunds: 1,
+      payers: 1,
+      payer_conversion: 1,
+    });
+  });
+
+  it('shows coins earned and spent, by reason, and balances (Economy)', async () => {
+    t.clock.t = july(16, 9);
+    const [a, b] = [await julyPlayer(), await julyPlayer()];
+    const move = (at: number, work: Parameters<typeof withTransaction>[1]) => {
+      t.clock.t = at;
+      return withTransaction(t.pool, work);
+    };
+    await move(july(17, 10), (c) =>
+      grantCoins(c, a, 100, { key: `an-${randomUUID()}`, reason: 'daily', now: july(17, 10) }),
+    );
+    await move(july(17, 11), (c) =>
+      grantCoins(c, b, 30, { key: `an-${randomUUID()}`, reason: 'duel_win', now: july(17, 11) }),
+    );
+    await move(july(18, 10), (c) =>
+      spendCoins(c, a, 40, { key: `an-${randomUUID()}`, reason: 'lifeline', now: july(18, 10) }),
+    );
+    t.clock.t = july(19, 9);
+
+    const e = await board<EconomyBoard>('economy', '?from=2028-07-17&to=2028-07-18&platform=web');
+    expect(e.platform).toBe('all');
+    expect(e.summary).toMatchObject({ earned: 130, spent: 40, inflation: 130 / 40 });
+    expect(e.summary.holders).toBeGreaterThanOrEqual(2);
+    expect(e.days).toEqual([
+      { day: '2028-07-17', earned: 130, spent: 0 },
+      { day: '2028-07-18', earned: 0, spent: 40 },
+    ]);
+    expect(e.sources).toEqual([
+      { reason: 'daily', coins: 100 },
+      { reason: 'duel_win', coins: 30 },
+    ]);
+    expect(e.sinks).toEqual([{ reason: 'lifeline', coins: 40 }]);
+    expect(e.balances.map((x) => x.bucket)).toEqual([
+      '1–99',
+      '100–499',
+      '500–1,999',
+      '2,000–9,999',
+      '10,000 or more',
+    ]);
+    expect(e.balances[0]!.players).toBeGreaterThanOrEqual(2); // 60 and 30 coins
   });
 });

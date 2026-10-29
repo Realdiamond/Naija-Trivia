@@ -72,6 +72,10 @@ export const AdminPermission = z.enum([
   'commerce.view',
   /** The KPI dashboards: Engagement & time, Growth & invites, Retention (step 2.7j). */
   'analytics.kpi',
+  /** The Gameplay dashboard (step 2.7k). */
+  'analytics.product',
+  /** The Monetisation and Economy dashboards (step 2.7k). */
+  'analytics.money',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 
