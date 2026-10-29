@@ -3,7 +3,8 @@
  * Google Play through RevenueCat. The store shows the price the player pays; the coins arrive
  * when RevenueCat tells our server, so the wallet is looked at again for a few seconds after.
  * The starter pack, gems and the Sabi Pass come with v1.1; on the web, buying comes with Paystack.
- * Opening the shop and tapping buy tell the staff (step 2.9b).
+ * Opening the shop and tapping buy tell the staff (step 2.9b). Staff can close the shop for a
+ * while (a kill switch, step 2.7c).
  */
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -16,6 +17,7 @@ import { useSession } from '../auth/session';
 import { PLATFORM } from '../config';
 import { useWallet, walletKeys } from '../features/economy/api';
 import { WatchAdCard } from '../features/economy/WatchAdCard';
+import { useFlag } from '../features/liveops/config';
 import { useT } from '../i18n';
 import { buy, startStore, storeAvailable, storePrices } from '../purchases';
 import { Icon } from '../ui/icons';
@@ -33,6 +35,7 @@ export default function Shop() {
   const userId = useSession((s) => s.user?.id);
   const signedIn = status === 'guest' || status === 'account';
   const wallet = useWallet(signedIn);
+  const shopOn = useFlag('shop.enabled');
   const shop = useQuery({
     queryKey: ['shop'],
     queryFn: () => api.get<ShopResponse>(routes.shop()),
@@ -104,6 +107,11 @@ export default function Shop() {
       <Text variant="heading" style={styles.section}>
         {t('shop.coins')}
       </Text>
+      {!shopOn ? (
+        <Text variant="body" align="center" testID="shop-closed">
+          {t('shop.closed')}
+        </Text>
+      ) : null}
       <View style={styles.grid}>
         {shop.data?.packs.map((pack) => (
           <Pressable
@@ -134,7 +142,7 @@ export default function Shop() {
         <Text variant="body" align="center" accessibilityLiveRegion="polite" testID="shop-note">
           {note}
         </Text>
-      ) : !canBuy && shop.data ? (
+      ) : shopOn && !canBuy && shop.data ? (
         <Text variant="bodySoft" align="center" testID="shop-soon">
           {PLATFORM === 'web' ? t('shop.soonWeb') : t('shop.soonApp')}
         </Text>

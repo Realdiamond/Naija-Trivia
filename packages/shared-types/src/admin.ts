@@ -56,6 +56,8 @@ export const AdminPermission = z.enum([
   'live.manage',
   /** Support's actions on a player (step 2.7b): coins (within limits), a streak, signing out; notes. */
   'players.support',
+  /** Flags, kill switches and the status banner (step 2.7c). */
+  'liveops.flags',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 

@@ -64,6 +64,8 @@ export const ErrorCode = {
   notEnoughCoins: 'NOT_ENOUGH_COINS',
   lifelineUsed: 'LIFELINE_USED',
   lifelineNotAllowed: 'LIFELINE_NOT_ALLOWED',
+  /** Switched off for now by staff (a kill switch, step 2.7c). */
+  featureOff: 'FEATURE_OFF',
   internal: 'INTERNAL',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

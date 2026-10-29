@@ -22,6 +22,8 @@ import type { Pool } from './db';
 import { registerErrorHandlers } from './errors';
 import { ingestRoutes } from '@whosabi/ingest';
 import { ServerEvents } from './events';
+import { LiveOpsStore } from './liveops/store';
+import { liveOpsRoutes } from './liveops/routes';
 import { newId } from './ids';
 import { PartyRooms } from './party/registry';
 import { partyRoutes } from './party/routes';
@@ -43,6 +45,8 @@ export interface AppDeps {
   events: ServerEvents;
   log: FastifyBaseLogger;
   auth: AuthProviders;
+  /** Flags, kill switches and the status banner (step 2.7c). */
+  liveops: LiveOpsStore;
 }
 
 export interface BuildOptions {
@@ -72,6 +76,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
     events: new ServerEvents(options.redis, options.config.analyticsKey, options.clock, app.log),
     log: app.log,
     auth: { ...createAuthProviders(options.config, app.log, options.clock.now), ...options.auth },
+    liveops: new LiveOpsStore(options.pool, options.clock.now),
   };
 
   const { webAppDir, webGuestDir } = options.config;
@@ -128,6 +133,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   dailyRoutes(app, deps);
   economyRoutes(app, deps, options.adKeys ?? new GoogleAdKeys());
   shareRoutes(app, deps);
+  liveOpsRoutes(app, deps);
   adminRoutes(app, deps);
 
   // Party rooms run in this process (doc 07 §5 at launch): one web dyno holds them all.

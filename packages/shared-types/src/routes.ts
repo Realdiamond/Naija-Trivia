@@ -76,6 +76,8 @@ export const routes = {
   wallet: () => `${API_PREFIX}/wallet`,
   /** The coin packs, and the payment journey for staff alerts (step 2.4d). */
   shop: () => `${API_PREFIX}/shop`,
+  /** Flags, kill switches and the status banner for this player (step 2.7c). */
+  config: () => `${API_PREFIX}/config`,
   shopEvents: () => `${API_PREFIX}/shop/events`,
   /** Rewarded ads (step 2.4c): what one pays and how many more will pay today. */
   rewardedAds: () => `${API_PREFIX}/ads/rewarded`,
@@ -122,6 +124,10 @@ export const routes = {
     userDevices: (id: string) => `/admin/users/${encodeURIComponent(id)}/devices`,
     userNotes: (id: string) => `/admin/users/${encodeURIComponent(id)}/notes`,
     userActions: (id: string) => `/admin/users/${encodeURIComponent(id)}/actions`,
+    /** LiveOps: flags, kill switches and the status banner (step 2.7c). */
+    flags: () => '/admin/flags',
+    flag: (key: string) => `/admin/flags/${encodeURIComponent(key)}`,
+    banner: () => '/admin/banner',
     liveOnline: (platform?: string) => `/admin/live/online${platform ? `?platform=${platform}` : ''}`,
     liveRooms: () => '/admin/live/rooms',
     liveFeed: (after?: string) => `/admin/live/feed${after ? `?after=${encodeURIComponent(after)}` : ''}`,

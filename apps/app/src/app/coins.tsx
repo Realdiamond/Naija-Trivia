@@ -9,6 +9,7 @@ import { errorMessage } from '../api';
 import { useSession } from '../auth/session';
 import { useWallet, useWalletHistory } from '../features/economy/api';
 import { WatchAdCard } from '../features/economy/WatchAdCard';
+import { useFlag } from '../features/liveops/config';
 import { useT, type MessageKey } from '../i18n';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/icons';
@@ -22,6 +23,7 @@ export default function Coins() {
   const signedIn = status === 'guest' || status === 'account';
   const wallet = useWallet(signedIn);
   const history = useWalletHistory(signedIn);
+  const shopOn = useFlag('shop.enabled');
 
   if (status === 'signed_out') return <Redirect href="/welcome" />;
 
@@ -43,13 +45,15 @@ export default function Coins() {
             {wallet.data ? wallet.data.coins.toLocaleString('en-NG') : '–'}
           </Text>
         </View>
-        <Button
-          label={t('coins.buy')}
-          variant="dark"
-          size="medium"
-          onPress={() => router.push('/shop')}
-          testID="open-shop"
-        />
+        {shopOn ? (
+          <Button
+            label={t('coins.buy')}
+            variant="dark"
+            size="medium"
+            onPress={() => router.push('/shop')}
+            testID="open-shop"
+          />
+        ) : null}
       </View>
       <Text variant="bodySoft">{t('coins.how')}</Text>
       <WatchAdCard placement="coins" />

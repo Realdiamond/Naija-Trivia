@@ -27,6 +27,7 @@ import { requireAuth } from '../auth/context';
 import { PARTY_SEAT_TTL_SECONDS, type PartySeatClaims } from '../auth/tokens';
 import { ApiError, conflict, notFound, parse } from '../errors';
 import { requestEventContext } from '../events';
+import { audienceOf } from '../liveops/store';
 import { checkUsername } from '../profile/usernames';
 import type { PartyRooms } from './registry';
 import { getGame } from './results';
@@ -97,11 +98,20 @@ export function partyRoutes(app: FastifyInstance, deps: AppDeps, rooms: PartyRoo
     };
   }
 
+  // The kill switch (step 2.7c) stops new rooms and new seats; games already going carry on.
+  const partyOn = (request: FastifyRequest) =>
+    deps.liveops.require(
+      'party.enabled',
+      audienceOf(request),
+      'Party rooms are taking a short break. Duels and the Daily still work.',
+    );
+
   app.post(
     '/v1/party/rooms',
     { config: { rateLimit: { max: 30, timeWindow: '1 hour' } } },
     async (request, reply) => {
       requireAuth(request);
+      await partyOn(request);
       const body = parse(CreatePartyRequest, request.body);
       const known = await pool.query<{ id: string }>(
         'SELECT id FROM categories WHERE active AND id = ANY($1)',
@@ -169,6 +179,7 @@ export function partyRoutes(app: FastifyInstance, deps: AppDeps, rooms: PartyRoo
     async (request): Promise<PartySeat> => {
       const room = rooms.byCode(parse(CodeParams, request.params).code);
       if (!room) throw roomGone();
+      await partyOn(request);
       const body = parse(JoinPartyRequest, request.body ?? {});
       let claims: Omit<PartySeatClaims, 'roomId'>;
       if (body.screen) {
