@@ -32,6 +32,11 @@ async function read(): Promise<Counts> {
 
 const write = (counts: Counts) => storage.setItem(KEY, JSON.stringify(counts));
 
+/** How many times the app has started on this device, this one included. */
+export async function sessionsHere(): Promise<number> {
+  return (await read()).sessions;
+}
+
 /** Once each time the app starts. */
 export async function countSession(): Promise<void> {
   const counts = await read();

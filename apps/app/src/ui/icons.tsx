@@ -31,7 +31,8 @@ export type IconName =
   | 'chevron-right'
   | 'shield'
   | 'search'
-  | 'settings';
+  | 'settings'
+  | 'download';
 
 interface IconProps {
   name: IconName;
@@ -93,6 +94,8 @@ function paths(name: IconName, s: Stroke) {
       return <Path d="M5 12.5l4.5 4.5L19 7" {...s} />;
     case 'cross':
       return <Path d="M6 6l12 12M18 6L6 18" {...s} />;
+    case 'download':
+      return <Path d="M12 4v11M7 10l5 5 5-5M5 20h14" {...s} />;
     case 'phone':
       return (
         <>

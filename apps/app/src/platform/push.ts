@@ -9,27 +9,15 @@ import { routes, type WebPushKeyResponse } from '@whosabi/shared-types';
 import { api } from '../api';
 import { APP_VERSION } from '../config';
 import { pushTarget, type PushTarget } from '../features/push/target';
+import { isIos, isStandalone } from './browser';
 
 const inBrowser = typeof window !== 'undefined' && typeof navigator !== 'undefined';
-
-function isIos(): boolean {
-  return (
-    /iPhone|iPad|iPod/.test(navigator.userAgent) ||
-    // iPadOS asks for desktop sites and says it is a Mac.
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
-}
 
 export const pushSupported =
   inBrowser && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
 /** Safari on iPhone or iPad, not opened from the Home Screen: no pushes until it is. */
-export const needsHomeScreen =
-  inBrowser &&
-  !pushSupported &&
-  isIos() &&
-  !(navigator as Navigator & { standalone?: boolean }).standalone &&
-  !window.matchMedia?.('(display-mode: standalone)').matches;
+export const needsHomeScreen = inBrowser && !pushSupported && isIos() && !isStandalone();
 
 export type PushPermission = 'granted' | 'denied' | 'undetermined' | 'unsupported';
 

@@ -486,6 +486,15 @@ PRD F15, UX §4, TRD FR-WEB-6, doc 11 §2, doc 18 §15.
 - Left for later: picture questions and their text-only stand-ins (when the first picture questions arrive), and gzipped event batches from the apps
 - ✅ Tests: the API (bundles, pages and bigger replies compressed, small ones not; Data Saver back to automatic); the app's rules (when Data Saver is on, what may show); the app in the browser (Data Saver on by itself with Save-Data, switched off and kept in the profile, back to automatic)
 
+### Step 2.8c · The installable web app ✅
+TRD FR-WEB-3, UX §3 and §4, PRD F18.
+
+- ✅ **The service worker for every visitor**, not only those with pushes on (not in development). Bundles, fonts and pictures (their names carry content hashes) come from the phone once they've been loaded, so a repeat visit downloads only the page; the newest 150 are kept. Pages come from the network, and the last one is kept as the app shell for when there's no connection or it takes over 4 seconds, so the app opens offline. The API is never cached. Party links still get the light party client
+- ✅ **"Put Who Sabi? on your home screen"** on Home from the second visit on that device: Install opens the browser's own prompt (Chrome, Edge, Samsung Internet); on iPhone and iPad it gives Safari's "Add to Home Screen" steps. "Not now" waits a week; it never shows once installed. `pwa_installed` says whether our card or the browser's menu did it
+- ✅ The manifest gains an id, a language and categories
+- Left for later: Practice packs offline (with Practice itself), the "Get the app" banner for mobile browsers (once the Play Store listing is live), and making the light party client installable
+- ✅ Tests: the app in the browser (files kept and a repeat visit served from the phone, the app opening offline; the install card from the second visit, "Not now" for a week, Install showing the browser's prompt)
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
@@ -495,7 +504,7 @@ PRD F15, UX §4, TRD FR-WEB-6, doc 11 §2, doc 18 §15.
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
-| 2.8 Platform & compliance (2.8a ✅, 2.8b ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
+| 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |
 
