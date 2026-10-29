@@ -15,6 +15,8 @@ export const routes = {
   authGoogle: () => `${API_PREFIX}/auth/google`,
   authApple: () => `${API_PREFIX}/auth/apple`,
   me: () => `${API_PREFIX}/me`,
+  /** The player saw a notice from the team (step 2.7d). */
+  noticeSeen: (id: number) => `${API_PREFIX}/me/notices/${id}/seen`,
   meAge: () => `${API_PREFIX}/me/age`,
   meConsents: () => `${API_PREFIX}/me/consents`,
   /** POST to turn pushes on for this phone, DELETE (same body shape, the token) to turn them off. */
@@ -124,6 +126,11 @@ export const routes = {
     userDevices: (id: string) => `/admin/users/${encodeURIComponent(id)}/devices`,
     userNotes: (id: string) => `/admin/users/${encodeURIComponent(id)}/notes`,
     userActions: (id: string) => `/admin/users/${encodeURIComponent(id)}/actions`,
+    /** Moderation history and integrity flags (step 2.7d). */
+    userSafety: (id: string) => `/admin/users/${encodeURIComponent(id)}/safety`,
+    integrity: (status?: string) =>
+      `/admin/integrity${status ? `?status=${encodeURIComponent(status)}` : ''}`,
+    integrityReview: (id: number) => `/admin/integrity/${id}`,
     /** LiveOps: flags, kill switches and the status banner (step 2.7c). */
     flags: () => '/admin/flags',
     flag: (key: string) => `/admin/flags/${encodeURIComponent(key)}`,

@@ -13,9 +13,10 @@ import type {
 import { AdminApiError, adminApi } from '../../../../lib/api';
 import { describeEvent, duration, groupSessions, watDateTime, watTime } from '../../../../lib/format';
 import { Reveal } from './Reveal';
-import { DevicesTab, MatchesTab, MoneyTab, SessionsTab, SupportTab } from './tabs';
+import { DevicesTab, MatchesTab, MoneyTab, SafetyTab, SessionsTab, SupportTab } from './tabs';
 
-type Tab = 'summary' | 'timeline' | 'sessions' | 'matches' | 'money' | 'devices' | 'support' | 'history';
+type Tab =
+  'summary' | 'timeline' | 'sessions' | 'matches' | 'money' | 'safety' | 'devices' | 'support' | 'history';
 
 export default async function User360({
   params,
@@ -33,6 +34,7 @@ export default async function User360({
     ['sessions', 'Sessions & time'],
     ['matches', 'Matches'],
     ['money', 'Money'],
+    ['safety', 'Safety'],
     ['devices', 'Devices & consent'],
     ['support', 'Support'],
     ...(me.permissions.includes('audit.view')
@@ -58,7 +60,14 @@ export default async function User360({
       <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div className="row">
           <h1 data-testid="player-name">{user.username ?? 'Guest'}</h1>
-          <span className={user.status === 'banned' ? 'badge warn' : 'badge'}>{user.status}</span>
+          <span className={user.status === 'banned' ? 'badge warn' : 'badge'} data-testid="player-status">
+            {user.status === 'banned'
+              ? user.banned_until
+                ? `banned until ${watDateTime(user.banned_until)}`
+                : 'banned for good'
+              : user.status}
+          </span>
+          {user.hidden_from_boards ? <span className="badge warn">hidden from boards</span> : null}
           {user.age_band ? (
             <span className="badge off">{user.age_band === '18_plus' ? '18+' : '13–17'}</span>
           ) : null}
@@ -124,6 +133,9 @@ export default async function User360({
       {tab === 'sessions' ? <SessionsTab userId={user.id} /> : null}
       {tab === 'matches' ? <MatchesTab userId={user.id} /> : null}
       {tab === 'money' ? <MoneyTab userId={user.id} /> : null}
+      {tab === 'safety' ? (
+        <SafetyTab user={user} canModerate={me.permissions.includes('players.moderate')} />
+      ) : null}
       {tab === 'devices' ? <DevicesTab user={user} /> : null}
       {tab === 'support' ? (
         <SupportTab userId={user.id} canAct={me.permissions.includes('players.support')} />

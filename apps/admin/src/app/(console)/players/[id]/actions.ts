@@ -51,18 +51,37 @@ export async function addNote(userId: string, _state: ActionState, form: FormDat
   return { done: 'Note saved.', error: null };
 }
 
-/** Support's actions (doc 18 §8): grant coins, restore a streak, sign out everywhere; always with a reason. */
+/** The action the form describes; the API checks it, and who may. */
+function actionFrom(form: FormData): AdminPlayerAction {
+  const type = String(form.get('type') ?? '');
+  const reason = String(form.get('reason') ?? '');
+  switch (type) {
+    case 'grant_coins':
+      return { type, amount: Number(form.get('amount') ?? 0), reason };
+    case 'warn':
+      return { type, message: String(form.get('message') ?? ''), reason };
+    case 'ban': {
+      const days = String(form.get('days') ?? '');
+      return { type, days: days === 'forever' ? null : Number(days), reason };
+    }
+    case 'restore_streak':
+    case 'rename':
+    case 'shadow_restrict':
+    case 'unrestrict':
+    case 'unban':
+      return { type, reason };
+    default:
+      return { type: 'sign_out', reason };
+  }
+}
+
+/** Support's and moderators' actions (doc 18 §8), always with a reason. */
 export async function playerAction(
   userId: string,
   _state: ActionState,
   form: FormData,
 ): Promise<ActionState> {
-  const type = String(form.get('type') ?? '');
-  const reason = String(form.get('reason') ?? '');
-  const body: AdminPlayerAction =
-    type === 'grant_coins'
-      ? { type, amount: Number(form.get('amount') ?? 0), reason }
-      : { type: type === 'restore_streak' ? 'restore_streak' : 'sign_out', reason };
+  const body = actionFrom(form);
   let res: AdminPlayerActionResponse;
   try {
     res = await adminApi<AdminPlayerActionResponse>(routes.admin.userActions(userId), {

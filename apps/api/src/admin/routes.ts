@@ -31,6 +31,7 @@ import { adminContentRoutes } from './content';
 import { adminPhoneRoutes } from './phoneRoutes';
 import { isPhoneToken, phoneSessionFor, revokePhoneSession } from './phones';
 import { adminLiveOpsRoutes } from './liveops';
+import { adminModerationRoutes } from './moderation';
 import { adminPlayer360Routes } from './player360';
 import { adminPlayerRoutes } from './players';
 import { AdminSessions } from './sessions';
@@ -277,6 +278,7 @@ export function adminRoutes(app: FastifyInstance, deps: AppDeps): void {
   adminContentRoutes(app, deps, ctx);
   adminPhoneRoutes(app, deps, ctx);
   adminLiveOpsRoutes(app, deps, ctx);
+  adminModerationRoutes(app, deps, ctx);
 }
 
 async function requireStaff(pool: Pool, id: string): Promise<void> {

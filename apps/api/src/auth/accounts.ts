@@ -15,6 +15,7 @@ import type { PoolClient } from '../db';
 import { moveAllCoins } from '../economy/ledger';
 import { ApiError } from '../errors';
 import { newId } from '../ids';
+import { bannedError, liftEndedBan } from '../moderation/bans';
 import type { AccessClaims } from './tokens';
 
 export type IdentityProvider = 'phone' | 'email' | 'google' | 'apple';
@@ -25,6 +26,7 @@ export interface AccountRow {
   status: 'guest' | 'active' | 'restricted' | 'banned' | 'deleted';
   level: number;
   xp: string | number;
+  banned_until: Date | null;
 }
 
 export interface SignInInput {
@@ -46,7 +48,7 @@ export interface SignInResult {
   deviceId: string | null;
 }
 
-const ACCOUNT_COLUMNS = 'id, username, status, level, xp';
+const ACCOUNT_COLUMNS = 'id, username, status, level, xp, banned_until';
 
 export async function signInWithIdentity(client: PoolClient, input: SignInInput): Promise<SignInResult> {
   const { provider, subject, now } = input;
@@ -74,7 +76,12 @@ export async function signInWithIdentity(client: PoolClient, input: SignInInput)
   let isNew = false;
   let mergedGuest = false;
   if (owner) {
-    if (owner.status === 'banned' || owner.status === 'deleted') {
+    // A ban that has ended lifts itself here (step 2.7d).
+    if (owner.status === 'banned') {
+      owner.status = (await liftEndedBan(client, owner, now)) as AccountRow['status'];
+      if (owner.status === 'banned') throw bannedError(owner.banned_until);
+    }
+    if (owner.status === 'deleted') {
       throw new ApiError(
         403,
         ErrorCode.accountUnavailable,

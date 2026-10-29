@@ -5,6 +5,7 @@
  */
 import {
   routes,
+  type AdminSafetyResponse,
   type AdminDevicesResponse,
   type AdminMatchesResponse,
   type AdminMoneyResponse,
@@ -15,6 +16,7 @@ import {
 import { adminApi } from '../../../../lib/api';
 import { BarList, DayBars } from '../../../../lib/charts';
 import { watDateTime } from '../../../../lib/format';
+import { ModerationActions } from './ModerationActions';
 import { NoteForm, SupportActions } from './SupportActions';
 
 const words = (s: string) => s.replaceAll('_', ' ');
@@ -408,6 +410,103 @@ export async function SupportTab({ userId, canAct }: { userId: string; canAct: b
           <SupportActions userId={userId} />
         ) : (
           <Empty>Coin grants, streak restores and sign-outs are for support, admins and owners.</Empty>
+        )}
+      </section>
+    </div>
+  );
+}
+
+const ACTION_WORDS: Record<string, string> = {
+  warn: 'Warned',
+  rename: 'Username taken away',
+  shadow_restrict: 'Hidden from the boards',
+  unrestrict: 'Back on the boards',
+  ban: 'Banned',
+  unban: 'Ban lifted',
+  mute: 'Muted',
+};
+
+export async function SafetyTab({ user, canModerate }: { user: AdminUserSummary; canModerate: boolean }) {
+  const s = await adminApi<AdminSafetyResponse>(routes.admin.userSafety(user.id));
+  return (
+    <div className="grid2" data-testid="safety-tab">
+      <div className="stack">
+        <section className="card">
+          <h2>Moderation history</h2>
+          {s.moderation.length === 0 ? (
+            <Empty>Nothing yet.</Empty>
+          ) : (
+            <table data-testid="moderation-history">
+              <thead>
+                <tr>
+                  <th>When (WAT)</th>
+                  <th>What</th>
+                  <th>Who</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {s.moderation.map((m) => (
+                  <tr key={m.id}>
+                    <td title={m.created_at}>{watDateTime(m.created_at)}</td>
+                    <td>
+                      {ACTION_WORDS[m.action] ?? words(m.action)}
+                      {m.action === 'ban' ? (
+                        <div className="muted small">
+                          {m.ends_at ? `until ${watDateTime(m.ends_at)}` : 'for good'}
+                        </div>
+                      ) : null}
+                      {m.message ? <div className="muted small">“{m.message}”</div> : null}
+                      {m.details && typeof m.details.old_username === 'string' ? (
+                        <div className="muted small">was {m.details.old_username}</div>
+                      ) : null}
+                      {m.action === 'warn' || m.action === 'rename' ? (
+                        <div className="muted small">
+                          {m.seen_at ? `seen ${watDateTime(m.seen_at)}` : 'not seen yet'}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td>{m.actor}</td>
+                    <td>{m.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+        <section className="card">
+          <h2>Integrity flags</h2>
+          {s.flags.length === 0 ? (
+            <Empty>No flags.</Empty>
+          ) : (
+            <table>
+              <tbody>
+                {s.flags.map((f) => (
+                  <tr key={f.id}>
+                    <td>{watDateTime(f.created_at)}</td>
+                    <td>
+                      {words(f.kind)} · risk {Math.round(f.score * 100)}%
+                      <div className="mono small muted">{JSON.stringify(f.evidence)}</div>
+                    </td>
+                    <td>
+                      {f.status}
+                      {f.review_note ? <div className="muted small">{f.review_note}</div> : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      </div>
+      <section className="card">
+        <h2>Actions</h2>
+        {canModerate ? (
+          <ModerationActions user={user} />
+        ) : (
+          <Empty>
+            Warnings, renames, hiding from the boards and bans are for moderators, admins and owners.
+          </Empty>
         )}
       </section>
     </div>

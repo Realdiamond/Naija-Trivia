@@ -58,6 +58,8 @@ export const AdminPermission = z.enum([
   'players.support',
   /** Flags, kill switches and the status banner (step 2.7c). */
   'liveops.flags',
+  /** Warn, rename, hide from boards, ban; the integrity queue (step 2.7d). */
+  'players.moderate',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 
@@ -171,6 +173,9 @@ export const AdminUserSummary = z.object({
   lifetime_spend_ngn: z.number().int(),
   open_flags: z.number().int(),
   notes: z.number().int(),
+  /** Step 2.7d: a ban's end (null and status 'banned' is for good), and the shadow restriction. */
+  banned_until: z.iso.datetime().nullable(),
+  hidden_from_boards: z.boolean(),
 });
 export type AdminUserSummary = z.infer<typeof AdminUserSummary>;
 
@@ -630,19 +635,94 @@ export type AdminNotesResponse = z.infer<typeof AdminNotesResponse>;
 export const AdminNoteRequest = z.object({ body: z.string().trim().min(1).max(2000) });
 export type AdminNoteRequest = z.infer<typeof AdminNoteRequest>;
 
-/** Doc 18 §8: what support can do for a player, always with a reason. */
+const Reason = z.string().trim().min(3).max(300);
+
+/**
+ * Doc 18 §8: what staff can do for or about a player, always with a reason. Support grants coins,
+ * restores a streak and signs out (`players.support`); moderators warn, rename, hide from the
+ * boards and ban (`players.moderate`, step 2.7d).
+ */
 export const AdminPlayerAction = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('grant_coins'),
-    amount: z.number().int().min(1).max(5000),
-    reason: z.string().trim().min(3).max(300),
-  }),
-  z.object({ type: z.literal('restore_streak'), reason: z.string().trim().min(3).max(300) }),
-  z.object({ type: z.literal('sign_out'), reason: z.string().trim().min(3).max(300) }),
+  z.object({ type: z.literal('grant_coins'), amount: z.number().int().min(1).max(5000), reason: Reason }),
+  z.object({ type: z.literal('restore_streak'), reason: Reason }),
+  z.object({ type: z.literal('sign_out'), reason: Reason }),
+  /** The player reads `message` the next time they open the game. */
+  z.object({ type: z.literal('warn'), message: z.string().trim().min(10).max(500), reason: Reason }),
+  /** Takes the username away; the player picks a new one. */
+  z.object({ type: z.literal('rename'), reason: Reason }),
+  /** Doc 10 §2's first step: still playing, left off the boards other players see. */
+  z.object({ type: z.literal('shadow_restrict'), reason: Reason }),
+  z.object({ type: z.literal('unrestrict'), reason: Reason }),
+  /** `days: null` is for good; more than 30 days needs an admin (doc 18 §8). */
+  z.object({ type: z.literal('ban'), days: z.number().int().min(1).max(3650).nullable(), reason: Reason }),
+  z.object({ type: z.literal('unban'), reason: Reason }),
 ]);
+export const SUPPORT_ACTIONS = ['grant_coins', 'restore_streak', 'sign_out'] as const;
+/** Moderators ban for up to this long; longer, or for good, needs an admin or owner. */
+export const MODERATOR_BAN_DAYS = 30;
 /** Doc 18 §8: support grants up to 500 coins per player per WAT day; owners and admins up to 5,000. */
 export const SUPPORT_GRANT_DAILY_LIMIT = 500;
 export const ADMIN_GRANT_DAILY_LIMIT = 5000;
 export type AdminPlayerAction = z.infer<typeof AdminPlayerAction>;
 export const AdminPlayerActionResponse = z.object({ done: z.string() });
 export type AdminPlayerActionResponse = z.infer<typeof AdminPlayerActionResponse>;
+
+// ----- Safety: moderation and the integrity queue (step 2.7d, doc 18 §7.2 and §12) -----
+
+export const AdminModerationEntry = z.object({
+  id: z.number().int(),
+  action: z.string(),
+  reason: z.string(),
+  message: z.string().nullable(),
+  ends_at: z.iso.datetime().nullable(),
+  details: z.record(z.string(), z.unknown()).nullable(),
+  actor: z.string(),
+  created_at: z.iso.datetime(),
+  /** When the player saw what they were told. */
+  seen_at: z.iso.datetime().nullable(),
+});
+
+export const IntegrityKind = z.enum([
+  'accuracy_outlier',
+  'timing_anomaly',
+  'tab_hidden',
+  'multi_account',
+  'collusion',
+  'ad_reward_abuse',
+  'question_scraping',
+  'otp_abuse',
+]);
+
+export const AdminIntegrityFlag = z.object({
+  id: z.number().int(),
+  user_id: z.string(),
+  username: z.string().nullable(),
+  kind: IntegrityKind,
+  score: z.number(),
+  evidence: z.record(z.string(), z.unknown()),
+  status: z.enum(['open', 'dismissed', 'actioned']),
+  created_at: z.iso.datetime(),
+  reviewed_by: z.string().nullable(),
+  reviewed_at: z.iso.datetime().nullable(),
+  review_note: z.string().nullable(),
+});
+export type AdminIntegrityFlag = z.infer<typeof AdminIntegrityFlag>;
+
+export const AdminSafetyResponse = z.object({
+  moderation: z.array(AdminModerationEntry),
+  flags: z.array(AdminIntegrityFlag),
+});
+export type AdminSafetyResponse = z.infer<typeof AdminSafetyResponse>;
+
+export const AdminIntegrityQuery = z.object({
+  status: z.enum(['open', 'dismissed', 'actioned']).default('open'),
+});
+export const AdminIntegrityResponse = z.object({ flags: z.array(AdminIntegrityFlag) });
+export type AdminIntegrityResponse = z.infer<typeof AdminIntegrityResponse>;
+
+/** A moderator's decision on a flag: nothing in it, or acted on (with the action taken on User 360). */
+export const AdminIntegrityReview = z.object({
+  status: z.enum(['dismissed', 'actioned']),
+  note: z.string().trim().min(3).max(500),
+});
+export type AdminIntegrityReview = z.infer<typeof AdminIntegrityReview>;
