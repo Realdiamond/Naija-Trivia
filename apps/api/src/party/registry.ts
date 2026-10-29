@@ -19,6 +19,7 @@ import {
 } from '@whosabi/game-rules';
 import type { PartySettings } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
+import { configOf } from '../liveops/store';
 import type { PartySeatClaims } from '../auth/tokens';
 import { overallRating, recordQuestionStats } from '../content/stats';
 import { markSeen } from '../duels/questions';
@@ -28,7 +29,8 @@ import { pickPartyQuestions } from './questions';
 import { saveGame } from './results';
 import { PartyRoom, type RoomHooks, type Scheduler, type SeatInfo } from './room';
 
-export type PartyDeps = Pick<AppDeps, 'config' | 'pool' | 'redis' | 'clock' | 'events' | 'log'>;
+export type PartyDeps = Pick<AppDeps, 'config' | 'pool' | 'redis' | 'clock' | 'events' | 'log'> &
+  Partial<Pick<AppDeps, 'liveops'>>;
 
 /** A running room's code is held this long, and again at every game it starts. */
 const CODE_HOLD_SECONDS = 12 * 3600;
@@ -164,7 +166,7 @@ export class PartyRooms {
         background(
           'saving the game',
           (async () => {
-            const paid = await saveGame(pool, game);
+            const paid = await saveGame(pool, game, await configOf(this.deps));
             const webGuests = game.ranking.filter((p) => p.kind === 'web_guest').length;
             for (const p of game.ranking) {
               if (!p.userId) continue;

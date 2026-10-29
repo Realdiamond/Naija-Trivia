@@ -39,7 +39,7 @@ export async function countSession(): Promise<void> {
 }
 
 /** A finished duel's result is on screen: true when an interstitial is due as the player leaves it. */
-export async function countMatch(key: string): Promise<boolean> {
+export async function countMatch(key: string, every?: number): Promise<boolean> {
   const counts = await read();
   if (counts.counted.includes(key)) return false;
   const next = {
@@ -48,5 +48,5 @@ export async function countMatch(key: string): Promise<boolean> {
     counted: [...counts.counted, key].slice(-REMEMBERED),
   };
   await write(next);
-  return interstitialDue({ completedMatches: next.matches, sessions: next.sessions, hasPass: false });
+  return interstitialDue({ completedMatches: next.matches, sessions: next.sessions, hasPass: false, every });
 }

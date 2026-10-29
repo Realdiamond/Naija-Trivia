@@ -62,6 +62,8 @@ export const AdminPermission = z.enum([
   'players.moderate',
   /** The Daily scheduler: plan the next 30 Dailies and swap their questions (step 2.7f). */
   'liveops.daily',
+  /** Game and economy values, with history and rollback (step 2.7g). */
+  'liveops.config',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 

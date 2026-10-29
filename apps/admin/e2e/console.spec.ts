@@ -335,6 +335,29 @@ test('LiveOps plans the Dailies and swaps a question in one, with a reason', asy
   expect(replacement).not.toBe(before);
 });
 
+test('LiveOps changes a coin value with a reason and rolls it back', async ({ page, request }) => {
+  const email = `e2e-config-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'liveops');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page).toHaveURL(/\/overview$/);
+  await page.getByRole('link', { name: 'LiveOps' }).click();
+  await expect(page.getByTestId('config-now-econ-rewarded_ad_coins')).toHaveText('25');
+
+  await page.getByTestId('config-change-econ-rewarded_ad_coins').click();
+  await page.getByTestId('config-econ-rewarded_ad_coins-value').fill('40');
+  await page.getByTestId('config-econ-rewarded_ad_coins-reason').fill('E2E: weekend promo');
+  await page.getByTestId('config-econ-rewarded_ad_coins-save').click();
+  await expect(page.getByTestId('config-now-econ-rewarded_ad_coins')).toHaveText('40');
+  const config = await (await request.get(`${API}/v1/config`)).json();
+  expect(config.values['econ.rewarded_ad_coins']).toBe(40);
+
+  await page.getByTestId('config-econ-rewarded_ad_coins-reason').fill('E2E: promo over');
+  await page.getByTestId('config-econ-rewarded_ad_coins-rollback').click();
+  await expect(page.getByTestId('config-now-econ-rewarded_ad_coins')).toHaveText('25');
+});
+
 test('someone not on the staff list is turned away', async ({ page }) => {
   await page.goto('/login');
   await page.getByTestId('dev-email').fill('stranger@example.com');

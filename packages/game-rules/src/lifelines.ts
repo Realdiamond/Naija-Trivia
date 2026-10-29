@@ -2,14 +2,14 @@
  * Lifelines (GDD §5.2): one of each per duel, paid for with coins. Never in the Daily, Campus
  * Clash or a sponsored-prize event, and never in a duel's tie-break.
  */
-import { DEFAULT_CONFIG } from './config';
+import { DEFAULT_CONFIG, type GameConfig } from './config';
 import { xxh64 } from './hash';
 
 export const LIFELINES = ['fifty', 'ask_naija', 'skip', 'time'] as const;
 export type Lifeline = (typeof LIFELINES)[number];
 
-export function lifelineCost(type: Lifeline): number {
-  return DEFAULT_CONFIG[`econ.lifeline_${type}`];
+export function lifelineCost(type: Lifeline, config: GameConfig = DEFAULT_CONFIG): number {
+  return config[`econ.lifeline_${type}`];
 }
 
 /** "+10s": what Extra Time adds. Points for speed still count against the usual limit. */

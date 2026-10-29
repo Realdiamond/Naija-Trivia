@@ -18,7 +18,9 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
     ...(me.permissions.includes('players.search') ? [{ href: '/players', label: 'Players' }] : []),
     ...(me.permissions.includes('players.moderate') ? [{ href: '/integrity', label: 'Integrity' }] : []),
     ...(me.permissions.includes('liveops.daily') ? [{ href: '/daily', label: 'Daily' }] : []),
-    ...(me.permissions.includes('liveops.flags') ? [{ href: '/liveops', label: 'LiveOps' }] : []),
+    ...(me.permissions.includes('liveops.flags') || me.permissions.includes('liveops.config')
+      ? [{ href: '/liveops', label: 'LiveOps' }]
+      : []),
     ...(me.permissions.includes('content.view')
       ? [
           { href: '/questions', label: 'Questions' },

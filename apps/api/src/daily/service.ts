@@ -37,6 +37,7 @@ import {
 } from '@whosabi/shared-types';
 import { raiseStaffAlert } from '../admin/alerts';
 import type { AppDeps } from '../app';
+import { configOf } from '../liveops/store';
 import { withTransaction } from '../db';
 import { rewardPlayer } from '../economy/rewards';
 import { ApiError, conflict, notFound } from '../errors';
@@ -64,7 +65,8 @@ import {
   type DailyRow,
 } from './repo';
 
-export type DailyDeps = Pick<AppDeps, 'config' | 'pool' | 'redis' | 'clock' | 'events' | 'log'>;
+export type DailyDeps = Pick<AppDeps, 'config' | 'pool' | 'redis' | 'clock' | 'events' | 'log'> &
+  Partial<Pick<AppDeps, 'liveops'>>;
 
 const HOUR = 3_600_000;
 /** A Daily's answers stay in Redis for two days: the whole day plus a late finish. */
@@ -242,7 +244,8 @@ export class DailyService {
       if (inserted.rowCount === 0) return null;
       const { state, usedFreeze } = recordDailyPlay(await loadStreak(client, userId, true), daily.play_date);
       await saveStreak(client, userId, state);
-      const coins = dailyCoins(state.current);
+      const config = await configOf(this.deps);
+      const coins = dailyCoins(state.current, config);
       await client.query(
         'UPDATE daily_results SET streak = $3, used_freeze = $4, coins = $5 WHERE daily_id = $1 AND user_id = $2',
         [daily.id, userId, state.current, usedFreeze, coins],
@@ -250,6 +253,7 @@ export class DailyService {
       const paid = await rewardPlayer(client, userId, {
         xp,
         coins,
+        config,
         reason: 'daily',
         key: `daily:${daily.id}:${userId}`,
         refType: 'daily',

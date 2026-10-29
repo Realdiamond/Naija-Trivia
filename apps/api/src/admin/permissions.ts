@@ -32,6 +32,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'liveops.flags',
     'players.moderate',
     'liveops.daily',
+    'liveops.config',
   ],
   admin: [
     ...PLAYER_SUPPORT,
@@ -42,6 +43,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'liveops.flags',
     'players.moderate',
     'liveops.daily',
+    'liveops.config',
   ],
   dpo: [...PLAYER_SUPPORT.filter((p) => p !== 'players.support'), 'audit.view'],
   support: PLAYER_SUPPORT,
@@ -49,7 +51,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
   moderator: ['players.search', 'players.view', 'overview.view', 'live.manage', 'players.moderate'],
   analyst: ['content.view', 'overview.view'],
   growth: ['overview.view'],
-  liveops: ['content.view', 'overview.view', 'liveops.flags', 'liveops.daily'],
+  liveops: ['content.view', 'overview.view', 'liveops.flags', 'liveops.daily', 'liveops.config'],
   editor: CONTENT_ALL,
   fact_checker: ['content.view', 'content.write', 'content.review'],
   // Writers see and edit their own questions only.

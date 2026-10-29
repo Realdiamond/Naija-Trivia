@@ -5,7 +5,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { timingSafeEqual } from 'node:crypto';
-import { COIN_PACKS, coinPack, REWARDED_AD_COINS } from '@whosabi/game-rules';
+import { COIN_PACKS, coinPack } from '@whosabi/game-rules';
 import {
   ErrorCode,
   ShopEventRequest,
@@ -106,7 +106,11 @@ export function economyRoutes(app: FastifyInstance, deps: AppDeps, adKeys: AdKey
 
   app.get('/v1/ads/rewarded', async (request): Promise<RewardedAdStatus> => {
     const { userId } = requireAuth(request);
-    return { coins: REWARDED_AD_COINS, left_today: await rewardedLeft(deps.pool, userId, deps.clock.now()) };
+    const config = await deps.liveops.values();
+    return {
+      coins: config['econ.rewarded_ad_coins'],
+      left_today: await rewardedLeft(deps.pool, userId, deps.clock.now(), config['ads.rewarded_daily_cap']),
+    };
   });
 
   app.get('/v1/wallet', async (request): Promise<Wallet> => balances(deps.pool, requireAuth(request).userId));

@@ -5,7 +5,7 @@
  * kill switches count as on: the server still refuses what is switched off.
  */
 import { useQuery } from '@tanstack/react-query';
-import { KILL_SWITCHES } from '@whosabi/game-rules';
+import { DEFAULT_CONFIG, KILL_SWITCHES, type GameConfig } from '@whosabi/game-rules';
 import { routes, type ClientConfig } from '@whosabi/shared-types';
 import { api } from '../../api';
 
@@ -24,4 +24,10 @@ export function useRemoteConfig() {
 export function useFlag(key: string): boolean {
   const config = useRemoteConfig();
   return config.data?.flags[key] ?? (KILL_SWITCHES as readonly string[]).includes(key);
+}
+
+/** The game and economy values in force: the defaults with what staff tuned (step 2.7g). */
+export function useGameConfig(): GameConfig {
+  const values = useRemoteConfig().data?.values;
+  return values ? ({ ...DEFAULT_CONFIG, ...values } as GameConfig) : DEFAULT_CONFIG;
 }

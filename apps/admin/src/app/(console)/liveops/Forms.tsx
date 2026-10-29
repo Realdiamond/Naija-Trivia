@@ -4,8 +4,8 @@
  * banner. Every change needs a reason; apps pick it up within a minute.
  */
 import { useActionState } from 'react';
-import type { AdminFlag, StatusBanner } from '@whosabi/shared-types';
-import { saveBanner, saveFlag, type FormState } from './actions';
+import type { AdminConfigValue, AdminFlag, StatusBanner } from '@whosabi/shared-types';
+import { saveBanner, saveConfig, saveFlag, type FormState } from './actions';
 
 const IDLE: FormState = { done: null, error: null };
 
@@ -124,6 +124,53 @@ export function BannerForm({ banner }: { banner: StatusBanner | null }) {
         ) : null}
       </div>
       <Outcome state={state} testId="banner" />
+    </form>
+  );
+}
+
+export function ConfigForm({ value }: { value: AdminConfigValue }) {
+  const [state, action, pending] = useActionState(saveConfig.bind(null, value.key), IDLE);
+  const id = value.key.replaceAll('.', '-');
+  return (
+    <form action={action} className="inline" data-testid={`config-${id}`}>
+      <label>
+        New value ({value.min}–{value.max})
+        <input
+          name="value"
+          type="number"
+          min={value.min}
+          max={value.max}
+          defaultValue={value.value}
+          required
+          data-testid={`config-${id}-value`}
+        />
+      </label>
+      <label>
+        Reason
+        <input name="reason" required minLength={3} maxLength={300} data-testid={`config-${id}-reason`} />
+      </label>
+      <button
+        className="primary"
+        type="submit"
+        name="intent"
+        value="set"
+        disabled={pending}
+        data-testid={`config-${id}-save`}
+      >
+        Save
+      </button>
+      {value.changed_by ? (
+        <button
+          type="submit"
+          name="intent"
+          value="rollback"
+          disabled={pending}
+          data-testid={`config-${id}-rollback`}
+        >
+          Roll back
+        </button>
+      ) : null}
+      <Outcome state={state} testId={`config-${id}`} />
     </form>
   );
 }

@@ -22,12 +22,14 @@ import {
   isoWeekStart,
   scoreAnswer,
   watDate,
+  type GameConfig,
 } from '@whosabi/game-rules';
 import { recordResult } from '../daily/boards';
 import { rankDaily, rankWeek } from '../daily/repo';
 import { withTransaction, type PoolClient } from '../db';
 import { grantCoins, type CoinChange } from '../economy/ledger';
 import type { JobDeps } from '../jobs/deps';
+import { configOf } from '../liveops/store';
 import { queuePush } from '../push/queue';
 import { addHistory } from './bank';
 
@@ -128,7 +130,7 @@ async function rescoreNext(
   };
 
   const paid: CoinChange[] = [];
-  const duels = await rescoreDuels(client, correction, now, tell, paid);
+  const duels = await rescoreDuels(client, correction, now, tell, paid, await configOf(deps));
   const { dailies, boards, answers: dailyAnswers } = await rescoreDailies(client, correction, now, tell);
 
   const names = await usernames(
@@ -195,6 +197,7 @@ async function rescoreDuels(
   now: number,
   tell: (userId: string) => Told,
   paid: CoinChange[],
+  config: GameConfig,
 ): Promise<{ answers: number; duels: number; flipped: number }> {
   const window = [c.question_id, c.new_index, new Date(now - RESCORE_DAYS * DAY)];
   const match = `da.question_id = $1 AND da.chosen_index = $2 AND NOT da.correct AND da.round_no <= 3
@@ -291,7 +294,7 @@ async function rescoreDuels(
       const had = side === 'a' ? duel.coins_a : duel.coins_b;
       // Duels from before coins (and the Sabi Bot's side) have none recorded: nothing to top up.
       if (winner && had !== null) {
-        const change = await grantCoins(client, winner, duelCoins('win') - had, {
+        const change = await grantCoins(client, winner, duelCoins('win', config) - had, {
           key: `duel:${duel.id}:${winner}:corrected`,
           reason: 'duel_win',
           refType: 'duel',

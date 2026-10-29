@@ -78,6 +78,7 @@ Staff sign in with Google Workspace SSO, with 2-step verification enforced. Role
 - Built in step 2.7c: flags, kill switches and the status banner for owners, admins, LiveOps and on-call engineers (`liveops.flags`).
 - Built in step 2.7d: warnings, renames, hiding from the boards, bans and the integrity queue for owners, admins and moderators (`players.moderate`); a ban longer than 30 days, or for good, needs an admin or owner (the second-moderator approval comes later).
 - Built in step 2.7f: the Daily scheduler for owners, admins and LiveOps (`liveops.daily`).
+- Built in step 2.7g: the game and economy values, with history and rollback, for owners, admins and LiveOps (`liveops.config`).
 - Contractor access expires on its own (`expires_at`).
 - The DPO reviews every staff account and role each quarter.
 

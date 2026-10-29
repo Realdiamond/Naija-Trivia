@@ -212,6 +212,8 @@ points     = (base + speed + streak) × wahala
 ---
 
 ## 10. Balancing & tuning parameters (remote config)
+Built in step 2.7g: the economy values (duel, Daily and level-up coins, rewarded video coins and cap, ad pacing, lifeline prices) can be changed in the admin console without a release, with history and rollback. Timers, scoring, room sizes and the rest stay as written until their screens can take a change mid-game.
+
 | Key | Default |
 |---|---|
 | `duel.timer_text_s` | 15 |
