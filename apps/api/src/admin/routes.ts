@@ -123,9 +123,11 @@ export function adminRoutes(app: FastifyInstance, deps: AppDeps): void {
     return startSession(request, identity.email.toLowerCase(), 'google');
   });
 
-  // Development and tests sign in by email alone; production never has this route.
+  // Development and tests sign in by email alone; production never has this route. The browser
+  // tests sign in as one staff member after another from one address, so it allows more.
   if (config.env !== 'production') {
-    app.post('/admin/auth/dev', signInLimit, async (request) =>
+    const devLimit = { config: { rateLimit: { max: 200, timeWindow: '1 minute' } } };
+    app.post('/admin/auth/dev', devLimit, async (request) =>
       startSession(request, parse(AdminDevSignIn, request.body).email.toLowerCase(), 'dev'),
     );
   }
