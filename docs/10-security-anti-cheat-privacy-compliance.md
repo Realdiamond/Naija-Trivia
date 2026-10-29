@@ -88,7 +88,7 @@ NDPA s.31 defines a child as anyone **under 18** and requires **parent or guardi
 **Product decision:**
 1. Under 13: blocked at the age gate.
 2. 13–17 → **restricted account**:
-   - Guardian consent captured through a guardian phone OTP (a guardian enters their number, receives an OTP and confirms consent). Logged as `consent_records.purpose='guardian'`.
+   - Guardian consent captured through a guardian phone OTP (a guardian enters their number, receives an OTP and confirms consent). Logged as `consent_records.purpose='guardian'`. Built in step 2.8d: the code goes by text, or by email while texts aren't available, and until it's given the account plays like a guest (no username, no friends).
    - No ads personalisation, no Question Factory submissions, no prize events, no public leaderboard name (shown as "Player from Lagos"), friends only through codes or links (not discoverable by contacts), and family-safe content only.
    - Tracked for the service and for safety only: never in marketing segments, push campaigns, price experiments or session replay.
 3. 18+: full account.

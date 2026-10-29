@@ -23,7 +23,7 @@ import type { AccessClaims } from '../auth/tokens';
 import { withTransaction, type PoolClient } from '../db';
 import { ApiError, notFound, parse } from '../errors';
 import { requestEventContext } from '../events';
-import { profileCards } from '../profile/routes';
+import { guardianConsentRequired, profileCards } from '../profile/routes';
 import { queuePush } from '../push/queue';
 import { pairOf } from './graph';
 
@@ -36,7 +36,7 @@ const UserParams = z.object({ userId: z.string().min(3).max(40) });
 export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
   const { pool, redis, clock, events } = deps;
 
-  function requireAccount(request: FastifyRequest): AccessClaims {
+  async function requireAccount(request: FastifyRequest): Promise<AccessClaims> {
     const auth = requireAuth(request);
     if (auth.guest) {
       throw new ApiError(
@@ -46,6 +46,12 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
         'Guests can still play by link.',
       );
     }
+    // A 13–17 account plays like a guest until a parent or guardian agrees (step 2.8d).
+    const waiting = await pool.query(
+      "SELECT 1 FROM users WHERE id = $1 AND status = 'restricted' AND guardian_consent_at IS NULL",
+      [auth.userId],
+    );
+    if (waiting.rowCount) throw guardianConsentRequired();
     return auth;
   }
 
@@ -69,7 +75,7 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
   }
 
   app.get('/v1/friends', async (request): Promise<FriendsResponse> => {
-    const me = requireAccount(request).userId;
+    const me = (await requireAccount(request)).userId;
     const pairs = await pool.query<{
       other: string;
       status: 'pending' | 'accepted' | 'blocked';
@@ -114,7 +120,7 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
   });
 
   app.post('/v1/friends/requests', async (request, reply) => {
-    const me = requireAccount(request).userId;
+    const me = (await requireAccount(request)).userId;
     const body = parse(FriendRequest, request.body);
     const target = (
       await pool.query<{ id: string }>(
@@ -183,7 +189,7 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
   }
 
   app.post('/v1/friends/requests/:userId/accept', async (request): Promise<FriendRequestResult> => {
-    const me = requireAccount(request).userId;
+    const me = (await requireAccount(request)).userId;
     const { userId: them } = parse(UserParams, request.params);
     const outcome = await withTransaction(pool, async (client) => {
       await lockPair(client, me, them);
@@ -201,7 +207,7 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
   });
 
   app.post('/v1/friends/requests/:userId/decline', async (request, reply) => {
-    const me = requireAccount(request).userId;
+    const me = (await requireAccount(request)).userId;
     const { userId: them } = parse(UserParams, request.params);
     const deleted = await pool.query(
       `DELETE FROM friendships
@@ -215,7 +221,7 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
 
   /** Unfriend, or cancel a request you sent. A block is left alone (that is DELETE /blocks). */
   app.delete('/v1/friends/:userId', async (request, reply) => {
-    const me = requireAccount(request).userId;
+    const me = (await requireAccount(request)).userId;
     const { userId: them } = parse(UserParams, request.params);
     await pool.query(
       `DELETE FROM friendships
@@ -231,7 +237,7 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
    * challenges both ways. Neither side is told who blocked whom.
    */
   app.post('/v1/blocks', async (request, reply) => {
-    const me = requireAccount(request).userId;
+    const me = (await requireAccount(request)).userId;
     const { user_id: them } = parse(BlockRequest, request.body);
     if (them === me)
       throw new ApiError(400, ErrorCode.validation, 'The request is not valid', "You can't block yourself.");
@@ -253,7 +259,7 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
   });
 
   app.delete('/v1/blocks/:userId', async (request, reply) => {
-    const me = requireAccount(request).userId;
+    const me = (await requireAccount(request)).userId;
     const { userId: them } = parse(UserParams, request.params);
     await pool.query(
       `DELETE FROM friendships
@@ -266,7 +272,7 @@ export function socialRoutes(app: FastifyInstance, deps: AppDeps): void {
 
   /** Contact discovery by hash prefix (FR-SOC-2). The app only: the web has no contacts. */
   app.post('/v1/discovery/prefixes', async (request): Promise<DiscoveryResponse> => {
-    const auth = requireAccount(request);
+    const auth = await requireAccount(request);
     if (auth.platform === 'web') {
       throw new ApiError(403, ErrorCode.forbidden, 'Finding friends from contacts is in the app');
     }

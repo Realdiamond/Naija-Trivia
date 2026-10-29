@@ -217,10 +217,14 @@ describe('the age gate (doc 10 §3.3)', () => {
       age_band: '13_17',
       family_mode: true,
       discoverable: false,
+      guardian: 'needed',
     });
     expect((await patchMe(teen.access, { family_mode: false })).statusCode).toBe(403);
     expect((await patchMe(teen.access, { discoverable: true })).statusCode).toBe(403);
-    expect((await patchMe(teen.access, { username: uniqueName('teen') })).statusCode).toBe(200);
+    // No name until a parent or guardian agrees (step 2.8d, test/guardian.test.ts).
+    expect((await patchMe(teen.access, { username: uniqueName('teen') })).json().code).toBe(
+      'GUARDIAN_CONSENT_REQUIRED',
+    );
   });
 
   it('keeps the answer a guest gave when they sign up', async () => {

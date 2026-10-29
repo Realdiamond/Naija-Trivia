@@ -35,6 +35,7 @@ interface MeRow {
   discoverable: boolean;
   push_off: Me['push_off'];
   age_band: Me['age_band'];
+  guardian_consent_at: Date | null;
   xp: string | number;
   created_at: Date;
   rating: number | null;
@@ -42,7 +43,7 @@ interface MeRow {
 
 const ME_SQL = `
   SELECT u.id, u.username, u.status, u.avatar_id, u.home_state, u.language, u.data_saver, u.family_mode,
-         u.discoverable, u.push_off, u.age_band, u.xp, u.created_at, r.rating
+         u.discoverable, u.push_off, u.age_band, u.guardian_consent_at, u.xp, u.created_at, r.rating
     FROM users u LEFT JOIN ratings r ON r.user_id = u.id AND r.scope = 'overall'
    WHERE u.id = $1`;
 
@@ -58,17 +59,20 @@ const SETTABLE = [
   'push_off',
 ] as const;
 
+/** The player's own profile and settings, as GET /v1/me returns them. */
+export async function currentMe(pool: Pool, userId: string, now: number): Promise<Me> {
+  const [row, staff, notices] = await Promise.all([
+    loadMe(pool, userId),
+    isStaffPlayer(pool, userId, now),
+    unseenNotices(pool, userId),
+  ]);
+  return toMe(row, staff, notices);
+}
+
 export function profileRoutes(app: FastifyInstance, deps: AppDeps): void {
   const { pool, clock } = deps;
 
-  const me = async (userId: string): Promise<Me> => {
-    const [row, staff, notices] = await Promise.all([
-      loadMe(pool, userId),
-      isStaffPlayer(pool, userId, clock.now()),
-      unseenNotices(pool, userId),
-    ]);
-    return toMe(row, staff, notices);
-  };
+  const me = (userId: string): Promise<Me> => currentMe(pool, userId, clock.now());
 
   app.get('/v1/me', async (request): Promise<Me> => me(requireAuth(request).userId));
 
@@ -98,6 +102,8 @@ export function profileRoutes(app: FastifyInstance, deps: AppDeps): void {
             'Guests play without one.',
           );
         }
+        // No name until a parent or guardian has agreed (step 2.8d).
+        if (restricted && !me.guardian_consent_at) throw guardianConsentRequired();
         // Chosen once; support handles changes and moderators can force a rename (doc 16).
         if (me.username && me.username.toLowerCase() !== body.username.toLowerCase()) {
           throw conflict(
@@ -218,6 +224,14 @@ async function loadMe(db: Pool | PoolClient, userId: string, lock = false): Prom
   return row;
 }
 
+export const guardianConsentRequired = () =>
+  new ApiError(
+    403,
+    ErrorCode.guardianConsentRequired,
+    'Ask a parent or guardian first',
+    'Players under 18 need a parent or guardian to agree before they use an account.',
+  );
+
 function toMe(row: MeRow, staff: boolean, notices: PlayerNotice[]): Me {
   const xp = Number(row.xp);
   const progress = levelForXp(xp);
@@ -235,6 +249,7 @@ function toMe(row: MeRow, staff: boolean, notices: PlayerNotice[]): Me {
     discoverable: row.discoverable,
     push_off: row.push_off,
     age_band: row.age_band,
+    guardian: row.status !== 'restricted' ? 'not_needed' : row.guardian_consent_at ? 'given' : 'needed',
     level: progress.level,
     xp,
     xp_into_level: progress.xpIntoLevel,

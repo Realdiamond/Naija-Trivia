@@ -21,6 +21,9 @@ export const routes = {
   meDelete: () => `${API_PREFIX}/me/delete`,
   meExport: () => `${API_PREFIX}/me/export`,
   meAge: () => `${API_PREFIX}/me/age`,
+  /** A parent's or guardian's consent for a 13–17 account (step 2.8d). */
+  meGuardianSend: () => `${API_PREFIX}/me/guardian/send`,
+  meGuardianVerify: () => `${API_PREFIX}/me/guardian/verify`,
   meConsents: () => `${API_PREFIX}/me/consents`,
   /** POST to turn pushes on for this phone, DELETE (same body shape, the token) to turn them off. */
   meDevices: () => `${API_PREFIX}/me/devices`,

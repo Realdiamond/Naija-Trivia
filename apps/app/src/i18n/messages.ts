@@ -134,6 +134,19 @@ export const en = {
   'home.random': 'Random opponent',
   'home.soon': 'Soon',
   'home.paused': 'Taking a break',
+  'guardian.title': 'Ask a parent or guardian',
+  'guardian.body':
+    "You're under 18, so a parent or guardian has to agree before you play with an account. We'll send them a code, and if they agree, they give it to you.",
+  'guardian.rules':
+    'Your account stays safe: family-safe questions only, no name on public leaderboards, and nobody finds you by your number.',
+  'guardian.phone': 'Their phone number',
+  'guardian.email': 'Their email address',
+  'guardian.send': 'Send them a code',
+  'guardian.codeTitle': 'Type the code they got',
+  'guardian.codeSent': 'We sent a code to {to}. Ask them for it.',
+  'guardian.unavailable':
+    "We can't send codes right now. Ask your parent or guardian to email help@whosabi.ng.",
+  'guardian.later': 'Not now: sign out and play as a guest',
   'install.title': 'Put Who Sabi? on your home screen',
   'install.body': 'It opens like an app, loads faster and uses less data.',
   'install.iosSteps': 'In Safari, tap the Share button, then "Add to Home Screen".',
@@ -649,6 +662,18 @@ export const pcm: Record<MessageKey, string> = {
   'home.random': 'Random opponent',
   'home.soon': 'E dey come',
   'home.paused': 'E dey rest small',
+  'guardian.title': 'Ask your papa, mama or guardian',
+  'guardian.body':
+    'You never reach 18, so your papa, mama or guardian must agree before you play with account. We go send them code; if dem agree, dem go give you am.',
+  'guardian.rules':
+    'Your account go dey safe: na only family-safe questions, your name no go show for public leaderboards, and nobody fit find you by your number.',
+  'guardian.phone': 'Their phone number',
+  'guardian.email': 'Their email address',
+  'guardian.send': 'Send them code',
+  'guardian.codeTitle': 'Type the code wey dem get',
+  'guardian.codeSent': 'We don send code to {to}. Ask them for am.',
+  'guardian.unavailable': 'We no fit send code now. Make your papa, mama or guardian email help@whosabi.ng.',
+  'guardian.later': 'No be now: sign out and play as guest',
   'install.title': 'Put Who Sabi? for your home screen',
   'install.body': 'E go open like app, load quick and use small data.',
   'install.iosSteps': 'For Safari, tap the Share button, then "Add to Home Screen".',

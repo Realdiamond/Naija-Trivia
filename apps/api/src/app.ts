@@ -15,6 +15,7 @@ import { registerAuth } from './auth/context';
 import type { TokenService } from './auth/tokens';
 import type { Clock } from './clock';
 import type { Config } from './config';
+import { guardianRoutes } from './compliance/guardian';
 import { complianceRoutes } from './compliance/routes';
 import { contentRoutes } from './content/routes';
 import { dailyRoutes } from './daily/routes';
@@ -138,6 +139,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   contentRoutes(app, deps);
   profileRoutes(app, deps);
   complianceRoutes(app, deps);
+  guardianRoutes(app, deps);
   pushRoutes(app, deps);
   socialRoutes(app, deps);
   rttRoutes(app, deps);

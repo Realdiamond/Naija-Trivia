@@ -495,6 +495,16 @@ TRD FR-WEB-3, UX §3 and §4, PRD F18.
 - Left for later: Practice packs offline (with Practice itself), the "Get the app" banner for mobile browsers (once the Play Store listing is live), and making the light party client installable
 - ✅ Tests: the app in the browser (files kept and a repeat visit served from the phone, the app opening offline; the install card from the second visit, "Not now" for a week, Install showing the browser's prompt)
 
+### Step 2.8d · Guardian consent for 13–17s ✅
+Doc 10 §3.3, NDPA s.31.
+
+- ✅ A player who says they're 13–17 when they set up their profile is asked for a parent or guardian next: a code goes to the parent's phone by text (or to their email, for when texts aren't set up), explaining what they agree to, and the parent gives it to the player if they agree. Never to the player's own number or address; the same limits and human check as sign-in codes; the code works only for the player who asked
+- ✅ Until then the account plays like a guest: no username and no friends (`GUARDIAN_CONSENT_REQUIRED`), and the app keeps them on the guardian screen, with "Not now: sign out and play as a guest". What they typed on the profile screen is saved the moment the parent agrees
+- ✅ The consent is a `consent_records` row (purpose `guardian`) saying how it was given, with the parent's number or address only masked and hashed; it's in the player's data download (without the contact)
+- ✅ Ads for 13–17 players are tagged as for someone under the age of consent (`tagForUnderAgeOfConsent`)
+- Left for later: deleting accounts a parent never confirmed (with the retention jobs), and the console showing it on User 360
+- ✅ Tests: the API (text and email, the record, the name and friends refused then allowed, someone else's code, wrong codes, the player's own email, only for 13–17s); the app in the browser (a teen asks, the parent's code brings them home with their name; "Not now")
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
@@ -504,7 +514,7 @@ TRD FR-WEB-3, UX §3 and §4, PRD F18.
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
-| 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
+| 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |
 

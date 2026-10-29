@@ -1,7 +1,8 @@
 /**
  * Ads on phones (doc 11 §2, build plan step 2.4c), through Google AdMob. Requests are always
  * for non-personalised ads (the consent banner promises no ad tracking) rated PG; gambling ads
- * are blocked in the AdMob console too (doc 11 §7). Without our own ad unit ids in the build,
+ * are blocked in the AdMob console too (doc 11 §7), and a 13–17 player's are tagged as for
+ * someone under the age of consent (doc 10 §3.3). Without our own ad unit ids in the build,
  * Google's test units show.
  */
 import mobileAds, {
@@ -12,6 +13,7 @@ import mobileAds, {
   RewardedAdEventType,
   TestIds,
 } from 'react-native-google-mobile-ads';
+import { useSession } from '../auth/session';
 
 export type RewardedOutcome = 'earned' | 'closed' | 'failed' | 'unavailable';
 
@@ -22,11 +24,16 @@ const REQUEST = { requestNonPersonalizedAdsOnly: true };
 export const adsAvailable = true;
 
 let started: Promise<unknown> | null = null;
-/** Sets the content rating and starts the SDK, once; every ad waits for it. */
-export function startAds(): Promise<unknown> {
-  started ??= mobileAds()
-    .setRequestConfiguration({ maxAdContentRating: MaxAdContentRating.PG })
-    .then(() => mobileAds().initialize());
+/**
+ * Sets the rating, and the under-age tag for whoever plays now, then starts the SDK (once);
+ * every ad waits for it.
+ */
+export async function startAds(): Promise<unknown> {
+  await mobileAds().setRequestConfiguration({
+    maxAdContentRating: MaxAdContentRating.PG,
+    tagForUnderAgeOfConsent: useSession.getState().user?.status === 'restricted',
+  });
+  started ??= mobileAds().initialize();
   return started;
 }
 

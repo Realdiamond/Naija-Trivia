@@ -91,7 +91,9 @@ export async function exportAccount(
   const [signIns, consents, duels, dailies, party, ledger, purchases, devices, notices] = await Promise.all([
     q(`SELECT provider, subject, created_at FROM auth_identities WHERE user_id = $1 ORDER BY created_at`),
     q(
-      `SELECT purpose, granted, policy_version, source, created_at FROM consent_records WHERE user_id = $1 ORDER BY id`,
+      // How a parent or guardian agreed (step 2.8d), without their masked number or address.
+      `SELECT purpose, granted, policy_version, source, details->>'method' AS method, created_at
+         FROM consent_records WHERE user_id = $1 ORDER BY id`,
     ),
     q(
       `SELECT d.id, d.source, d.state, d.created_at, d.completed_at,
