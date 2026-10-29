@@ -40,6 +40,7 @@ import { adminEventRoutes } from './events';
 import { adminLiveOpsRoutes } from './liveops';
 import { adminModerationRoutes } from './moderation';
 import { adminPlayer360Routes } from './player360';
+import { adminSegmentRoutes } from './segments';
 import { adminPlayerRoutes } from './players';
 import { AdminSessions } from './sessions';
 
@@ -122,9 +123,11 @@ export function adminRoutes(app: FastifyInstance, deps: AppDeps): void {
     return startSession(request, identity.email.toLowerCase(), 'google');
   });
 
-  // Development and tests sign in by email alone; production never has this route.
+  // Development and tests sign in by email alone; production never has this route. The browser
+  // tests sign in as one staff member after another from one address, so it allows more.
   if (config.env !== 'production') {
-    app.post('/admin/auth/dev', signInLimit, async (request) =>
+    const devLimit = { config: { rateLimit: { max: 200, timeWindow: '1 minute' } } };
+    app.post('/admin/auth/dev', devLimit, async (request) =>
       startSession(request, parse(AdminDevSignIn, request.body).email.toLowerCase(), 'dev'),
     );
   }
@@ -290,6 +293,7 @@ export function adminRoutes(app: FastifyInstance, deps: AppDeps): void {
   adminAnalyticsRoutes(app, deps, ctx);
   adminAlertRuleRoutes(app, deps, ctx);
   adminComplianceOverviewRoutes(app, deps, ctx);
+  adminSegmentRoutes(app, deps, ctx);
   adminModerationRoutes(app, deps, ctx);
   adminDailyRoutes(app, deps, ctx);
   adminComplianceRoutes(app, deps, ctx);

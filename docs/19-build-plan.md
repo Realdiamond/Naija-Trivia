@@ -531,6 +531,15 @@ Doc 18 §14, doc 08 §4.
 - Left for later: ClickHouse rows (when it arrives, M3), backups' 35 days (set on the database host)
 - ✅ Tests: the API (the job removes only what is past its time, keeps answers' points, runs once a night after 03:00 and records each rule; the overview; who may record a review); the console in the browser (the DPO checks the tabs and records a review)
 
+### Step 2.7o · Segments ✅
+Doc 18 §9 ("Segments"), §8 (exports with approval).
+
+- ✅ The console's **Segments** page for owners, admins, analysts and growth (`segments.manage`): build a group of players from conditions that must all hold (home state, platform, age band, guest or signed up, joined, played or not played in the last days, duels finished in a period, bought coins or never, coins, level and Daily streak at least), count it before saving, save it with a name, delete it
+- ✅ **Size day by day**: a saved segment is counted when saved and each night after 02:00 WAT; the page shows the last 30 days
+- ✅ **Exports with approval** (four eyes): asking needs a reason; an owner or admin who did not ask approves or turns it down (`segments.approve`); for a day after approval only the person who asked can download it, as CSV of pseudonymous ids with platform, home state and age band (no names, numbers or user ids), up to 200,000 players. Every save, ask, decision and download is in the audit log
+- Left for later: using a segment as a dashboard filter, an experiment audience, or (v1.1) a push campaign audience
+- ✅ Tests: the API (each condition counted against known players; bad definitions; saving, the nightly count and the trend; exports asked, turned down, approved by someone else only, downloaded only by the asker, expiring after a day; all audited); the console in the browser (an analyst builds and saves a segment and asks to export it, an admin approves, the analyst downloads it)
+
 ### Step 2.8a · Account deletion and data requests ✅
 NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the first.
 
@@ -587,7 +596,7 @@ TRD §2 ("Crash / perf": Sentry), doc 18's `crash_free_sessions`.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅, 2.7n ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅, 2.7n ✅, 2.7o ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |

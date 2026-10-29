@@ -3,6 +3,7 @@ export * from './adminAlertRules';
 export * from './adminAnalytics';
 export * from './adminCompliance';
 export * from './adminContent';
+export * from './adminSegments';
 export * from './auth';
 export * from './common';
 export * from './content';

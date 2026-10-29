@@ -3,7 +3,7 @@
  * ends overdue duels, seats the Sabi Bot in random duels nobody took and plays its turns, sends
  * pushes and queues turn and Daily reminders, picks the Daily, saves final leaderboard ranks,
  * retires expired questions, moves question stats into Postgres, loads analytics events,
- * checks the threshold alert rules and removes data past its retention time.
+ * checks the threshold alert rules, removes data past its retention time and counts segments.
  *
  * Every job is safe with several workers running (locked rows, claimed reminder rows, a Redis
  * lock, a stream consumer group), so the worker scales by running more copies and needs no job
@@ -17,6 +17,7 @@ import { loadConfig } from './config';
 import { DailyService } from './daily/service';
 import { DevEmail, ResendEmail } from './auth/email';
 import { createPool } from './db';
+import { countSegments } from './admin/segments';
 import { DuelService } from './duels/service';
 import { ServerEvents } from './events';
 import { checkAlertRules } from './jobs/alertRules';
@@ -149,6 +150,7 @@ const jobs = [
   every('ledger-check', 10 * MINUTE, () => checkLedger(deps)),
   every('alert-rules', MINUTE, () => checkAlertRules(deps, alertOutlets)),
   every('retention', 10 * MINUTE, () => applyRetention(deps)),
+  every('segment-counts', 10 * MINUTE, () => countSegments(deps)),
   every('analytics-upkeep', 60 * MINUTE, () => loader.maintain(config.analyticsRetentionDays)),
   loadEvents(),
 ];

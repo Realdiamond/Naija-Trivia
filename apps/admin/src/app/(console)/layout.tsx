@@ -18,6 +18,7 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
     ...(ANALYTICS_BOARDS.some((b) => me.permissions.includes(ANALYTICS_BOARD_PERMISSION[b]))
       ? [{ href: '/analytics', label: 'Analytics' }]
       : []),
+    ...(me.permissions.includes('segments.manage') ? [{ href: '/segments', label: 'Segments' }] : []),
     ...(me.permissions.includes('players.search') ? [{ href: '/players', label: 'Players' }] : []),
     ...(me.permissions.includes('players.moderate') ? [{ href: '/integrity', label: 'Integrity' }] : []),
     ...(me.permissions.includes('liveops.daily') ? [{ href: '/daily', label: 'Daily' }] : []),

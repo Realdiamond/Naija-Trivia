@@ -44,6 +44,8 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'analytics.integrity',
     'alerts.manage',
     'compliance.review',
+    'segments.manage',
+    'segments.approve',
   ],
   admin: [
     ...PLAYER_SUPPORT,
@@ -64,6 +66,8 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'analytics.tech',
     'analytics.integrity',
     'alerts.manage',
+    'segments.manage',
+    'segments.approve',
   ],
   dpo: [
     ...PLAYER_SUPPORT.filter((p) => p !== 'players.support'),
@@ -91,8 +95,9 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'analytics.content',
     'analytics.tech',
     'analytics.integrity',
+    'segments.manage',
   ],
-  growth: ['overview.view', 'analytics.kpi'],
+  growth: ['overview.view', 'analytics.kpi', 'segments.manage'],
   liveops: [
     'content.view',
     'overview.view',

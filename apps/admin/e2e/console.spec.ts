@@ -604,6 +604,53 @@ test('the DPO checks what is kept and the consent rates, and records the access 
   await expect(page.getByTestId('last-review')).toContainText('Q4: every role still needed');
 });
 
+test('an analyst builds and saves a segment, an admin approves its export, the analyst downloads it', async ({
+  page,
+}) => {
+  const analystEmail = `e2e-analyst-${randomInt(1e9)}@whosabi.ng`;
+  const adminEmail = `e2e-admin-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(analystEmail, 'analyst');
+  addStaff(adminEmail, 'admin');
+  const signIn = async (email: string) => {
+    await page.goto('/login');
+    await page.getByTestId('dev-email').fill(email);
+    await page.getByTestId('dev-sign-in').click();
+    await expect(page.getByTestId('staff-name')).toBeVisible();
+  };
+  const name = `Android players ${randomInt(1e6)}`;
+
+  await signIn(analystEmail);
+  await page.getByRole('link', { name: 'Segments' }).click();
+  const builder = page.getByTestId('segment-builder');
+  await builder.getByLabel('Condition 1').selectOption('platform');
+  await page.getByTestId('count-segment').click();
+  await expect(page.getByTestId('segment-count')).toContainText('players right now');
+  await builder.getByLabel('Name').fill(name);
+  await builder.getByRole('button', { name: 'Save segment' }).click();
+  await expect(page.getByTestId('segment-saved')).toBeVisible();
+  const saved = page.getByTestId('segments').locator('.card', { hasText: name });
+  await expect(saved).toContainText('plays on android');
+  await saved.getByLabel('Why export it?').fill('Invite Android players to a beta');
+  await saved.getByRole('button', { name: 'Ask to export' }).click();
+  const row = page.getByTestId('exports').getByRole('row', { name: new RegExp(name) });
+  await expect(row).toContainText('Waiting for approval');
+
+  await signIn(adminEmail);
+  await page.goto('/segments');
+  const pending = page.getByTestId('exports').getByRole('row', { name: new RegExp(name) });
+  await pending.getByRole('button', { name: 'Approve' }).click();
+  await expect(pending).toContainText('Approved by');
+  // Only the one who asked can download it.
+  await expect(pending.getByRole('link', { name: 'Download CSV' })).toHaveCount(0);
+
+  await signIn(analystEmail);
+  await page.goto('/segments');
+  const mine = page.getByTestId('exports').getByRole('row', { name: new RegExp(name) });
+  const download = page.waitForEvent('download');
+  await mine.getByRole('link', { name: 'Download CSV' }).click();
+  expect((await download).suggestedFilename()).toMatch(/^whosabi-segment-export-sx_.+\.csv$/);
+});
+
 test('someone not on the staff list is turned away', async ({ page }) => {
   await page.goto('/login');
   await page.getByTestId('dev-email').fill('stranger@example.com');
