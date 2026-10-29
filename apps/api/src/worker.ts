@@ -29,6 +29,7 @@ import { flushQuestionStats } from './jobs/questionStats';
 import { queueDailyReminders } from './jobs/dailyReminder';
 import { queueTurnReminders } from './jobs/reminders';
 import { migrate } from './migrate';
+import { flushReports, reportError, startMonitoring } from './monitoring';
 import { prunePushes, sendDuePushes } from './push/dispatch';
 import { FcmTransport, LogTransport, PushRouter } from './push/transport';
 import { WebPushTransport } from './push/webpush';
@@ -39,6 +40,7 @@ const MINUTE = 60 * SECOND;
 
 const config = loadConfig();
 const log = pino({ level: config.logLevel, base: { service: 'worker' } });
+startMonitoring(config, 'worker');
 const pool = createPool(config.databaseUrl);
 const redis = createRedis(config, { maxRetriesPerRequest: 2 });
 // A blocking stream read holds its connection, so the loader gets one of its own.
@@ -80,7 +82,9 @@ async function every(name: string, intervalMs: number, job: () => Promise<unknow
       if (result) log.info({ job: name, result }, 'job done');
     } catch (err) {
       log.error({ err, job: name }, 'job failed');
-      if (++failures === FAILURES_TO_ALERT) await jobFailing(name, err);
+      // Reported once per run of failures, not every tick.
+      if (++failures === 1) reportError(err, { job: name });
+      if (failures === FAILURES_TO_ALERT) await jobFailing(name, err);
     }
     await pause(intervalMs);
   }
@@ -106,6 +110,7 @@ async function loadEvents(): Promise<void> {
     } catch (err) {
       if (stop.signal.aborted) return; // shutdown closed the connection mid-read; nothing was lost
       log.error({ err, job: 'analytics-loader' }, 'job failed');
+      reportError(err, { job: 'analytics-loader' });
       await pause(5 * SECOND);
     }
   }
@@ -138,7 +143,7 @@ const shutdown = async (signal: string) => {
   stop.abort();
   streamRedis.disconnect(); // ends a blocking read at once
   await Promise.allSettled(jobs);
-  await Promise.allSettled([pool.end(), redis.quit()]);
+  await Promise.allSettled([pool.end(), redis.quit(), flushReports()]);
   process.exit(0);
 };
 process.once('SIGTERM', () => void shutdown('SIGTERM'));

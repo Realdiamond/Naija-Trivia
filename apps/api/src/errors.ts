@@ -2,6 +2,7 @@
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { ErrorCode, type Problem } from '@whosabi/shared-types';
 import type { z } from 'zod';
+import { reportError } from './monitoring';
 
 export class ApiError extends Error {
   constructor(
@@ -74,6 +75,12 @@ export function registerErrorHandlers(app: FastifyInstance, fallback?: NotFoundF
       );
     } else {
       request.log.error({ err: error }, 'unhandled error');
+      reportError(error, {
+        requestId: request.id,
+        route: request.routeOptions.url,
+        method: request.method,
+        userId: request.auth?.userId,
+      });
       problem = problemFor(500, ErrorCode.internal, 'Something went wrong on our side', request.id);
     }
     void reply.code(problem.status).type('application/problem+json').send(problem);

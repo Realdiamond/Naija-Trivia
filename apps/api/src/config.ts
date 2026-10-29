@@ -8,6 +8,10 @@ const Env = z.object({
   HOST: z.string().default('0.0.0.0'),
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  /** Where unexpected errors are reported (Sentry → Project settings → Client keys). Off without it. */
+  SENTRY_DSN: z.url().optional(),
+  /** Which build is running, for error reports: Heroku sets it with runtime dyno metadata. */
+  HEROKU_SLUG_COMMIT: z.string().min(7).max(64).optional(),
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   /**
@@ -106,6 +110,8 @@ export interface Config {
   host: string;
   port: number;
   logLevel: string;
+  sentryDsn?: string;
+  release?: string;
   databaseUrl: string;
   redisUrl: string;
   redisTlsVerify: boolean;
@@ -176,6 +182,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     host: e.HOST,
     port: e.PORT,
     logLevel: e.LOG_LEVEL,
+    sentryDsn: e.SENTRY_DSN,
+    release: e.HEROKU_SLUG_COMMIT,
     databaseUrl: e.DATABASE_URL,
     redisUrl: e.REDIS_URL,
     redisTlsVerify: e.REDIS_TLS_VERIFY === 'true',

@@ -27,12 +27,18 @@ import { startDataSaver } from '../features/dataSaver/store';
 import { showsSideNav, SideNav } from '../features/nav/SideNav';
 import { useLanguage } from '../i18n';
 import '../platform/install';
+import { startCrashReports, withCrashReports } from '../platform/crashReports';
 import { syncPush, usePushHandlers } from '../platform/push';
 import { startServiceWorker } from '../platform/serviceWorker';
 import { useIsDesktop } from '../ui/layout';
 import { colors } from '../ui/theme';
 
-export default function RootLayout() {
+// As early as possible, so a crash while starting up is reported too (step 2.8e).
+startCrashReports();
+
+export default withCrashReports(RootLayout);
+
+function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Nunito_400Regular,
     Nunito_600SemiBold,

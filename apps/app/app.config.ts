@@ -7,6 +7,9 @@
  *   API serves both once ANDROID_CERT_SHA256 / APPLE_TEAM_ID are set.
  * - AdMob (step 2.4c): ADMOB_ANDROID_APP_ID and ADMOB_IOS_APP_ID (AdMob → Apps → App settings).
  *   Without them the build uses Google's sample app ids, which only ever show test ads.
+ * - Crash reports (step 2.8e): EXPO_PUBLIC_SENTRY_DSN turns them on. With SENTRY_ORG and
+ *   SENTRY_PROJECT too (and SENTRY_AUTH_TOKEN as an EAS secret), the build uploads its source
+ *   maps, so reports show our code rather than the minified bundle.
  */
 import { existsSync } from 'node:fs';
 import type { ConfigContext, ExpoConfig } from 'expo/config';
@@ -57,5 +60,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         iosAppId: process.env.ADMOB_IOS_APP_ID ?? ADMOB_SAMPLE.ios,
       },
     ],
+    ...(process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
+      ? [
+          [
+            '@sentry/react-native/expo',
+            { organization: process.env.SENTRY_ORG, project: process.env.SENTRY_PROJECT },
+          ] as [string, Record<string, string>],
+        ]
+      : []),
   ],
 });
