@@ -153,7 +153,8 @@ A **seat** is `{room_id, code, token, socket_path, expires_at}`. The token is a 
 | GET | `/shop` | Cosmetics, packs, offers (remote-config priced) |
 | POST | `/shop/purchase` | `{item_id, currency}` (coins/gems only; real money goes through the stores) |
 | POST | `/inventory/equip` | `{cosmetic_id}` |
-| GET | `/ads/ssv` | **AdMob SSV callback** (signature verified with Google's public keys; dedupe by `transaction_id`) |
+| GET | `/ads/ssv` | **AdMob SSV callback** (step 2.4c). The signature over the query string up to `&signature=` is checked against Google's published keys (fetched daily, and again for an unknown `key_id`); `403` if it doesn't verify. Pays 25 coins to `user_id` when `custom_data` is `coins` (the server's amount, not the callback's), once per `transaction_id`, up to 10 a WAT day; every callback is kept in `ad_rewards`. Anything accepted is `200 {outcome: granted|capped|duplicate|not_ours}`, so Google stops retrying |
+| GET | `/ads/rewarded` | Step 2.4c. `{coins, left_today}`: what a rewarded video pays and how many more will pay today |
 | POST | `/webhooks/revenuecat` | Entitlement updates (auth header secret) |
 | POST | `/payments/paystack/initialize` | Web only (v1.1). `{sku}` → `{authorization_url, access_code, reference}` for Paystack's inline checkout |
 | POST | `/webhooks/paystack` | Web purchases (v1.1). Checks the `x-paystack-signature` HMAC-SHA512, verifies the transaction with Paystack's API, then grants through the ledger or entitlements (dedupe by `reference`) |

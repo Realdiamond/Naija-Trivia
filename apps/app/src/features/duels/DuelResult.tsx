@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { routes, type DuelView, type Me } from '@whosabi/shared-types';
+import { useInterstitial } from '../../ads/useInterstitial';
 import { trackEvent } from '../../analytics';
 import { errorMessage } from '../../api';
 import { useT } from '../../i18n';
@@ -28,6 +29,8 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
 
   const random = useRandomDuel('replace');
   const played = duel.state === 'complete' || duel.state === 'forfeit';
+  // Every 3rd finished duel, an interstitial as the player leaves (step 2.4c).
+  const leave = useInterstitial(played ? `duel:${duel.id}` : null);
   const { title, subtitle, background } = headline();
   // The Sabi Bot plays no rematches: a new random duel may find a person this time.
   const bot = duel.source === 'bot';
@@ -63,7 +66,7 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
       const next = await duels.rematch(duel.id);
       queryClient.setQueryData(duelKeys.one(next.id), next);
       void queryClient.invalidateQueries({ queryKey: duelKeys.all });
-      router.replace(`/duel/${next.id}`);
+      await leave(() => router.replace(`/duel/${next.id}`));
     } catch (e) {
       setError(errorMessage(e, t('error.network')));
       setBusy(false);
@@ -79,7 +82,7 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
               accessibilityRole="button"
               accessibilityLabel={t('duel.home')}
               hitSlop={12}
-              onPress={() => router.replace('/home')}
+              onPress={() => void leave(() => router.replace('/home'))}
               style={styles.close}
             >
               <Icon name="cross" color={colors.white} size={28} />
@@ -247,7 +250,7 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
             <Button
               label={t('duel.home')}
               variant="link"
-              onPress={() => router.replace('/home')}
+              onPress={() => void leave(() => router.replace('/home'))}
               testID="result-home"
             />
           </View>

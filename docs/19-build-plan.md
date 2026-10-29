@@ -372,12 +372,23 @@ GDD §5.2, API §2.5, mockup 11.
 - Left for later: lifelines in party rooms (two a game in GDD §5.2: web guests have no coins, and the room runs on its own clock) and paying for 50/50 with a rewarded ad (step 2.4c)
 - ✅ Tests: the rules (costs, 50/50 always the same two wrong options, Ask Naija adding up to 100 and leaning right); the API (each lifeline's effect and price, a free retry, once a duel, not enough coins changing nothing, not once answered, after time or out of turn, Extra Time's late answer with base points only, Skip's new question answered and in the review); the browser (the lifeline row under a duel question, off without coins)
 
+### Step 2.4c · Ads ✅
+TRD FR-ECO-2, doc 11 §2, API §2.8, PRD US-10.
+
+- ✅ **Rewarded videos pay 25 coins**, up to 10 a WAT day, from **Watch a video** on the Coins screen (phones; the web plays ad-free until v1.1). The coins come only from **AdMob's server-side verification**: `GET /v1/ads/ssv` checks Google's ECDSA signature against its published keys, pays the player named in the callback once per transaction, keeps every callback in `ad_rewards` (paid or over the cap), and answers 200 so Google stops retrying. The app looks at the wallet again for a few seconds after the video
+- ✅ **Interstitials after every 3rd finished duel**, never in a player's first session on the device and never during a question: one is loaded on the result screen when due and shown as the player leaves it (Home or Rematch). Counted on the device; a duel counts once however often its result is opened. The Sabi Pass (v1.1) will switch them off
+- ✅ Every request is for non-personalised ads (the consent banner promises no ad tracking) rated PG; gambling and betting are blocked in AdMob as well (doc 11 §7, deploy guide)
+- ✅ AdMob in the Android build (`react-native-google-mobile-ads`): `ADMOB_ANDROID_APP_ID` and the two ad unit ids; without them, Google's test ads (which never pay)
+- ✅ Analytics: `ad_requested`, `ad_shown`, `ad_reward_granted`, `coins_changed`
+- Left for later: paying for 50/50 with a video (a video can't play during a question, US-10), the results-screen banner (with Data Saver, 2.8), and web ads (v1.1)
+- ✅ Tests: the rules (25 coins, 10 a day, every 3rd match, not in the first session or with the pass); the API (a signed callback paying once, Google's retries, tampered or unsigned or unknown-key callbacks refused, the day's cap and the next day, Google's URL check, fetching Google's keys); the app (interstitial pacing on the device)
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
 | 2.2 Party rooms ✅ (2.2a, 2.2b, 2.2c) | Party room server (WebSockets in the API), party REST side, the app's party screens, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
 | 2.3 Random opponents ✅ | Rating-window matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
-| 2.4 Economy & monetisation (2.4a ✅, 2.4b ✅, 2.4c ⬜, 2.4d ⬜) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
+| 2.4 Economy & monetisation (2.4a ✅, 2.4b ✅, 2.4c ✅, 2.4d ⬜) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
@@ -403,5 +414,5 @@ These are for the team, not pull requests, and some steps wait on them.
 | Termii sender ID (and Africa's Talking), Turnstile keys | Only when phone sign-in is switched on | Not needed for launch. Registration and NCC approval take weeks. Then set `TERMII_API_KEY`, `TERMII_SENDER_ID` (and `AT_USERNAME`, `AT_API_KEY`), `OTP_SECRET`, `TURNSTILE_SECRET` and the app's `SMS_RETRIEVER_APP_HASH` |
 | Firebase project (FCM) | 2.5b, before the Android build | Free. Add an Android app with package `ng.whosabi.app` and send the developers its `google-services.json` (it identifies the app, not a secret: it goes in the repo). Then **Project settings → Service accounts → Generate new private key**: that file **is** a secret, so it goes straight into the game app's Heroku settings as `FIREBASE_SERVICE_ACCOUNT`, never into chat ([deploy guide](deploy/heroku.md#later)) |
 | Play app-signing SHA-256 fingerprint | 2.5a, once the app is on Play | Public, not a secret: Play Console → App integrity → App signing. Set `ANDROID_CERT_SHA256` so links open the installed app ([deploy guide](deploy/heroku.md#later)) |
-| Google Play developer account ✅, AdMob, RevenueCat | 2.4, M4 | The Play account exists and is an **organisation** account, so the rule that makes new personal accounts run a closed test with 12 testers for 14 days before publishing does not apply. AdMob approval takes 2–4 weeks: start it now |
+| Google Play developer account ✅, AdMob, RevenueCat | 2.4, M4 | The Play account exists and is an **organisation** account, so the rule that makes new personal accounts run a closed test with 12 testers for 14 days before publishing does not apply. AdMob approval takes 2–4 weeks: start it now. Then a rewarded unit with server-side verification pointing at `/v1/ads/ssv`, an interstitial unit, and gambling blocked; the app ID and unit IDs are not secrets ([deploy guide](deploy/heroku.md#later)) |
 | Legal review (NDPA, prizes, ARCON), DPO, DPIA | Before beta | Doc 10 |

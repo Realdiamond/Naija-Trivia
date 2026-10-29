@@ -74,6 +74,8 @@ export const routes = {
   partySocket: () => `${API_PREFIX}/party/socket`,
   /** Coins (step 2.4): the balance, and what moved it, newest first. */
   wallet: () => `${API_PREFIX}/wallet`,
+  /** Rewarded ads (step 2.4c): what one pays and how many more will pay today. */
+  rewardedAds: () => `${API_PREFIX}/ads/rewarded`,
   walletHistory: (before?: string) =>
     `${API_PREFIX}/wallet/history${before ? `?before=${encodeURIComponent(before)}` : ''}`,
   invite: (token: string) => `${API_PREFIX}/invites/${encodeURIComponent(token)}`,
