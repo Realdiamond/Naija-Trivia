@@ -697,3 +697,40 @@ fieldset.choices label {
     overflow-x: auto;
   }
 }
+
+/* LiveOps (step 2.7c) */
+.flag {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.flag h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.flag p {
+  margin: 4px 0 0;
+}
+.flag details {
+  margin-top: 8px;
+}
+.flag summary {
+  cursor: pointer;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.banner-preview {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--primary-tint);
+  color: var(--primary-ink);
+  font-weight: 700;
+}
+.banner-preview.warn {
+  background: #fff1e3;
+  color: #a84300;
+}

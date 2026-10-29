@@ -17,6 +17,8 @@ import { useWallet } from '../features/economy/api';
 import { currentRound, isUrgent, timeLeft } from '../features/duels/format';
 import { useOpponentName } from '../features/duels/parts';
 import { useRandomDuel } from '../features/duels/useRandomDuel';
+import { useFlag } from '../features/liveops/config';
+import { StatusBanner } from '../features/liveops/StatusBanner';
 import { useT } from '../i18n';
 import { staffToolsHere } from '../platform/staffLock';
 import { Avatar } from '../ui/Avatar';
@@ -37,6 +39,7 @@ export default function Home() {
   const daily = useDailyToday(signedIn);
   const wallet = useWallet(signedIn);
   const random = useRandomDuel();
+  const partyOn = useFlag('party.enabled');
 
   // Coming back from a duel or the Daily: show the new state at once.
   const { refetch: refetchActive } = active;
@@ -133,6 +136,7 @@ export default function Home() {
         ) : null}
       </View>
 
+      <StatusBanner />
       {daily.data ? <DailyBanner today={daily.data} /> : null}
 
       {yourTurn.length > 0 ? (
@@ -151,7 +155,13 @@ export default function Home() {
           onPress={() => router.push('/challenge')}
           testID="challenge"
         />
-        <Action icon="users" label={t('home.party')} onPress={() => router.push('/party')} testID="party" />
+        <Action
+          icon="users"
+          label={t('home.party')}
+          paused={!partyOn}
+          onPress={() => router.push('/party')}
+          testID="party"
+        />
         <Action
           icon="shuffle"
           label={t('home.random')}
@@ -329,6 +339,7 @@ function Action({
   label,
   onPress,
   soon = false,
+  paused = false,
   busy = false,
   testID,
 }: {
@@ -336,25 +347,28 @@ function Action({
   label: string;
   onPress?: () => void;
   soon?: boolean;
+  /** Switched off by staff for now (a kill switch, step 2.7c). */
+  paused?: boolean;
   busy?: boolean;
   testID?: string;
 }) {
   const t = useT();
+  const note = soon ? t('home.soon') : paused ? t('home.paused') : null;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={soon ? `${label} (${t('home.soon')})` : label}
-      accessibilityState={{ disabled: soon || busy, busy }}
-      disabled={soon || busy}
+      accessibilityLabel={note ? `${label} (${note})` : label}
+      accessibilityState={{ disabled: Boolean(note) || busy, busy }}
+      disabled={Boolean(note) || busy}
       onPress={onPress}
-      style={({ pressed }) => [styles.action, soon && styles.actionSoon, (pressed || busy) && styles.pressed]}
+      style={({ pressed }) => [styles.action, note && styles.actionSoon, (pressed || busy) && styles.pressed]}
       testID={testID}
     >
       <Icon name={icon} size={28} color={colors.primaryInk} />
       <Text variant="label" align="center">
         {label}
       </Text>
-      {soon ? <Text variant="caption">{t('home.soon')}</Text> : null}
+      {note ? <Text variant="caption">{note}</Text> : null}
     </Pressable>
   );
 }

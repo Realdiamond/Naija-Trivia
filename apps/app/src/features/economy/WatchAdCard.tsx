@@ -10,6 +10,7 @@ import { adsAvailable, showRewarded } from '../../ads';
 import { trackEvent } from '../../analytics';
 import { useSession } from '../../auth/session';
 import { useT } from '../../i18n';
+import { useFlag } from '../liveops/config';
 import { Icon } from '../../ui/icons';
 import { Text } from '../../ui/Text';
 import { colors, radius } from '../../ui/theme';
@@ -18,11 +19,12 @@ import { useRewardedStatus, walletKeys } from './api';
 export function WatchAdCard({ placement }: { placement: 'coins' | 'shop' }) {
   const t = useT();
   const userId = useSession((s) => s.user?.id);
-  const rewarded = useRewardedStatus(adsAvailable && Boolean(userId));
+  const adsOn = useFlag('ads.enabled');
+  const rewarded = useRewardedStatus(adsAvailable && adsOn && Boolean(userId));
   const queryClient = useQueryClient();
   const [watching, setWatching] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  if (!adsAvailable || !rewarded.data) return null;
+  if (!adsAvailable || !adsOn || !rewarded.data) return null;
   const left = rewarded.data.left_today;
 
   const watch = async () => {

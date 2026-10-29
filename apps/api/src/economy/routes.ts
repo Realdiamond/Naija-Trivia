@@ -18,6 +18,7 @@ import {
   type WalletHistory,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
+import { audienceOf } from '../liveops/store';
 import { requireAuth } from '../auth/context';
 import { ApiError, parse } from '../errors';
 import { raiseStaffAlert } from '../admin/alerts';
@@ -39,7 +40,10 @@ export function economyRoutes(app: FastifyInstance, deps: AppDeps, adKeys: AdKey
     return { outcome };
   });
 
-  app.get('/v1/shop', async (): Promise<ShopResponse> => ({ packs: [...COIN_PACKS] }));
+  // Switched off (step 2.7c), the shop has nothing to sell; store purchases already made still pay.
+  app.get('/v1/shop', async (request): Promise<ShopResponse> => ({
+    packs: (await deps.liveops.isOn('shop.enabled', audienceOf(request))) ? [...COIN_PACKS] : [],
+  }));
 
   // The payment journey for staff alerts: once an hour per player for opening the shop, once in
   // ten minutes per pack for tapping buy, so a curious player doesn't flood anyone's phone.

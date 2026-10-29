@@ -223,6 +223,43 @@ test('support leaves a note, grants coins within the limit and signs a player ou
   expect(refresh.status()).toBe(401);
 });
 
+test('an on-call engineer switches party rooms off and back on, and puts up a banner', async ({
+  page,
+  request,
+}) => {
+  const email = `e2e-engineer-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'engineer');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await page.getByRole('link', { name: 'LiveOps' }).click();
+  await expect(page).toHaveURL(/\/liveops$/);
+  await expect(page.getByTestId('flag-state-party-enabled')).toHaveText('On for everyone');
+
+  await page.getByTestId('flag-change-party-enabled').click();
+  await page.getByTestId('flag-party-enabled-on').uncheck();
+  await page.getByTestId('flag-party-enabled-reason').fill('E2E: rooms dropping players');
+  await page.getByTestId('flag-party-enabled-save').click();
+  await expect(page.getByTestId('flag-state-party-enabled')).toHaveText('Off for everyone');
+  const config = await (await request.get(`${API}/v1/config`)).json();
+  expect(config.flags['party.enabled']).toBe(false);
+
+  await page.getByTestId('banner-en').fill('Party rooms are having issues. Duels still work.');
+  await page.getByTestId('banner-reason').fill('E2E: incident');
+  await page.getByTestId('banner-set').click();
+  await expect(page.getByTestId('banner-now')).toHaveText('Party rooms are having issues. Duels still work.');
+  expect((await (await request.get(`${API}/v1/config`)).json()).banner.text_en).toContain('Duels still work');
+
+  await page.getByTestId('banner-reason').fill('E2E: fixed');
+  await page.getByTestId('banner-clear').click();
+  await expect(page.getByTestId('banner-none')).toBeVisible();
+  // The flag's form is still open from before.
+  await page.getByTestId('flag-party-enabled-on').check();
+  await page.getByTestId('flag-party-enabled-reason').fill('E2E: fixed');
+  await page.getByTestId('flag-party-enabled-save').click();
+  await expect(page.getByTestId('flag-state-party-enabled')).toHaveText('On for everyone');
+});
+
 test('someone not on the staff list is turned away', async ({ page }) => {
   await page.goto('/login');
   await page.getByTestId('dev-email').fill('stranger@example.com');

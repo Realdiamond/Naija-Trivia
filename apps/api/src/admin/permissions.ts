@@ -22,23 +22,31 @@ const CONTENT_ALL: AdminPermission[] = [
 ];
 
 export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
-  owner: [...PLAYER_SUPPORT, 'audit.view', 'staff.manage', ...CONTENT_ALL, 'overview.view', 'live.manage'],
-  admin: [...PLAYER_SUPPORT, 'audit.view', ...CONTENT_ALL, 'overview.view', 'live.manage'],
+  owner: [
+    ...PLAYER_SUPPORT,
+    'audit.view',
+    'staff.manage',
+    ...CONTENT_ALL,
+    'overview.view',
+    'live.manage',
+    'liveops.flags',
+  ],
+  admin: [...PLAYER_SUPPORT, 'audit.view', ...CONTENT_ALL, 'overview.view', 'live.manage', 'liveops.flags'],
   dpo: [...PLAYER_SUPPORT.filter((p) => p !== 'players.support'), 'audit.view'],
   support: PLAYER_SUPPORT,
   // Moderators see players masked only.
   moderator: ['players.search', 'players.view', 'overview.view', 'live.manage'],
   analyst: ['content.view', 'overview.view'],
   growth: ['overview.view'],
-  liveops: ['content.view', 'overview.view'],
+  liveops: ['content.view', 'overview.view', 'liveops.flags'],
   editor: CONTENT_ALL,
   fact_checker: ['content.view', 'content.write', 'content.review'],
   // Writers see and edit their own questions only.
   writer: ['content.view', 'content.write'],
   finance: [],
   sponsor_manager: [],
-  // On call: the live numbers and rooms (doc 18 §6).
-  engineer: ['overview.view', 'live.manage'],
+  // On call: the live numbers and rooms (doc 18 §6), and the kill switches (§8).
+  engineer: ['overview.view', 'live.manage', 'liveops.flags'],
   viewer: ['overview.view'],
 };
 
