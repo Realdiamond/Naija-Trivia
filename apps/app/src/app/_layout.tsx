@@ -1,7 +1,7 @@
 /**
  * The root of the app: fonts, the saved language, Data Saver, the session, the analytics tracker,
- * push notifications and the navigation stack. Screens decide where a player goes from the session
- * (see index.tsx).
+ * push notifications, the web app's service worker and the navigation stack. Screens decide
+ * where a player goes from the session (see index.tsx).
  */
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, AppState, StyleSheet, View } from 'react-native';
@@ -26,7 +26,9 @@ import { loadConsent } from '../features/consent/store';
 import { startDataSaver } from '../features/dataSaver/store';
 import { showsSideNav, SideNav } from '../features/nav/SideNav';
 import { useLanguage } from '../i18n';
+import '../platform/install';
 import { syncPush, usePushHandlers } from '../platform/push';
+import { startServiceWorker } from '../platform/serviceWorker';
 import { useIsDesktop } from '../ui/layout';
 import { colors } from '../ui/theme';
 
@@ -68,6 +70,11 @@ export default function RootLayout() {
   useEffect(() => {
     if (signedIn) void syncPush();
   }, [signedIn]);
+  // Once the fonts are in, so the worker is handed them with the bundles (step 2.8c).
+  const ready = fontsLoaded || Boolean(fontError);
+  useEffect(() => {
+    if (ready) void startServiceWorker();
+  }, [ready]);
 
   useEffect(() => {
     void useLanguage.getState().load();
