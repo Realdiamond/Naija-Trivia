@@ -100,13 +100,34 @@ export const AnalyticsQuery = z.object({
   steps: z.string().max(400).optional(),
   /** Funnels only: hours from the first step for the others to happen (1 to 168; 24 by default). */
   window: z.coerce.number().int().min(1).max(168).optional(),
+  /** The boards in FILTERED_BOARDS (step 2.7q): one version of the app, e.g. `1.2.0`. */
+  version: z
+    .string()
+    .trim()
+    .regex(/^[0-9A-Za-z.+-]{1,32}$/)
+    .optional(),
+  /** The same boards: only the players in a saved segment, by its id (step 2.7q). */
+  segment: z.string().min(3).max(40).optional(),
 });
 export type AnalyticsQuery = z.infer<typeof AnalyticsQuery>;
+
+/** The boards about players' own activity, which the version and segment filters narrow (step 2.7q). */
+export const FILTERED_BOARDS: readonly AnalyticsBoard[] = [
+  'engagement',
+  'growth',
+  'retention',
+  'funnels',
+  'tech',
+];
 
 export interface AnalyticsRange {
   from: string;
   to: string;
   platform: Platform | 'all';
+  /** On the boards in FILTERED_BOARDS: the app version they were narrowed to. */
+  version?: string | null;
+  /** On the same boards: the saved segment they were narrowed to, and its players now. */
+  segment?: { id: string; name: string; players: number } | null;
 }
 
 /** Engagement & time (doc 18 §9). */

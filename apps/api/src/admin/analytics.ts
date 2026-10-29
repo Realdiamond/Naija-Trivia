@@ -18,6 +18,7 @@ import {
   AnalyticsBoard,
   AnalyticsQuery,
   ErrorCode,
+  FILTERED_BOARDS,
   FUNNEL_MAX_STEPS,
   READY_FUNNELS,
   type AnalyticsRange,
@@ -33,10 +34,12 @@ import {
   type MoneyByCurrency,
   type RetentionBoard,
   type TechBoard,
+  type SegmentDefinition,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
-import { ApiError, parse } from '../errors';
+import { ApiError, notFound, parse } from '../errors';
 import { requireAdmin, type AdminDeps } from './context';
+import { compileSegment } from './segmentSql';
 
 const WAT = 3_600_000;
 const MINUTE = 60_000;
@@ -91,7 +94,20 @@ interface Range extends AnalyticsRange {
   days: string[];
   platformOrNull: string | null;
   today: string;
+  /** Step 2.7q, on FILTERED_BOARDS only: an app version, and a segment with its players' ids and pseudonymous ids. */
+  version: string | null;
+  segment: { id: string; name: string; players: number } | null;
+  ids: string[] | null;
+  pids: string[] | null;
 }
+
+/**
+ * Events in the range, on the platform, and on the filtered boards the app version and the
+ * segment's players: $1 start, $2 end, $3 platform, $4 version, $5 pseudonymous ids.
+ */
+const EVENTS_IN = `ts >= $1 AND ts < $2 AND ($3::text IS NULL OR platform = $3)
+  AND ($4::text IS NULL OR app_version = $4) AND ($5::text[] IS NULL OR user_pid = ANY($5))`;
+const eventArgs = (r: Range, start: Date = r.start) => [start, r.end, r.platformOrNull, r.version, r.pids];
 
 const badRange = (detail: string) =>
   new ApiError(400, ErrorCode.validation, 'The request is not valid', detail);
@@ -121,8 +137,15 @@ function rangeOf(query: AnalyticsQuery, now: number): Range {
     days: Array.from({ length }, (_, i) => addDays(from, i)),
     platformOrNull: query.platform === 'all' ? null : query.platform,
     today,
+    version: null,
+    segment: null,
+    ids: null,
+    pids: null,
   };
 }
+
+/** What a filtered board says it was narrowed to. */
+const filtersOf = (r: Range) => ({ version: r.version, segment: r.segment });
 
 const share = (part: number, whole: number) => (whole > 0 ? part / whole : null);
 
@@ -130,8 +153,8 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
   const { pool, clock, config } = deps;
 
   async function engagement(r: Range): Promise<EngagementBoard> {
-    const args = [r.start, r.end, r.platformOrNull];
-    const where = `ts >= $1 AND ts < $2 AND ($3::text IS NULL OR platform = $3)`;
+    const args = eventArgs(r);
+    const where = EVENTS_IN;
     const [days, reach, sessions, screens, hours] = await Promise.all([
       pool.query<{
         day: string;
@@ -154,8 +177,8 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
       pool.query<{ wau: number; mau: number }>(
         `SELECT count(DISTINCT ${PLAYER}) FILTER (WHERE ts >= $1::timestamptz + interval '23 days')::int AS wau,
                 count(DISTINCT ${PLAYER})::int AS mau
-           FROM analytics_events WHERE ts >= $1 AND ts < $2 AND ($3::text IS NULL OR platform = $3)`,
-        [new Date(Date.parse(addDays(r.to, -29)) - WAT), r.end, r.platformOrNull],
+           FROM analytics_events WHERE ${EVENTS_IN}`,
+        eventArgs(r, new Date(Date.parse(addDays(r.to, -29)) - WAT)),
       ),
       // A session's time in front: its foreground reports, or its span when the last report was lost.
       pool.query<{ ms: string }>(
@@ -213,6 +236,7 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
       from: r.from,
       to: r.to,
       platform: r.platform,
+      ...filtersOf(r),
       summary: {
         dau,
         wau,
@@ -230,10 +254,11 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
   }
 
   async function growth(r: Range): Promise<GrowthBoard> {
+    // New players by when they joined, so the app version doesn't narrow them; a segment does.
     const users = `FROM users WHERE ${PLAYING} AND created_at >= $1 AND created_at < $2
-                     AND ($3::text IS NULL OR signup_platform = $3)`;
-    const args = [r.start, r.end, r.platformOrNull];
-    const events = `FROM analytics_events WHERE ts >= $1 AND ts < $2 AND ($3::text IS NULL OR platform = $3)`;
+                     AND ($3::text IS NULL OR signup_platform = $3) AND ($4::text[] IS NULL OR id = ANY($4))`;
+    const args = [r.start, r.end, r.platformOrNull, r.ids];
+    const events = `FROM analytics_events WHERE ${EVENTS_IN}`;
     const [newPlayers, signups, sources, shared, opened, web] = await Promise.all([
       pool.query<{ day: string; platform: string | null; n: number }>(
         `SELECT to_char((created_at AT TIME ZONE 'Africa/Lagos')::date, 'YYYY-MM-DD') AS day,
@@ -249,6 +274,7 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
                   ORDER BY a.user_id, a.created_at) f
            JOIN users u ON u.id = f.user_id
           WHERE f.first >= $1 AND f.first < $2 AND ($3::text IS NULL OR u.signup_platform = $3)
+            AND ($4::text[] IS NULL OR u.id = ANY($4))
           GROUP BY 1, 2`,
         args,
       ),
@@ -260,14 +286,14 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
       pool.query<{ channel: string; n: number }>(
         `SELECT props->>'channel' AS channel, count(*)::int AS n ${events} AND event = 'invite_shared'
           GROUP BY 1 ORDER BY 2 DESC`,
-        args,
+        eventArgs(r),
       ),
       pool.query<{ type: string; in_app: number; on_web: number }>(
         `SELECT props->>'type' AS type,
                 count(*) FILTER (WHERE (props->>'has_app')::boolean)::int AS in_app,
                 count(*) FILTER (WHERE NOT (props->>'has_app')::boolean)::int AS on_web
            ${events} AND event = 'invite_opened' GROUP BY 1 ORDER BY count(*) DESC`,
-        args,
+        eventArgs(r),
       ),
       // New players who first came on the web: did they make an account?
       pool.query<{ id: string; account: boolean }>(
@@ -275,7 +301,7 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
                                WHERE a.user_id = u.id AND a.provider <> 'guest_device') AS account
            FROM users u
           WHERE ${PLAYING} AND created_at >= $1 AND created_at < $2 AND signup_platform = 'web'
-            AND ($3::text IS NULL OR $3 = 'web')`,
+            AND ($3::text IS NULL OR $3 = 'web') AND ($4::text[] IS NULL OR u.id = ANY($4))`,
         args,
       ),
     ]);
@@ -320,6 +346,7 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
       from: r.from,
       to: r.to,
       platform: r.platform,
+      ...filtersOf(r),
       summary: {
         new_players: newCount,
         signups: rows.reduce((total, d) => total + d.signups, 0),
@@ -348,15 +375,16 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
     const cohort = await pool.query<{ id: string; first_day: string }>(
       `SELECT id, to_char((created_at AT TIME ZONE 'Africa/Lagos')::date, 'YYYY-MM-DD') AS first_day
          FROM users
-        WHERE ${PLAYING} AND created_at >= $1 AND created_at < $2 AND ($3::text IS NULL OR signup_platform = $3)`,
-      [r.start, r.end, r.platformOrNull],
+        WHERE ${PLAYING} AND created_at >= $1 AND created_at < $2 AND ($3::text IS NULL OR signup_platform = $3)
+          AND ($4::text[] IS NULL OR id = ANY($4))`,
+      [r.start, r.end, r.platformOrNull, r.ids],
     );
     const pids = cohort.rows.map((u) => pseudonymousId(u.id, config.analyticsKey));
     const active = cohort.rows.length
       ? await pool.query<{ first_day: string; n: number; players: number }>(
           `WITH c AS (SELECT * FROM unnest($1::text[], $2::date[]) AS c(pid, first_day)),
                 a AS (SELECT DISTINCT user_pid, ${LAGOS_DAY} AS day FROM analytics_events
-                       WHERE user_pid = ANY($1) AND ts >= $3 AND ts < $4)
+                       WHERE user_pid = ANY($1) AND ts >= $3 AND ts < $4 AND ($5::text IS NULL OR app_version = $5))
            SELECT to_char(c.first_day, 'YYYY-MM-DD') AS first_day, (a.day - c.first_day) AS n,
                   count(*)::int AS players
              FROM c JOIN a ON a.user_pid = c.pid
@@ -367,6 +395,7 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
             cohort.rows.map((u) => u.first_day),
             r.start,
             new Date(Math.min(Date.parse(addDays(r.to, RETENTION_DAYS + 1)) - WAT, clock.now())),
+            r.version,
           ],
         )
       : { rows: [] };
@@ -404,6 +433,7 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
       from: r.from,
       to: r.to,
       platform: r.platform,
+      ...filtersOf(r),
       summary: {
         d1: rate(firstDays, 1, false),
         d7: rate(firstDays, 7, false),
@@ -747,19 +777,19 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
     const ctes = steps.map((_, i) =>
       i === 0
         ? `s0 AS (SELECT ${PLAYER} AS p, min(ts) AS first, min(ts) AS t FROM analytics_events
-                   WHERE event = ANY($4) AND ts >= $1 AND ts < $2 AND ($3::text IS NULL OR platform = $3)
+                   WHERE event = ANY($6) AND ${EVENTS_IN}
                      AND ${PLAYER} IS NOT NULL
                    GROUP BY 1)`
         : `s${i} AS (SELECT s.p, s.first, min(e.ts) AS t FROM s${i - 1} s
                      JOIN analytics_events e ON ${playerIn('e')} = s.p
-                    WHERE e.event = ANY($${i + 4}) AND e.ts >= s.t AND e.ts < s.first + make_interval(hours => $${steps.length + 4})
-                      AND ($3::text IS NULL OR e.platform = $3)
+                    WHERE e.event = ANY($${i + 6}) AND e.ts >= s.t AND e.ts < s.first + make_interval(hours => $${steps.length + 6})
+                      AND ($3::text IS NULL OR e.platform = $3) AND ($4::text IS NULL OR e.app_version = $4)
                     GROUP BY s.p, s.first)`,
     );
     const counted = await pool.query<Record<string, number>>(
       `WITH ${ctes.join(',\n')}
        SELECT ${steps.map((_, i) => `(SELECT count(*) FROM s${i})::int AS n${i}`).join(', ')}`,
-      [r.start, r.end, r.platformOrNull, ...steps.map((s) => s.events), window],
+      [...eventArgs(r), ...steps.map((s) => s.events), window],
     );
     const players = steps.map((_, i) => counted.rows[0]![`n${i}`] ?? 0);
     return {
@@ -767,6 +797,7 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
       from: r.from,
       to: r.to,
       platform: r.platform,
+      ...filtersOf(r),
       funnel,
       window_hours: window,
       steps: steps.map((s, i) => ({
@@ -879,8 +910,8 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
   }
 
   async function tech(r: Range): Promise<TechBoard> {
-    const args = [r.start, r.end, r.platformOrNull];
-    const events = `FROM analytics_events WHERE ts >= $1 AND ts < $2 AND ($3::text IS NULL OR platform = $3)`;
+    const args = eventArgs(r);
+    const events = `FROM analytics_events WHERE ${EVENTS_IN}`;
     const [starts, byRam, versions, otp, push, connection, vitals] = await Promise.all([
       pool.query<{ p50: number | null; p90: number | null }>(
         `SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY (props->>'cold_start_ms')::int) AS p50,
@@ -942,6 +973,7 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
       from: r.from,
       to: r.to,
       platform: r.platform,
+      ...filtersOf(r),
       summary: {
         cold_start_p50_ms: starts.rows[0]!.p50,
         cold_start_p90_ms: starts.rows[0]!.p90,
@@ -1022,11 +1054,32 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
     };
   }
 
+  /** The version and segment filters (step 2.7q): the segment's players now, by id and pseudonymous id. */
+  async function narrow(r: Range, query: AnalyticsQuery): Promise<void> {
+    r.version = query.version ?? null;
+    if (!query.segment) return;
+    const segment = (
+      await pool.query<{ id: string; name: string; definition: SegmentDefinition }>(
+        'SELECT id, name, definition FROM segments WHERE id = $1',
+        [query.segment],
+      )
+    ).rows[0];
+    if (!segment) throw notFound('No such segment.');
+    const { where, params } = compileSegment(segment.definition, clock.now());
+    const ids = (
+      await pool.query<{ id: string }>(`SELECT u.id FROM users u WHERE ${where}`, params)
+    ).rows.map((u) => u.id);
+    r.segment = { id: segment.id, name: segment.name, players: ids.length };
+    r.ids = ids;
+    r.pids = ids.map((id) => pseudonymousId(id, config.analyticsKey));
+  }
+
   app.get('/admin/analytics/:board', async (request): Promise<AnalyticsResponse> => {
     const { board } = parse(Params, request.params);
     await requireAdmin(request, ctx, ANALYTICS_BOARD_PERMISSION[board]);
     const query = parse(AnalyticsQuery, request.query);
     const range = rangeOf(query, clock.now());
+    if (FILTERED_BOARDS.includes(board)) await narrow(range, query);
     switch (board) {
       case 'engagement':
         return engagement(range);

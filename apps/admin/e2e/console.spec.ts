@@ -638,6 +638,16 @@ test('an analyst builds and saves a segment, an admin approves its export, the a
   const row = page.getByTestId('exports').getByRole('row', { name: new RegExp(name) });
   await expect(row).toContainText('Waiting for approval');
 
+  // The segment narrows the player dashboards (step 2.7q).
+  await page.goto('/analytics?board=engagement');
+  await page.getByTestId('filter-segment').selectOption({ label: name });
+  await page.getByTestId('filter-version').fill('1.0.0');
+  await page.getByRole('button', { name: 'Show' }).click();
+  await expect(
+    page.getByText(new RegExp(`version 1\\.0\\.0 · ${name} \\(\\d+ players now\\)`)),
+  ).toBeVisible();
+  await page.goto('/segments');
+
   await signIn(adminEmail);
   await page.goto('/segments');
   const pending = page.getByTestId('exports').getByRole('row', { name: new RegExp(name) });
