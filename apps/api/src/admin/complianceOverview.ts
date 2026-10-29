@@ -56,6 +56,20 @@ const POLICY: Array<{
     oldest: 'SELECT min(completed_at) AS at FROM daily_results',
   },
   {
+    rule: 'practice_sets',
+    data: 'Practice sets (the questions sent for Practice)',
+    keep: '35 days',
+    by: 'retention job',
+    oldest: 'SELECT min(issued_at) AS at FROM practice_sets',
+  },
+  {
+    rule: 'practice_results',
+    data: 'Practice results',
+    keep: '2 years',
+    by: 'retention job',
+    oldest: 'SELECT min(received_at) AS at FROM practice_results',
+  },
+  {
     rule: 'analytics_events',
     data: 'Analytics events (raw)',
     keep: 'ANALYTICS_RETENTION_DAYS (at most 13 months)',

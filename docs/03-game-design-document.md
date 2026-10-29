@@ -67,6 +67,7 @@ Every mode plays the same in the Android and iOS apps and in the web app, with t
 
 ### 2.6 Solo Practice / Pack Play
 - Play any unlocked pack offline using a cached set of 50 questions. Practice gives XP but no rating change.
+- Built in step 2.8f: a game is 10 questions from the set, those played least first; the set stays the same all week and never holds a question in today's or a planned Daily. XP is +10 a right answer, +2 a wrong one and +50 for finishing, up to 300 a day (`practice.xp_daily_cap`); a level reached still pays its coins. The six core packs are each a whole category, free.
 
 ---
 
@@ -231,3 +232,4 @@ Built in step 2.7g: the economy values (duel, Daily and level-up coins, rewarded
 | `difficulty.k_factor` | 8 |
 | `web.rewarded_daily_cap` | 5 |
 | `web.install_prompt_after_sessions` | 2 |
+| `practice.xp_daily_cap` | 300 (XP from Practice per player per WAT day; step 2.8f) |

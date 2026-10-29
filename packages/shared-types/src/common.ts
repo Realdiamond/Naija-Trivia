@@ -66,6 +66,8 @@ export const ErrorCode = {
   notEnoughCoins: 'NOT_ENOUGH_COINS',
   lifelineUsed: 'LIFELINE_USED',
   lifelineNotAllowed: 'LIFELINE_NOT_ALLOWED',
+  /** A pack the player has not unlocked (step 2.8f). */
+  packLocked: 'PACK_LOCKED',
   /** Switched off for now by staff (a kill switch, step 2.7c). */
   featureOff: 'FEATURE_OFF',
   internal: 'INTERNAL',

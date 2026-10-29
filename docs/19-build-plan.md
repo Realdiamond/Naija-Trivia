@@ -588,6 +588,18 @@ TRD §2 ("Crash / perf": Sentry), doc 18's `crash_free_sessions`.
 - Left for later: the web app (Sentry's browser code would add about 70 KB to its first load, a fifth of the budget), performance tracing, and crash-free sessions and API latency on the console's Overview (from Sentry's API)
 - ✅ Tests: the API (off without a DSN; a 500 reported with the request id, route and pseudonymous id and none of the request's numbers, tokens, cookies or ids; an expected error not reported; a failing job); the Android bundle builds with reports on, and the web bundle has none of it
 
+### Step 2.8f · Packs and Practice: the server and the console ✅
+GDD §2.6 and §6.1, TRD FR-CON-3, doc 09 §2.4. Practice is split: the app's screens and playing offline come next (2.8g).
+
+- ✅ **The pack catalogue** (`GET /v1/packs`): packs in their dates with at least 10 questions the player can get, whether each is unlocked, and how many questions it has. The six **core packs**, made by the migration, are each a whole category and free; a category switched off hides its pack. Other packs hold questions chosen by hand, and a pack can be both
+- ✅ **Unlocking a coins pack** for good, from the ledger (`pack`), once; Sabi Pass packs stay locked until v1.1
+- ✅ **The week's practice set**: up to 50 of the pack's questions **with** their answers, so it plays offline, picked unseen-first the first time in a week and the same all week. Because the answers go to the device, the set never holds a question in today's or a planned Daily, and its questions count as seen, so the player's duels prefer others
+- ✅ **Practice results**: a finished game (up to 10 questions) is sent when online, within 14 days, with an id made on the device, so sending it again pays once. Answers are checked against the questions as they are now and must come from the player's set; XP as in GDD §5.1, up to 300 a day (`practice.xp_daily_cap`, changeable in the console), no coins of its own and no rating. Practice answers never move a question's numbers. New events `pack_unlocked` and `practice_completed`
+- ✅ A guest's unlocked packs, sets and practice results follow them into the account they sign in to; they're in the player's data download (`practice_games`, `packs_unlocked`); practice sets are kept 35 days and results 2 years by the retention job
+- ✅ The console's **Packs** page in Content: every pack with its live and chosen questions and whether players can see it; editors, admins and owners make a pack (free, coins with a price, sponsored or Sabi Pass; optionally a whole category; optional dates), choose its questions by id or reference, take one out, and switch a pack off. All audited
+- Left for later: the app's Practice screens and offline play (2.8g), picture questions in sets (with media), sponsored packs' branding (v2) and the Sabi Pass (v1.1)
+- ✅ Tests: the API (the catalogue for a player and in family mode, hidden packs, unlocking with and without coins, the set with answers and without the Daily's question, the same all week, results paid once and capped by the day, games not from the player's set refused, a guest's packs following them, the console's pack routes and who may use them, all audited); the console in the browser (an editor makes a coins pack and chooses and removes a question)
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
@@ -597,7 +609,7 @@ TRD §2 ("Crash / perf": Sentry), doc 18's `crash_free_sessions`.
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅, 2.7n ✅, 2.7o ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
-| 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
+| 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅, 2.8f ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |
 

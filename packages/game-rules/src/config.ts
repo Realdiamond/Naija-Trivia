@@ -28,6 +28,7 @@ export const DEFAULT_CONFIG = {
   'difficulty.k_factor': 8,
   'web.rewarded_daily_cap': 5,
   'web.install_prompt_after_sessions': 2,
+  'practice.xp_daily_cap': 300,
 } as const;
 
 export type ConfigKey = keyof typeof DEFAULT_CONFIG;
@@ -74,6 +75,7 @@ export const TUNABLE: readonly Tunable[] = [
   { key: 'econ.lifeline_ask_naija', label: 'Price of Ask Naija', min: 0, max: 1000, client: true },
   { key: 'econ.lifeline_skip', label: 'Price of Skip', min: 0, max: 1000, client: true },
   { key: 'econ.lifeline_time', label: 'Price of +10s', min: 0, max: 1000, client: true },
+  { key: 'practice.xp_daily_cap', label: 'Most XP from practice, per player per day', min: 0, max: 5000 },
 ];
 
 export function tunable(key: string): Tunable | undefined {

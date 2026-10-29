@@ -87,6 +87,11 @@ export const routes = {
   /** Flags, kill switches and the status banner for this player (step 2.7c). */
   config: () => `${API_PREFIX}/config`,
   shopEvents: () => `${API_PREFIX}/shop/events`,
+  /** Packs and Practice (step 2.8f). */
+  packs: () => `${API_PREFIX}/packs`,
+  packUnlock: (id: string) => `${API_PREFIX}/packs/${encodeURIComponent(id)}/unlock`,
+  packPractice: (id: string) => `${API_PREFIX}/packs/${encodeURIComponent(id)}/practice`,
+  practiceResults: () => `${API_PREFIX}/practice/results`,
   /** Rewarded ads (step 2.4c): what one pays and how many more will pay today. */
   rewardedAds: () => `${API_PREFIX}/ads/rewarded`,
   walletHistory: (before?: string) =>
@@ -155,6 +160,12 @@ export const routes = {
     userDsar: (id: string) => `/admin/users/${encodeURIComponent(id)}/dsar`,
     complianceOverview: '/admin/compliance/overview',
     accessReview: '/admin/compliance/access-review',
+    /** Packs in the Content module (step 2.8f). */
+    packs: '/admin/packs',
+    pack: (id: string) => `/admin/packs/${encodeURIComponent(id)}`,
+    packQuestions: (id: string) => `/admin/packs/${encodeURIComponent(id)}/questions`,
+    packQuestion: (id: string, qid: string) =>
+      `/admin/packs/${encodeURIComponent(id)}/questions/${encodeURIComponent(qid)}`,
     segments: '/admin/segments',
     segment: (id: string) => `/admin/segments/${encodeURIComponent(id)}`,
     segmentCount: '/admin/segments/count',
