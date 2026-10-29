@@ -393,6 +393,16 @@ TRD FR-ECO-3, doc 11 §3, API §2.8, mockup 25; staff alerts from step 2.9b.
 - Left for later: the once-only starter pack (it comes with an outfit, so with cosmetics), gems, cosmetics and the Sabi Pass (v1.1), web purchases through Paystack (v1.1)
 - ✅ Tests: the API (the packs, only RevenueCat's header, a purchase credited once with its staff alert and event, a test purchase, a refund taking back what is left, a payment for an unknown player, what isn't sold, the payment journey's alerts without flooding); the browser (the shop's packs on the web, with buying off)
 
+### Step 2.7a · The console's Overview and Live ✅
+Doc 18 §4–§6, mockup 31. Step 2.7 is split by module; this is the first.
+
+- ✅ **Overview**, the console's home (mockup 31): online now by platform; players, new players, sign-ups and matches today against the same time a week ago; minutes per player and the median session (from the app's foreground time); money today (store purchases in Naira, test purchases apart, rewarded ads, coins earned and spent); live party rooms and duels waiting; event ingest delay and backlog; the work waiting (question reports, suspended questions, integrity flags, data requests due within 7 days); problems raised in the last day. Charts: players by hour against last week, players over 30 days, top states, new players by source and top categories. It refreshes every 15 seconds
+- ✅ **Live**: players seen in the last 5 minutes (by platform and state), the party rooms open with their players, and the last hour's key events in words that name nobody, every 5 seconds. Moderators, on-call engineers, admins and owners can remove a player from a room or close it, with a reason, in the audit log
+- ✅ The daily rollup counts every player across events and platforms (`analytics_daily` rows with `*`), for the 30-day chart once raw events are gone
+- ✅ Permissions: `overview.view` for owners, admins, analysts, growth, LiveOps, moderators, engineers and viewers; `live.manage` for owners, admins, moderators and engineers (doc 18 §3). Staff with Overview now land there
+- Left for later in 2.7: the platform filter on the Overview, crash-free sessions and API latency (with Sentry, 2.8), the map of players by state, and the other modules
+- ✅ Tests: the API (every Overview number against hand-made players, events, purchases, coins, data requests and alerts on a quiet day; the rollup's totals; who is online; the feed naming nobody and only what is new; rooms listed, a player removed and a room closed with reasons, who may); the console in the browser (an owner lands on the Overview; a moderator closes a party room from Live with a reason)
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
@@ -401,7 +411,7 @@ TRD FR-ECO-3, doc 11 §3, API §2.8, mockup 25; staff alerts from step 2.9b.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |

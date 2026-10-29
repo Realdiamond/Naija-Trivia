@@ -71,8 +71,11 @@ test('support finds a player, sees their game, reveals the phone with a reason, 
   await page.goto('/login');
   await page.getByTestId('dev-email').fill(email);
   await page.getByTestId('dev-sign-in').click();
-  await expect(page).toHaveURL(/\/players$/);
+  // Owners land on the Overview (step 2.7a).
+  await expect(page).toHaveURL(/\/overview$/);
   await expect(page.getByTestId('staff-name')).toContainText('owner');
+  await expect(page.getByTestId('overview-tiles')).toContainText('Online now');
+  await expect(page.getByTestId('queues')).toContainText('Question reports');
 
   // Search by user id from the top bar, then open User 360.
   await page.getByTestId('search').fill(player.id);
@@ -122,6 +125,54 @@ test('support finds a player, sees their game, reveals the phone with a reason, 
   await expect(page).toHaveURL(/\/login/);
   await page.goto('/players');
   await expect(page).toHaveURL(/\/login/);
+});
+
+test('a moderator sees the party rooms on Live and closes one, with a reason', async ({ page, request }) => {
+  const email = `e2e-mod-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'moderator');
+  // A guest opens a party room in the game.
+  const guest = await (
+    await request.post(`${API}/v1/auth/guest`, {
+      data: { device_id: randomBytes(24).toString('base64url'), platform: 'web' },
+    })
+  ).json();
+  const categories = (
+    (await (await request.get(`${API}/v1/categories`)).json()).categories as Array<{ id: string }>
+  ).map((c) => c.id);
+  const created = await (
+    await request.post(`${API}/v1/party/rooms`, {
+      headers: { authorization: `Bearer ${guest.access}` },
+      data: {
+        settings: {
+          questions: 5,
+          timer_s: 10,
+          family_safe: false,
+          wahala: true,
+          host_plays: true,
+          categories,
+        },
+        nickname: 'Tolu',
+      },
+    })
+  ).json();
+  const code = created.room.code as string;
+
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page).toHaveURL(/\/overview$/);
+  await page.getByRole('link', { name: 'Live' }).click();
+  await expect(page).toHaveURL(/\/live$/);
+  const room = page.getByTestId(`room-${code}`);
+  await expect(room).toContainText("Tolu's room · lobby");
+
+  // Closing needs a reason; then the room is gone.
+  await expect(page.getByTestId(`close-${code}`)).toBeDisabled();
+  await page.getByTestId(`reason-${code}`).fill('E2E: test room');
+  await page.getByTestId(`close-${code}`).click();
+  await expect(room).toHaveCount(0);
+  const preview = await request.get(`${API}/v1/party/rooms/${code}`);
+  expect(preview.status()).toBe(404);
 });
 
 test('someone not on the staff list is turned away', async ({ page }) => {

@@ -5,6 +5,7 @@ import websocket from '@fastify/websocket';
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import { PARTY_TIMINGS, type PartyTimings } from '@whosabi/game-rules';
 import type { Redis } from 'ioredis';
+import { adminConsoleRoutes } from './admin/consoleRoutes';
 import { adminRoutes } from './admin/routes';
 import { createAuthProviders, type AuthProviders } from './auth/providers';
 import { authRoutes } from './auth/routes';
@@ -132,6 +133,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   // Party rooms run in this process (doc 07 §5 at launch): one web dyno holds them all.
   const rooms = new PartyRooms(deps, { ...PARTY_TIMINGS, ...options.partyTimings });
   partyRoutes(app, deps, rooms);
+  adminConsoleRoutes(app, deps, rooms);
   app.addHook('onClose', async () => rooms.closeAll());
 
   // One process for everything at launch (Heroku, doc 07 §5): the event intake and the web app.

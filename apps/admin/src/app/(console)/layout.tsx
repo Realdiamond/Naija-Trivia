@@ -9,6 +9,12 @@ import { NavLinks } from './NavLinks';
 export default async function ConsoleLayout({ children }: { children: ReactNode }) {
   const me = await adminApi<AdminProfile>('/admin/me');
   const links = [
+    ...(me.permissions.includes('overview.view')
+      ? [
+          { href: '/overview', label: 'Overview' },
+          { href: '/live', label: 'Live' },
+        ]
+      : []),
     ...(me.permissions.includes('players.search') ? [{ href: '/players', label: 'Players' }] : []),
     ...(me.permissions.includes('content.view')
       ? [

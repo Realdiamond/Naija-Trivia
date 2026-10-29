@@ -52,6 +52,8 @@ export const AdminPermission = z.enum([
   'content.import',
   /** Live numbers: players online, sign-ups, games and Daily players today, work waiting. */
   'overview.view',
+  /** Remove a player from a live party room, or close the room (step 2.7a). */
+  'live.manage',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 
@@ -354,3 +356,129 @@ export const StaffPhonePush = z
       .regex(/^[A-Za-z0-9:_-]+$/),
   })
   .strict();
+
+// ----- The console's Overview and Live (step 2.7a, doc 18 §5–6) -----
+
+/** Today so far (WAT) against the same span a week ago. */
+export const WeekCount = z.object({ today: z.number().int(), last_week: z.number().int() });
+export type WeekCount = z.infer<typeof WeekCount>;
+
+export const ConsoleOverview = z.object({
+  at: z.iso.datetime(),
+  /** Players seen in the last 5 minutes, and players active in each of the last 24 hours (oldest first). */
+  online: z.object({
+    total: z.number().int(),
+    android: z.number().int(),
+    ios: z.number().int(),
+    web: z.number().int(),
+    last_24h: z.array(z.number().int()),
+  }),
+  today: z.object({
+    active_players: WeekCount,
+    new_players: WeekCount,
+    signups: WeekCount,
+    duels_finished: WeekCount,
+    party_games: WeekCount,
+    dailies: WeekCount,
+  }),
+  /** From the app's foreground time; null before anyone has played today. */
+  time: z.object({
+    minutes_per_player: z.number().nullable(),
+    median_session_minutes: z.number().nullable(),
+  }),
+  money: z.object({
+    purchases: z.number().int(),
+    /** Real store purchases in Naira, before the store's cut. */
+    revenue_ngn: z.number().int(),
+    test_purchases: z.number().int(),
+    rewarded_ads: z.number().int(),
+    coins_earned: z.number().int(),
+    coins_spent: z.number().int(),
+  }),
+  live: z.object({
+    party_rooms: z.number().int(),
+    party_players: z.number().int(),
+    duels_waiting: z.number().int(),
+  }),
+  health: z.object({
+    /** Analytics events waiting to be loaded. */
+    events_waiting: z.number().int(),
+    /** Seconds since the newest event was loaded; null if none ever was. */
+    last_event_loaded_s: z.number().int().nullable(),
+  }),
+  queues: z.object({
+    reported_questions: z.number().int(),
+    suspended_questions: z.number().int(),
+    open_flags: z.number().int(),
+    dsars_due: z.number().int(),
+  }),
+  /** Problems raised in the last 24 hours, newest first. */
+  alerts: z.array(z.object({ title: z.string(), body: z.string(), created_at: z.iso.datetime() })),
+  charts: z.object({
+    active_30d: z.array(z.object({ day: z.iso.date(), players: z.number().int() })),
+    by_hour: z.array(
+      z.object({ hour: z.number().int(), today: z.number().int(), last_week: z.number().int() }),
+    ),
+    top_states: z.array(z.object({ state: z.string(), players: z.number().int() })),
+    top_categories: z.array(z.object({ category: z.string(), answers: z.number().int() })),
+    new_by_source: z.array(z.object({ source: z.string(), players: z.number().int() })),
+  }),
+});
+export type ConsoleOverview = z.infer<typeof ConsoleOverview>;
+
+export const LiveOnlinePlayer = z.object({
+  id: z.string(),
+  /** Null for guests. */
+  username: z.string().nullable(),
+  platform: z.enum(['android', 'ios', 'web']).nullable(),
+  level: z.number().int(),
+  home_state: z.string().nullable(),
+  last_seen_at: z.iso.datetime(),
+});
+export const LiveOnlineQuery = z.object({ platform: z.enum(['android', 'ios', 'web']).optional() });
+export const LiveOnline = z.object({
+  total: z.number().int(),
+  /** The 100 seen most recently. */
+  players: z.array(LiveOnlinePlayer),
+  by_state: z.array(z.object({ state: z.string(), players: z.number().int() })),
+});
+export type LiveOnline = z.infer<typeof LiveOnline>;
+
+export const LiveRoomPlayer = z.object({
+  id: z.string(),
+  name: z.string(),
+  kind: z.enum(['app', 'web', 'web_guest']),
+  connected: z.boolean(),
+  score: z.number().int(),
+});
+export const LiveRoom = z.object({
+  code: z.string(),
+  host: z.string(),
+  phase: z.string(),
+  /** 1-based while a question is on; null in the lobby or on the podium. */
+  question: z.number().int().nullable(),
+  questions: z.number().int(),
+  players: z.array(LiveRoomPlayer),
+  screens: z.number().int(),
+  locked: z.boolean(),
+  age_s: z.number().int(),
+});
+export type LiveRoom = z.infer<typeof LiveRoom>;
+export const LiveRooms = z.object({ rooms: z.array(LiveRoom) });
+export type LiveRooms = z.infer<typeof LiveRooms>;
+export const LiveRoomKick = z.object({
+  player_id: z.string().min(1).max(60),
+  reason: z.string().trim().min(3).max(300),
+});
+export const LiveRoomClose = z.object({ reason: z.string().trim().min(3).max(300) });
+
+/** What just happened, without anything that names a player. */
+export const LiveFeedItem = z.object({
+  id: z.string(),
+  at: z.iso.datetime(),
+  platform: z.string(),
+  text: z.string(),
+});
+export const LiveFeedQuery = z.object({ after: z.iso.datetime().optional() });
+export const LiveFeed = z.object({ items: z.array(LiveFeedItem) });
+export type LiveFeed = z.infer<typeof LiveFeed>;

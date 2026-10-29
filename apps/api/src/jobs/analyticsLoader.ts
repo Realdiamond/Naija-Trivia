@@ -136,16 +136,20 @@ export class AnalyticsLoader {
     }
   }
 
-  /** Recounts one WAT day ('YYYY-MM-DD'). Only run it while that day's raw rows are still kept. */
+  /**
+   * Recounts one WAT day ('YYYY-MM-DD'). Only run it while that day's raw rows are still kept.
+   * Event '*' counts each platform's players across all events, and platform '*' everyone (the
+   * console's active players, step 2.7a).
+   */
   async rollupDay(day: string): Promise<void> {
     await this.deps.pool.query(
       `INSERT INTO analytics_daily (day, platform, event, events, players)
-       SELECT $1::date, platform, event, count(*),
+       SELECT $1::date, coalesce(platform, '*'), coalesce(event, '*'), count(*),
               count(DISTINCT coalesce(nullif(user_pid, ''), nullif(anon_id, '')))
          FROM analytics_events
         WHERE ts >= ($1::date::timestamp AT TIME ZONE 'Africa/Lagos')
           AND ts < (($1::date + 1)::timestamp AT TIME ZONE 'Africa/Lagos')
-        GROUP BY platform, event
+        GROUP BY GROUPING SETS ((platform, event), (platform), ())
        ON CONFLICT (day, platform, event) DO UPDATE SET events = EXCLUDED.events, players = EXCLUDED.players`,
       [day],
     );

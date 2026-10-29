@@ -5,6 +5,7 @@ import { adminApi } from '../../lib/api';
 
 export default async function ConsoleHome() {
   const me = await adminApi<AdminProfile>('/admin/me');
+  if (me.permissions.includes('overview.view')) redirect('/overview');
   if (me.permissions.includes('players.search')) redirect('/players');
   if (me.permissions.includes('content.view')) redirect('/questions');
   if (me.permissions.includes('audit.view')) redirect('/audit');

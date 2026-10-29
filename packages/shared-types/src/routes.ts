@@ -113,6 +113,13 @@ export const routes = {
     questionsImport: () => '/admin/questions/import',
     reports: () => '/admin/reports',
     overview: () => '/admin/overview',
+    /** The console's Overview and Live (step 2.7a). */
+    consoleOverview: () => '/admin/console/overview',
+    liveOnline: (platform?: string) => `/admin/live/online${platform ? `?platform=${platform}` : ''}`,
+    liveRooms: () => '/admin/live/rooms',
+    liveFeed: (after?: string) => `/admin/live/feed${after ? `?after=${encodeURIComponent(after)}` : ''}`,
+    liveKick: (code: string) => `/admin/live/rooms/${encodeURIComponent(code)}/kick`,
+    liveClose: (code: string) => `/admin/live/rooms/${encodeURIComponent(code)}/close`,
     phones: () => '/admin/phones',
     revokePhone: (id: string) => `/admin/phones/${encodeURIComponent(id)}/revoke`,
     /** This phone's push token, for staff alerts (phone sessions only). */

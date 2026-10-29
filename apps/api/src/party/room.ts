@@ -28,6 +28,7 @@ import {
 } from '@whosabi/game-rules';
 import {
   PartyCloseCode,
+  type LiveRoom,
   type PartyClientMessage,
   type PartyErrorCode,
   type PartyLeaderboardMessage,
@@ -185,6 +186,7 @@ export class PartyRoom {
   private podium: PartyPodiumMessage | null = null;
   private phaseTimer: (() => void) | null = null;
   private idleTimer: (() => void) | null = null;
+  private readonly openedAt: number;
 
   constructor(private readonly o: RoomOptions) {
     this.id = o.id;
@@ -192,7 +194,38 @@ export class PartyRoom {
     this.settings = o.settings;
     this.hostId = o.host.seat;
     this.hostUserId = o.host.userId;
+    this.openedAt = o.scheduler.now();
     this.touch();
+  }
+
+  /** The room as staff see it on the console's Live page (doc 18 §6). */
+  staffView(): LiveRoom {
+    const playing = this.phase === 'QUESTION' || this.phase === 'REVEAL' || this.phase === 'LEADERBOARD';
+    return {
+      code: this.code,
+      host: this.seats.get(this.hostId)?.name ?? this.o.host.name,
+      phase: this.phase.toLowerCase(),
+      question: playing ? this.qIndex + 1 : null,
+      questions: this.settings.questions,
+      players: this.players().map((s) => ({
+        id: s.id,
+        name: s.name,
+        kind: s.kind,
+        connected: s.conn !== null,
+        score: s.score,
+      })),
+      screens: [...this.seats.values()].filter((s) => s.role === 'screen').length,
+      locked: this.locked,
+      age_s: Math.round((this.o.scheduler.now() - this.openedAt) / 1000),
+    };
+  }
+
+  /** Staff take someone out (a moderator acting on a report): like the host's kick. Not the host: close the room instead. */
+  removeByStaff(playerId: string): boolean {
+    const seat = this.seats.get(playerId);
+    if (!seat || seat.role === 'screen' || seat.id === this.hostId) return false;
+    this.remove(seat);
+    return true;
   }
 
   get closed(): boolean {
@@ -647,6 +680,11 @@ export class PartyRoom {
   private kick(host: Seat, playerId: string): void {
     const seat = this.seats.get(playerId);
     if (!seat || seat.id === host.id) return;
+    this.remove(seat);
+  }
+
+  /** Out for good: a kicked seat can't come back. */
+  private remove(seat: Seat): void {
     this.kicked.add(seat.id);
     seat.gone?.();
     this.seats.delete(seat.id);
