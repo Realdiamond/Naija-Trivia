@@ -1,6 +1,7 @@
 /**
  * Username, avatar, age and home state (mockup 06), once a player has an account. The username
- * is picked once (doc 16); the age band decides a restricted account for 13–17s (doc 10 §3.3).
+ * is picked once (doc 16); the age band decides a restricted account for 13–17s (doc 10 §3.3),
+ * who ask a parent or guardian next (step 2.8d), with what they typed here kept for after.
  */
 import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
@@ -9,6 +10,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorCode, routes, Username, type HomeState, type Me } from '@whosabi/shared-types';
 import { api, ApiError, errorMessage } from '../api';
 import { updateUser, useSession } from '../auth/session';
+import { useProfileDraft } from '../features/guardian/draft';
 import { useNoticeSeen } from '../features/moderation/notices';
 import { STATE_NAMES, STATES_BY_NAME } from '../features/profile/states';
 import { useT } from '../i18n';
@@ -38,10 +40,12 @@ export default function ProfileSetup() {
     queryFn: () => api.get<Me>(routes.me()),
     enabled: status === 'account',
   });
-  const [username, setUsername] = useState('');
-  const [avatar, setAvatar] = useState<string>(AVATARS[1].id);
+  // Back from asking a parent or guardian, with a name that was taken meanwhile: as they left it.
+  const draft = useProfileDraft((s) => s.draft);
+  const [username, setUsername] = useState(draft?.username ?? '');
+  const [avatar, setAvatar] = useState<string>(draft?.avatar_id ?? AVATARS[1].id);
   const [age, setAge] = useState<AgeChoice | null>(null);
-  const [homeState, setHomeState] = useState<HomeState | null>(null);
+  const [homeState, setHomeState] = useState<HomeState | null>(draft?.home_state ?? null);
   const [picking, setPicking] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +54,7 @@ export default function ProfileSetup() {
 
   if (status === 'signed_out') return <Redirect href="/welcome" />;
   if (status === 'guest') return <Redirect href="/sign-in" />;
+  if (me.data?.guardian === 'needed') return <Redirect href="/guardian" />;
 
   const ageSet = me.data?.age_band != null;
   // Back here because a moderator took the username away (step 2.7d).
@@ -74,6 +79,17 @@ export default function ProfileSetup() {
     }
     setBusy(true);
     try {
+      if (!ageSet && age === '13_17') {
+        // A parent or guardian agrees first; the name and the rest are saved after.
+        const teen = await api.post<Me>(routes.meAge(), { age_band: age });
+        useProfileDraft.setState({
+          draft: { username: checked.data, avatar_id: avatar, home_state: homeState },
+        });
+        queryClient.setQueryData(['me'], teen);
+        updateUser({ status: teen.status });
+        router.replace('/guardian');
+        return;
+      }
       let updated = await api.patch<Me>(routes.me(), {
         username: checked.data,
         avatar_id: avatar,
@@ -83,6 +99,7 @@ export default function ProfileSetup() {
       queryClient.setQueryData(['me'], updated);
       updateUser({ username: updated.username, status: updated.status });
       if (renamed) noticeSeen(renamed.id);
+      useProfileDraft.setState({ draft: null });
       router.replace('/home');
     } catch (e) {
       if (e instanceof ApiError && USERNAME_ERRORS.has(e.code)) {

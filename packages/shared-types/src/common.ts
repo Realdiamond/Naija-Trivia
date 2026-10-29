@@ -50,6 +50,8 @@ export const ErrorCode = {
   providerUnavailable: 'PROVIDER_UNAVAILABLE',
   accountUnavailable: 'ACCOUNT_UNAVAILABLE',
   accountRequired: 'ACCOUNT_REQUIRED',
+  /** A 13–17 account waiting for a parent's or guardian's consent (step 2.8d). */
+  guardianConsentRequired: 'GUARDIAN_CONSENT_REQUIRED',
   usernameTaken: 'USERNAME_TAKEN',
   usernameNotAllowed: 'USERNAME_NOT_ALLOWED',
   usernameLocked: 'USERNAME_LOCKED',

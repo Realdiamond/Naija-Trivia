@@ -3,6 +3,7 @@
  */
 import { z } from 'zod';
 import { UserStatus } from './auth';
+import { Platform } from './common';
 
 /** Nigeria's 36 states and the FCT (ISO 3166-2:NG codes), for the optional home state. */
 // prettier-ignore
@@ -59,6 +60,35 @@ export const PlayerNotice = z.object({
 });
 export type PlayerNotice = z.infer<typeof PlayerNotice>;
 
+/**
+ * A parent's or guardian's consent (doc 10 §3.3, step 2.8d): only 13–17 accounts need one, and
+ * until it's given they play like a guest (no username, no friends).
+ */
+export const GuardianConsent = z.enum(['not_needed', 'needed', 'given']);
+export type GuardianConsent = z.infer<typeof GuardianConsent>;
+
+/** Asking a parent or guardian: a code goes to their phone or their email, never the player's own. */
+export const GuardianSendRequest = z
+  .object({
+    /** A Nigerian mobile number in any common format. */
+    phone: z.string().min(7).max(24).optional(),
+    email: z.string().trim().pipe(z.email().max(254)).optional(),
+    platform: Platform,
+    /** Cloudflare Turnstile, as for sign-in codes. */
+    turnstile_token: z.string().min(1).max(4096).optional(),
+  })
+  .strict()
+  .refine((b) => (b.phone === undefined) !== (b.email === undefined), {
+    message: 'send a phone number or an email address',
+  });
+export type GuardianSendRequest = z.infer<typeof GuardianSendRequest>;
+
+/** The code the parent or guardian gave the player. */
+export const GuardianVerifyRequest = z
+  .object({ request_id: z.string().min(10).max(64), code: z.string().regex(/^\d{6}$/) })
+  .strict();
+export type GuardianVerifyRequest = z.infer<typeof GuardianVerifyRequest>;
+
 export const Me = z.object({
   id: z.string(),
   username: z.string().nullable(),
@@ -74,6 +104,8 @@ export const Me = z.object({
   family_mode: z.boolean(),
   discoverable: z.boolean(),
   age_band: AgeBand.nullable(),
+  /** Whether a parent or guardian still has to agree (13–17 accounts, step 2.8d). */
+  guardian: GuardianConsent,
   level: z.number().int(),
   xp: z.number().int(),
   xp_into_level: z.number().int(),
