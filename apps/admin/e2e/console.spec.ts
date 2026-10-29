@@ -471,6 +471,29 @@ test('an analyst reads the KPI dashboards and narrows them to a platform', async
   await page.getByRole('link', { name: 'Retention' }).click();
   await expect(page).toHaveURL(/platform=ios/);
   await expect(page.getByTestId('d1')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Gameplay' }).click();
+  await expect(page.getByTestId('duels-finished')).toBeVisible();
+  await expect(page.getByText('Matches count every platform')).toBeVisible();
+  await page.getByRole('link', { name: 'Monetisation' }).click();
+  await expect(page.getByTestId('store-revenue')).toBeVisible();
+  // The ledger knows no platforms: Economy has no platform filter.
+  await page.getByRole('link', { name: 'Economy' }).click();
+  await expect(page.getByTestId('coins-earned')).toBeVisible();
+  await expect(page.getByLabel('Platform')).toHaveCount(0);
+});
+
+test('finance sees Monetisation and Economy, and not the other dashboards', async ({ page }) => {
+  const email = `e2e-finance-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'finance');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page).toHaveURL(/\/overview$/);
+  await page.getByRole('link', { name: 'Analytics' }).click();
+  const tabs = page.getByRole('navigation', { name: 'Dashboards' });
+  await expect(tabs.getByRole('link')).toHaveText(['Monetisation', 'Economy']);
+  await expect(page.getByTestId('store-revenue')).toBeVisible();
 });
 
 test('support logs a data request and the DPO erases the account, with reasons', async ({

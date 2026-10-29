@@ -494,6 +494,15 @@ Doc 18 §9–10. The dashboards are split; this is the first part.
 - Left for later (the next parts): Gameplay, Content performance, Monetisation, Economy, Funnels, Platforms & tech health and Integrity; the app version, state, source, age band and segment filters; exporting a chart; Explore (Metabase on ClickHouse, M3)
 - ✅ Tests: the API (who may; the range; each dashboard's numbers from known events, players and sign-ups, with the platform filter)
 
+### Step 2.7k · Gameplay, Monetisation and Economy dashboards ✅
+Doc 18 §9–10. The second part of the dashboards, on the same page and filters as step 2.7j.
+
+- ✅ **Gameplay** for owners, admins, analysts and LiveOps (`analytics.product`): duels finished, the forfeit rate and how long the middle duel takes, what became of the duels started and how they were set up, party games with their sizes and share of web guests, Daily scores out of 7, answers right by category, and lifelines paid with coins or ads. Matches count every platform; answers and lifelines follow the platform filter
+- ✅ **Monetisation** for owners, admins, analysts and finance (`analytics.money`): store naira (real purchases only, as on Commerce), purchases and refunds, players who paid and their share of players, ARPPU and ARPDAU, packs, AdMob's estimate of ad money, ads shown and the fill rate, rewarded ads a day and per player a day. A platform means its store (Google Play, the App Store, the web)
+- ✅ **Economy** (`analytics.money`): coins earned and spent on players' balances by day and by reason (a guest's coins moving into an account are neither), earned ÷ spent, and today's balances. The ledger knows no platforms, so this dashboard has no platform filter
+- Left for later: Funnels, Content performance, Platforms & tech health and Integrity; ad revenue in naira (AdMob reports dollars); LTV by cohort; starter pack take-up (no starter pack yet)
+- ✅ Tests: the API (each dashboard's numbers from known duels, party games, Dailies, events, purchases and coins, with the platform filter; who may); the console in the browser (an analyst opens all six; finance sees only Monetisation and Economy)
+
 ### Step 2.8a · Account deletion and data requests ✅
 NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the first.
 
@@ -550,7 +559,7 @@ TRD §2 ("Crash / perf": Sentry), doc 18's `crash_free_sessions`.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |

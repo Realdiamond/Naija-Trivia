@@ -37,6 +37,8 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'compliance.erase',
     'commerce.view',
     'analytics.kpi',
+    'analytics.product',
+    'analytics.money',
   ],
   admin: [
     ...PLAYER_SUPPORT,
@@ -51,6 +53,8 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'compliance.view',
     'commerce.view',
     'analytics.kpi',
+    'analytics.product',
+    'analytics.money',
   ],
   dpo: [
     ...PLAYER_SUPPORT.filter((p) => p !== 'players.support'),
@@ -61,14 +65,21 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
   support: PLAYER_SUPPORT,
   // Moderators see players masked only.
   moderator: ['players.search', 'players.view', 'overview.view', 'live.manage', 'players.moderate'],
-  analyst: ['content.view', 'overview.view', 'analytics.kpi'],
+  analyst: ['content.view', 'overview.view', 'analytics.kpi', 'analytics.product', 'analytics.money'],
   growth: ['overview.view', 'analytics.kpi'],
-  liveops: ['content.view', 'overview.view', 'liveops.flags', 'liveops.daily', 'liveops.config'],
+  liveops: [
+    'content.view',
+    'overview.view',
+    'liveops.flags',
+    'liveops.daily',
+    'liveops.config',
+    'analytics.product',
+  ],
   editor: CONTENT_ALL,
   fact_checker: ['content.view', 'content.write', 'content.review'],
   // Writers see and edit their own questions only.
   writer: ['content.view', 'content.write'],
-  finance: ['overview.view', 'commerce.view'],
+  finance: ['overview.view', 'commerce.view', 'analytics.money'],
   sponsor_manager: [],
   // On call: the live numbers and rooms (doc 18 §6), and the kill switches (§8).
   engineer: ['overview.view', 'live.manage', 'liveops.flags'],
