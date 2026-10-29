@@ -192,6 +192,22 @@ export const TRACKING_PLAN = {
   daily_started: spec('server', 'core', z.object({ daily_id: count() })),
   daily_completed: spec('server', 'core', z.object({ daily_id: count(), score: count(), streak: count() })),
   daily_shared: spec('client', 'behaviour', z.object({ channel: ShareChannel })),
+  /** Step 2.8f: a coins pack unlocked for Practice. */
+  pack_unlocked: spec('server', 'core', z.object({ pack_id: shortText(), coins: count() })),
+  /** Step 2.8f: a practice game, played on the device (perhaps offline) and sent afterwards. */
+  practice_completed: spec(
+    'server',
+    'core',
+    z.object({
+      pack_id: shortText(),
+      answered: count(),
+      correct_count: count(),
+      complete: z.boolean(),
+      xp: count(),
+      /** From playing to arriving: long when it was played offline. */
+      delay_s: count(),
+    }),
+  ),
   question_reported: spec(
     'server',
     'core',

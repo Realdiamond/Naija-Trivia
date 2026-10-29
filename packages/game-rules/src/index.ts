@@ -12,6 +12,7 @@ export * from './integrity';
 export * from './lifelines';
 export * from './matchmaking';
 export * from './party';
+export * from './practice';
 export * from './progression';
 export * from './questionRules';
 export * from './rating';

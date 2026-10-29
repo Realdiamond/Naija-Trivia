@@ -125,6 +125,18 @@ describe('retention and compliance (step 2.7n)', () => {
         [id, a, at],
       );
     }
+    for (const at of [OLD, RECENT]) {
+      await t.pool.query(
+        `INSERT INTO practice_sets (user_id, pack_id, week, question_ids, issued_at)
+         VALUES ($1, 'pk_core_slang', $2, '{}', $3)`,
+        [a, `W-${at.getTime()}`, at],
+      );
+      await t.pool.query(
+        `INSERT INTO practice_results (user_id, id, pack_id, week, answered, correct, complete, xp, played_at, received_at)
+         VALUES ($1, $2, 'pk_core_slang', 'W', 10, 5, true, 110, $3, $3)`,
+        [a, randomUUID(), at],
+      );
+    }
     const oldReport = (
       await t.pool.query<{ id: string }>(
         `INSERT INTO question_reports (question_id, reason, note, created_at) VALUES ($1, 'typo', $2, $3) RETURNING id`,
@@ -149,6 +161,8 @@ describe('retention and compliance (step 2.7n)', () => {
       'duel_timing',
       'party_results',
       'daily_results',
+      'practice_sets',
+      'practice_results',
       'integrity_flags',
       'question_reports',
       'consent_records',
@@ -220,6 +234,8 @@ describe('retention and compliance (step 2.7n)', () => {
       'duel_timing',
       'party_results',
       'daily_results',
+      'practice_sets',
+      'practice_results',
       'analytics_events',
       'integrity_flags',
       'question_reports',

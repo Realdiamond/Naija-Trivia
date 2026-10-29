@@ -22,6 +22,7 @@ import { dailyRoutes } from './daily/routes';
 import { duelRoutes } from './duels/routes';
 import { GoogleAdKeys, type AdKeys } from './economy/ads';
 import { economyRoutes } from './economy/routes';
+import { practiceRoutes } from './practice/routes';
 import type { Pool } from './db';
 import { registerErrorHandlers } from './errors';
 import { ingestRoutes } from '@whosabi/ingest';
@@ -147,6 +148,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   duelRoutes(app, deps);
   dailyRoutes(app, deps);
   economyRoutes(app, deps, options.adKeys ?? new GoogleAdKeys());
+  practiceRoutes(app, deps);
   shareRoutes(app, deps);
   liveOpsRoutes(app, deps);
   adminRoutes(app, deps);

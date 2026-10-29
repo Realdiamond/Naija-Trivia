@@ -18,6 +18,8 @@ export const LedgerReason = z.enum([
   'iap',
   'refund',
   'admin_grant',
+  /** Unlocking a coins pack (step 2.8f). */
+  'pack',
 ]);
 export type LedgerReason = z.infer<typeof LedgerReason>;
 

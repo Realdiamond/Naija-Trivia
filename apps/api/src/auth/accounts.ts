@@ -222,6 +222,21 @@ export async function mergeGuestInto(
   await client.query('DELETE FROM streaks WHERE user_id = $1', [g]);
 
   await client.query('UPDATE consent_records SET user_id = $2 WHERE user_id = $1', [g, x]);
+  // Packs the guest unlocked, and their practice (step 2.8f): sets already on the device stay
+  // good for the games played on it, and the day's practice XP cap counts both.
+  await client.query(
+    `INSERT INTO pack_unlocks (user_id, pack_id, coins, unlocked_at)
+     SELECT $2, pack_id, coins, unlocked_at FROM pack_unlocks WHERE user_id = $1 ON CONFLICT DO NOTHING`,
+    [g, x],
+  );
+  await client.query('DELETE FROM pack_unlocks WHERE user_id = $1', [g]);
+  await client.query(
+    `INSERT INTO practice_sets (user_id, pack_id, week, question_ids, issued_at)
+     SELECT $2, pack_id, week, question_ids, issued_at FROM practice_sets WHERE user_id = $1 ON CONFLICT DO NOTHING`,
+    [g, x],
+  );
+  await client.query('DELETE FROM practice_sets WHERE user_id = $1', [g]);
+  await client.query('UPDATE practice_results SET user_id = $2 WHERE user_id = $1', [g, x]);
   await client.query('UPDATE devices SET user_id = $2 WHERE user_id = $1', [g, x]);
   // Waiting pushes follow (the account's own waiting one wins where both have the same key).
   await client.query(

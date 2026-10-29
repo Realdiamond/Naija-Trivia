@@ -52,6 +52,8 @@ Common properties on every event: `event_id`, `ts`, `session_id`, `seq`, `screen
 | `pwa_installed` | Client | `prompt` (auto/manual) | Web only |
 | `daily_started` / `daily_completed` | Server | `daily_id`, `score`, `streak` | |
 | `daily_shared` | Client | `channel` | |
+| `pack_unlocked` | Server | `pack_id`, `coins` | A coins pack unlocked for Practice (step 2.8f) |
+| `practice_completed` | Server | `pack_id`, `answered`, `correct_count`, `complete`, `xp`, `delay_s` | A practice game, played on the device (perhaps offline) and sent afterwards; `delay_s` is how long after playing it arrived. Practice answers are checked on the device, so they send no `question_answered` and never move a question's numbers |
 | `question_reported` | Server | `qid`, `reason` | |
 | `coins_changed` | Server | `delta`, `reason`, `balance_after` | Every coin a player earns or spends (a guest's coins moving into their account on sign-in are not counted again) |
 | `ad_requested` / `ad_shown` | Client | `format`, `placement`, `network` | |

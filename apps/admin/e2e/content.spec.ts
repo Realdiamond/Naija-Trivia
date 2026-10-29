@@ -119,3 +119,47 @@ test('a question goes from a writer to live, an import lands, and reports get an
   await expect(page.getByTestId('question-status')).toHaveText('Live');
   await expect(page.getByTestId('history')).toContainText('Reports closed: nothing wrong');
 });
+
+test('an editor makes a coins pack and chooses its questions', async ({ page }) => {
+  const n = randomInt(1e9);
+  const editor = `e2e-packs-${n}@whosabi.ng`;
+  addStaff(editor, 'editor');
+  await signIn(page, editor);
+
+  // A question from the bank to choose: imported, so it has a reference.
+  const ref = `PACK-${n}`;
+  const csv = [
+    'id,category,subcategory,type,difficulty,question,option_a,option_b,option_c,option_d,correct_option,fact,family_safe,valid_until,region_tag,status,source_url,source_title,added_on,review_status,reviewer,review_notes',
+    `${ref},food,,mcq4,2,Which soup is pack question ${n} about?,Egusi,Ogbono,Afang,Banga,a,Egusi is made from melon seeds.,true,,ALL,draft,https://example.com/egusi,,,approved,Ada,`,
+  ].join('\n');
+  await page.goto('/import');
+  await page.getByTestId('import-file').setInputFiles({
+    name: 'food.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(csv),
+  });
+  await page.getByTestId('import-check').click();
+  await expect(page.getByTestId('import-result')).toContainText('Would add 1');
+  await page.getByTestId('import-run').click();
+  await expect(page.getByTestId('import-result')).toContainText('Added 1');
+
+  // The core packs are there already, one per category.
+  await page.goto('/packs');
+  await expect(page.getByTestId('packs')).toContainText('Food');
+  await page.getByTestId('pack-title').fill(`E2E pack ${n}`);
+  await page.getByTestId('pack-access').selectOption('coins');
+  await page.getByTestId('pack-price').fill('400');
+  await page.getByTestId('save-pack').click();
+  await expect(page).toHaveURL(/\/packs\/pk_[0-9A-Z]+$/);
+  await expect(page.getByTestId('pack-state')).toHaveText('Needs 10 live questions');
+
+  await page.getByTestId('pack-refs').fill(`${ref}\nNOPE-${n}`);
+  await page.getByTestId('add-to-pack').click();
+  await expect(page.getByTestId('questions-added')).toHaveText(`1 added; not found: NOPE-${n}.`);
+  await expect(page.getByTestId('pack-questions')).toContainText(`Which soup is pack question ${n} about?`);
+  await page.getByRole('button', { name: 'Take out' }).click();
+  await expect(page.getByText('None chosen yet.')).toBeVisible();
+
+  await page.goto('/packs');
+  await expect(page.getByTestId(`pack-e2e-pack-${n}`)).toContainText('400 coins');
+});

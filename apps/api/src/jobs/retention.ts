@@ -4,6 +4,8 @@
  *   duel answers' raw timing   180 days (the answers and points stay; only the timing goes)
  *   party games and results    2 years
  *   Daily results              2 years
+ *   practice sets              35 days (only to check games sent within 14 days)
+ *   practice results           2 years
  *   integrity flags            2 years
  *   question reports           2 years
  *   consent records            6 years after the account was deleted
@@ -69,6 +71,28 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
         pool,
         `DELETE FROM daily_results WHERE (daily_id, user_id) IN (
            SELECT daily_id, user_id FROM daily_results WHERE completed_at < $1 LIMIT $2)`,
+        cutoff,
+      ),
+  },
+  {
+    rule: 'practice_sets',
+    days: 35,
+    run: (pool, cutoff) =>
+      rows(
+        pool,
+        `DELETE FROM practice_sets WHERE (user_id, pack_id, week) IN (
+           SELECT user_id, pack_id, week FROM practice_sets WHERE issued_at < $1 LIMIT $2)`,
+        cutoff,
+      ),
+  },
+  {
+    rule: 'practice_results',
+    days: 730,
+    run: (pool, cutoff) =>
+      rows(
+        pool,
+        `DELETE FROM practice_results WHERE (user_id, id) IN (
+           SELECT user_id, id FROM practice_results WHERE received_at < $1 LIMIT $2)`,
         cutoff,
       ),
   },

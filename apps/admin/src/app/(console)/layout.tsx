@@ -28,6 +28,7 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
     ...(me.permissions.includes('content.view')
       ? [
           { href: '/questions', label: 'Questions' },
+          { href: '/packs', label: 'Packs' },
           { href: '/reports', label: 'Reports' },
         ]
       : []),
