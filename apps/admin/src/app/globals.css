@@ -734,3 +734,23 @@ label.check {
   background: #fff1e3;
   color: #a84300;
 }
+
+/* The Daily scheduler (step 2.7f) */
+.daily-question .options {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+.daily-question .options .right {
+  color: var(--primary-ink);
+  font-weight: 800;
+}
+.candidate {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+.card > a.button {
+  align-self: flex-start;
+  margin-top: 8px;
+}

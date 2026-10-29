@@ -77,6 +77,7 @@ Staff sign in with Google Workspace SSO, with 2-step verification enforced. Role
 - Built in step 2.7b: support's actions on a player (coin grants, streak restores, signing out everywhere) for owners, admins and support (`players.support`); notes for anyone who can see the player. Signing a player out from the on-call engineer's seat comes with tech health.
 - Built in step 2.7c: flags, kill switches and the status banner for owners, admins, LiveOps and on-call engineers (`liveops.flags`).
 - Built in step 2.7d: warnings, renames, hiding from the boards, bans and the integrity queue for owners, admins and moderators (`players.moderate`); a ban longer than 30 days, or for good, needs an admin or owner (the second-moderator approval comes later).
+- Built in step 2.7f: the Daily scheduler for owners, admins and LiveOps (`liveops.daily`).
 - Contractor access expires on its own (`expires_at`).
 - The DPO reviews every staff account and role each quarter.
 

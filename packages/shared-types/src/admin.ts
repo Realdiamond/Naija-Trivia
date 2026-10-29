@@ -60,6 +60,8 @@ export const AdminPermission = z.enum([
   'liveops.flags',
   /** Warn, rename, hide from boards, ban; the integrity queue (step 2.7d). */
   'players.moderate',
+  /** The Daily scheduler: plan the next 30 Dailies and swap their questions (step 2.7f). */
+  'liveops.daily',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 
@@ -726,3 +728,56 @@ export const AdminIntegrityReview = z.object({
   note: z.string().trim().min(3).max(500),
 });
 export type AdminIntegrityReview = z.infer<typeof AdminIntegrityReview>;
+
+// ----- The Daily scheduler (step 2.7f, doc 18 §11) -----
+
+export const AdminDailyQuestion = z.object({
+  id: z.string(),
+  category: z.string(),
+  type: z.string(),
+  difficulty: z.number().int(),
+  text: z.string(),
+  /** In the order written; the app shuffles them per player. */
+  options: z.array(z.string()),
+  correct_index: z.number().int(),
+  fact: z.string().nullable(),
+  /** The last Daily it was in, before this one. */
+  last_used: z.iso.date().nullable(),
+  plays: z.number().int(),
+  /** Share of players right, once it has been played. */
+  correct_rate: z.number().nullable(),
+});
+export type AdminDailyQuestion = z.infer<typeof AdminDailyQuestion>;
+
+export const AdminDailyDay = z.object({
+  date: z.iso.date(),
+  /** Null until it is planned. */
+  id: z.number().int().nullable(),
+  locked: z.boolean(),
+  /** Questions can still be swapped: until 22:00 WAT the day before. */
+  editable: z.boolean(),
+  players: z.number().int(),
+  questions: z.array(AdminDailyQuestion),
+});
+export type AdminDailyDay = z.infer<typeof AdminDailyDay>;
+
+export const AdminDailyCalendar = z.object({ today: z.iso.date(), days: z.array(AdminDailyDay) });
+export type AdminDailyCalendar = z.infer<typeof AdminDailyCalendar>;
+
+export const AdminDailyPlan = z.object({ reason: z.string().trim().min(3).max(300) });
+export const AdminDailyPlanResponse = z.object({ planned: z.number().int(), short: z.array(z.iso.date()) });
+export type AdminDailyPlanResponse = z.infer<typeof AdminDailyPlanResponse>;
+
+export const AdminDailyCandidatesQuery = z.object({ slot: z.coerce.number().int().min(1).max(7) });
+export const AdminDailyCandidates = z.object({
+  slot: z.number().int(),
+  candidates: z.array(AdminDailyQuestion),
+});
+export type AdminDailyCandidates = z.infer<typeof AdminDailyCandidates>;
+
+export const AdminDailySwap = z.object({
+  slot: z.number().int().min(1).max(7),
+  question_id: z.string().min(1).max(60),
+  reason: z.string().trim().min(3).max(300),
+});
+export type AdminDailySwap = z.infer<typeof AdminDailySwap>;
