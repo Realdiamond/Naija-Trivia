@@ -1,4 +1,7 @@
-/** Friends (mockup 23): add by username, answer requests, add recent opponents, challenge friends. */
+/**
+ * Friends (mockup 23): the player's friend code (step 2.12), add by username, answer requests,
+ * add recent opponents, challenge friends.
+ */
 import { useRef, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { Redirect, router } from 'expo-router';
@@ -13,6 +16,7 @@ import {
 import { api, errorMessage } from '../api';
 import { useSession } from '../auth/session';
 import { duelKeys, duels } from '../features/duels/api';
+import { FriendCode } from '../features/friends/FriendCode';
 import { useT } from '../i18n';
 import { randomId } from '../platform/random';
 import { Button } from '../ui/Button';
@@ -95,6 +99,8 @@ export default function Friends() {
           </Text>
         ) : null}
       </Text>
+
+      <FriendCode />
 
       <View style={styles.add}>
         <TextInput

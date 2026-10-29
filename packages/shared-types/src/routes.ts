@@ -17,6 +17,8 @@ export const routes = {
   me: () => `${API_PREFIX}/me`,
   /** The Profile screen's numbers (step 2.11). */
   meStats: () => `${API_PREFIX}/me/stats`,
+  /** The player's friend code: their link and its QR code (step 2.12). */
+  meFriendCode: () => `${API_PREFIX}/me/friend-code`,
   /** The player saw a notice from the team (step 2.7d). */
   noticeSeen: (id: number) => `${API_PREFIX}/me/notices/${id}/seen`,
   /** Delete my account, and a copy of my data (step 2.8a). */

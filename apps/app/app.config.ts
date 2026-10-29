@@ -25,7 +25,7 @@ const googleServicesFile =
 
 /** The web app's domain; set LINK_HOST for a build that points somewhere else. */
 const host = process.env.LINK_HOST ?? 'whosabi.ng';
-const paths = ['/d/', '/duel/', '/daily/'];
+const paths = ['/d/', '/duel/', '/daily/', '/u/'];
 
 /** Google's published sample app ids: test ads only. App ids are not secret. */
 const ADMOB_SAMPLE = {

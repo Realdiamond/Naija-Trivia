@@ -98,7 +98,7 @@ export function shareRoutes(app: FastifyInstance, deps: AppDeps): void {
         details: [
           {
             appIDs: [`${team}.${APP_ID}`],
-            components: [{ '/': '/d/*' }, { '/': '/daily/*' }, { '/': '/duel/*' }],
+            components: [{ '/': '/d/*' }, { '/': '/daily/*' }, { '/': '/duel/*' }, { '/': '/u/*' }],
           },
         ],
       },

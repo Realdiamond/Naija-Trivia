@@ -108,6 +108,21 @@ export class ShareService {
         description: 'Naija trivia with the whole group, live. Play in your browser: no app, no sign-up.',
       };
     }
+    // A friend code (step 2.12): whosabi.ng/u/{username}.
+    const friend = /^\/u\/([A-Za-z0-9_]{3,20})\/?$/.exec(pathname);
+    if (friend) {
+      const found = await this.deps.pool.query<{ username: string }>(
+        "SELECT username FROM users WHERE username = $1 AND status = 'active'",
+        [friend[1]],
+      );
+      const name = found.rows[0]?.username;
+      if (!name) return fallback;
+      return {
+        ...fallback,
+        title: `Add ${name} on Who Sabi?`,
+        description: 'Naija trivia with your own people. Add them as a friend and challenge them to a duel.',
+      };
+    }
     const daily = /^\/daily\/(\d{1,7})\/?$/.exec(pathname);
     if (daily && (await this.dailyExists(Number(daily[1])))) {
       return {
