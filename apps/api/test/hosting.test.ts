@@ -68,6 +68,43 @@ describe('the web app from the API origin', () => {
   });
 });
 
+describe('party links on the web (step 2.2c)', () => {
+  let t: Awaited<ReturnType<typeof createTestApp>>;
+  beforeAll(async () => {
+    const web = await mkdtemp(path.join(tmpdir(), 'web-build-'));
+    await writeFile(path.join(web, 'index.html'), '<!doctype html><head><title>Full app</title></head>');
+    const guest = await mkdtemp(path.join(tmpdir(), 'web-guest-'));
+    await mkdir(path.join(guest, 'assets'));
+    await writeFile(path.join(guest, 'index.html'), '<!doctype html><head><title>Light party</title></head>');
+    await writeFile(path.join(guest, 'assets/index-abc.js'), 'console.log(1)');
+    t = await createTestApp({ WEB_APP_DIR: web, WEB_GUEST_DIR: guest });
+  });
+  afterAll(() => t.close());
+
+  it('opens a party link in the light party client, with its preview', async () => {
+    const res = await t.app.inject({ method: 'GET', url: '/r/K7QXM' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toContain('Light party');
+    expect(res.body).toContain('Join the party on Who Sabi? Room K7QXM');
+    // "Sign in to keep your score" opens the same room in the full app.
+    expect((await t.app.inject({ method: 'GET', url: '/r/K7QXM?app=1' })).body).toContain('Full app');
+    expect((await t.app.inject({ method: 'GET', url: '/home' })).body).toContain('Full app');
+  });
+
+  it('serves its files under /party-client/, hashed ones for a year', async () => {
+    const js = await t.app.inject({ method: 'GET', url: '/party-client/assets/index-abc.js' });
+    expect([js.statusCode, js.headers['cache-control']]).toEqual([
+      200,
+      'public, max-age=31536000, immutable',
+    ]);
+    const missing = await t.app.inject({ method: 'GET', url: '/party-client/assets/nope.js' });
+    expect([missing.statusCode, missing.headers['content-type']]).toEqual([
+      404,
+      'application/problem+json; charset=utf-8',
+    ]);
+  });
+});
+
 describe('events taken by the API itself', () => {
   let t: Awaited<ReturnType<typeof createTestApp>>;
   beforeAll(async () => {

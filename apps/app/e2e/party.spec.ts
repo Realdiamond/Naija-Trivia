@@ -27,8 +27,9 @@ test('a host and a web guest play a party game from the link to the podium', asy
   await expect(tolu.getByTestId('party-link')).toContainText(`/r/${code}`);
   await expect(tolu.getByTestId('party-start')).toBeDisabled();
 
-  // Bola: never signed in, just a nickname.
-  await bola.goto(`/r/${code}`);
+  // Bola: never signed in, just a nickname, in the full web app (?app=1; party-light.spec.ts has
+  // the light party client).
+  await bola.goto(`/r/${code}?app=1`);
   await expect(bola.getByTestId('party-joining')).toHaveText("You're joining Tolu's party");
   await bola.getByTestId('party-nickname').fill('Bola');
   await bola.getByTestId('party-join').click();

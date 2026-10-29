@@ -29,6 +29,8 @@ const plans = {
         ['--filter', '@whosabi/app', 'build:web'],
         { env: { EXPO_PUBLIC_API_URL: '', EXPO_PUBLIC_EVENTS_URL: '', EXPO_NO_TELEMETRY: '1' } },
       ],
+      // The light party client for /r/{CODE} links (step 2.2c), also on this origin.
+      ['pnpm', ['--filter', '@whosabi/web-guest', 'build'], { env: { VITE_API_URL: '' } }],
     ],
     release: [['node', ['dist/scripts/migrate.js'], { cwd: api }]],
     web: [
@@ -39,6 +41,7 @@ const plans = {
           cwd: api,
           env: {
             WEB_APP_DIR: process.env.WEB_APP_DIR ?? path.join(repo, 'apps/app/web-build'),
+            WEB_GUEST_DIR: process.env.WEB_GUEST_DIR ?? path.join(repo, 'apps/web-guest/dist'),
             EVENTS_IN_API: process.env.EVENTS_IN_API ?? 'true',
           },
         },

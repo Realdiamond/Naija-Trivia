@@ -8,7 +8,7 @@ import {
   socketUrl,
   type PartySocketStatus,
   type SocketLike,
-} from './socket';
+} from '../src/socket';
 
 class FakeSocket implements SocketLike {
   onopen: (() => void) | null = null;

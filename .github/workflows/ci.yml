@@ -49,6 +49,10 @@ jobs:
         env:
           EXPO_PUBLIC_API_URL: http://localhost:3100
           EXPO_PUBLIC_EVENTS_URL: http://localhost:3101
+      - name: Build the light party client for the end-to-end tests
+        run: pnpm --filter @whosabi/web-guest build
+        env:
+          VITE_API_URL: http://localhost:3100
       - run: pnpm --filter @whosabi/app exec playwright install --with-deps chromium
       - name: End-to-end tests (the web app against the API)
         run: pnpm --filter @whosabi/app e2e

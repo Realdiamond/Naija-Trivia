@@ -326,6 +326,16 @@ UX §2.3, mockups 17–20 and 29.
 - ✅ The room's WebSocket in the app: reconnects after a drop (0.5 s, 1 s, 2 s … for a minute) on the same seat, kept for the session (through a reload on the web); kicked, closed, full or opened elsewhere ends it with a message
 - ✅ Tests: the socket's reconnecting and clock; the browser (a guest host and a web guest with just a nickname play a 5-question game, the Wahala Round included, to the podium and back to the lobby); the API's room link and QR code
 
+### Step 2.2c · The light web party client ✅
+TRD §2 and FR-SOC-3, UX §1, mockup 29.
+
+- ✅ **`apps/web-guest`**: Preact and Vite, about **15 KB gzipped** (13 KB of script and 2 KB of styles) against a budget of 150 KB, so a party link loads fast over 3G inside WhatsApp's browser. It loads no fonts or images: the phone's own font, and initials for players
+- ✅ **What `whosabi.ng/r/{CODE}` opens in a browser**: the API serves the light client for party links (`/party-client/`, its files cached for a year) and the full web app for everything else. `?app=1` opens the room in the full web app instead; the light client's "Have an account? Sign in to keep your score" goes there, so a signed-in player joins as themselves. The link preview on WhatsApp is the same as before
+- ✅ The same game as the app, for a guest: whose party and who is in, a nickname (no app, no sign-up), the lobby, 3-2-1, each question on the room's clock with the Wahala Round's band, the answer with what everyone picked and the top 5, and the podium with the MVP and Share the result. Then **Get the app** (Google Play) or **Keep playing in your browser** (the full web app). Kicked, closed, full or opened elsewhere ends it with a message
+- ✅ **`packages/party-client`**: the room's WebSocket (reconnecting on the same seat, the server's clock) and what the screens show, now shared by the app and the light client. The seat is kept for the session under the same key, so a reload returns to the game. The light client imports only types from shared-types (`@whosabi/shared-types/party-protocol` and `/routes`), which keeps the validation library out of its bundle
+- ✅ Heroku builds it with the web app (`WEB_GUEST_DIR`, deploy guide); CI builds it for the browser tests
+- ✅ Tests: the API (party links get the light client unless `?app`, other paths the web app, its files and caching); the browser (a guest opens the link in the light client, gives a nickname, plays a 5-question game with the Wahala Round to the podium, and a reload returns to the podium)
+
 ### Step 2.3 · Random opponents and the Sabi Bot ✅
 TRD FR-DUEL-6, GDD §2.1.
 
@@ -339,7 +349,7 @@ TRD FR-DUEL-6, GDD §2.1.
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
-| 2.2 Party rooms (2.2a ✅, 2.2b ✅, 2.2c ⬜) | Party room server (WebSockets in the API), party REST side, the app's party screens, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
+| 2.2 Party rooms ✅ (2.2a, 2.2b, 2.2c) | Party room server (WebSockets in the API), party REST side, the app's party screens, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
 | 2.3 Random opponents ✅ | Rating-window matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
 | 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |

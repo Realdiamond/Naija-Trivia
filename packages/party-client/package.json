@@ -1,0 +1,17 @@
+{
+  "name": "@whosabi/party-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The party room's client side, shared by the app and the light web party client: the room's WebSocket (reconnecting, the server's clock) and what the screens show from its messages.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@whosabi/shared-types": "workspace:*"
+  }
+}

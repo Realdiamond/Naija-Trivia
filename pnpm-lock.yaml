@@ -169,6 +169,9 @@ importers:
       '@whosabi/game-rules':
         specifier: workspace:*
         version: link:../../packages/game-rules
+      '@whosabi/party-client':
+        specifier: workspace:*
+        version: link:../../packages/party-client
       '@whosabi/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -274,6 +277,25 @@ importers:
         specifier: ^4.23.15
         version: 4.23.15
 
+  apps/web-guest:
+    dependencies:
+      '@whosabi/game-rules':
+        specifier: workspace:*
+        version: link:../../packages/game-rules
+      '@whosabi/party-client':
+        specifier: workspace:*
+        version: link:../../packages/party-client
+      '@whosabi/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
+      preact:
+        specifier: 10.29.8
+        version: 10.29.8
+    devDependencies:
+      vite:
+        specifier: 7.3.7
+        version: 7.3.7(@types/node@22.20.5)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)
+
   packages/analytics:
     dependencies:
       zod:
@@ -285,6 +307,12 @@ importers:
       fast-check:
         specifier: ^4.10.2
         version: 4.10.2
+
+  packages/party-client:
+    dependencies:
+      '@whosabi/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
 
   packages/shared-types:
     dependencies:
@@ -4028,6 +4056,14 @@ packages:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
 
+  preact@10.29.8:
+    resolution: {integrity: sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q==}
+    peerDependencies:
+      preact-render-to-string: '>=5'
+    peerDependenciesMeta:
+      preact-render-to-string:
+        optional: true
+
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
@@ -4680,6 +4716,46 @@ packages:
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
+
+  vite@7.3.7:
+    resolution: {integrity: sha512-AHEzTORMbi7/7aXp7w7KZ5+DCUdSeLsJz0grY8xHpc9DHdYb0vQu6DqJfm2tOw3gDExNgPgnJTXxM6syYFHaCA==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': ^20.19.0 || >=22.12.0
+      jiti: '>=1.21.0'
+      less: ^4.0.0
+      lightningcss: ^1.21.0
+      sass: ^1.70.0
+      sass-embedded: ^1.70.0
+      stylus: '>=0.54.8'
+      sugarss: ^5.0.0
+      terser: ^5.16.0
+      tsx: ^4.8.1
+      yaml: ^2.4.2
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      jiti:
+        optional: true
+      less:
+        optional: true
+      lightningcss:
+        optional: true
+      sass:
+        optional: true
+      sass-embedded:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+      tsx:
+        optional: true
+      yaml:
+        optional: true
 
   vite@8.3.4:
     resolution: {integrity: sha512-IftLE8phJhdNRIGNEV4JCCvfNScoZQVfcXaN8TQropWGJtOHcu+iAB9pHcuGvmEb/kddw0LBe/jS8ztdC6xdiQ==}
@@ -8994,6 +9070,8 @@ snapshots:
     dependencies:
       xtend: 4.0.2
 
+  preact@10.29.8: {}
+
   prelude-ls@1.2.1: {}
 
   prettier@3.9.10: {}
@@ -9715,6 +9793,21 @@ snapshots:
   validate-npm-package-name@5.0.1: {}
 
   vary@1.1.2: {}
+
+  vite@7.3.7(@types/node@22.20.5)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15):
+    dependencies:
+      esbuild: 0.28.2
+      fdir: 6.5.0(picomatch@4.0.7)
+      picomatch: 4.0.7
+      postcss: 8.5.30
+      rollup: 4.64.7
+      tinyglobby: 0.2.17
+    optionalDependencies:
+      '@types/node': 22.20.5
+      fsevents: 2.3.3
+      lightningcss: 1.33.0
+      terser: 5.51.2
+      tsx: 4.23.15
 
   vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(terser@5.51.2)(tsx@4.23.15):
     dependencies:

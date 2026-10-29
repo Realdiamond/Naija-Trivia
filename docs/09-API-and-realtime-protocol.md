@@ -295,7 +295,7 @@ A player who drops and comes back within a question gets it again, timed from wh
 | URL | App route | Web fallback |
 |---|---|---|
 | `whosabi.ng/d/{token}` | `/duel/accept/{token}` | **Web app**: challenger card, then play your turn in the browser (or get the app) |
-| `whosabi.ng/r/{CODE}` | `/party/join/{CODE}` | **Web party client** (play in the browser; signed-in web players join as themselves) |
+| `whosabi.ng/r/{CODE}` | `/party/join/{CODE}` | **Web party client** (`apps/web-guest`: play in the browser with a nickname); `/r/{CODE}?app=1` opens the room in the full web app, where a signed-in player joins as themselves |
 | `whosabi.ng/u/{username}` | `/profile/{username}` | Web app profile page (`noindex`) |
 | `whosabi.ng/daily/{n}` | `/daily` | **Web app**: play today's Daily |
 | `whosabi.ng/l/{invite}` | `/league/join/{invite}` | Web app: join the league |

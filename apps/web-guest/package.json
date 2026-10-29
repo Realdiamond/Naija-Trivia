@@ -1,0 +1,21 @@
+{
+  "name": "@whosabi/web-guest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The light web party client (TRD §2, UX §1): what a whosabi.ng/r/{CODE} link opens for someone without the app, small enough to load fast over 3G inside WhatsApp's browser.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@whosabi/game-rules": "workspace:*",
+    "@whosabi/party-client": "workspace:*",
+    "@whosabi/shared-types": "workspace:*",
+    "preact": "10.29.8"
+  },
+  "devDependencies": {
+    "vite": "7.3.7"
+  }
+}

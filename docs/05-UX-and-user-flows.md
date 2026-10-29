@@ -25,7 +25,7 @@ App
 
 **Web app** (`whosabi.ng`): the same tree as the app. On phones it looks and works like the app; from 1024 px wide, the tab bar becomes a side navigation (§3.5).
 
-**Web party client** (`whosabi.ng/r/{CODE}`): Nickname (or your own account, if you're signed in on the web) → Lobby → Game → Results → "Keep playing in your browser" or "Get the app".
+**Web party client** (`whosabi.ng/r/{CODE}`): Nickname (or "Have an account?", which opens the room in the full web app to join as yourself) → Lobby → Game → Results → "Keep playing in your browser" or "Get the app".
 
 **Admin console** (`admin.whosabi.ng`, staff only): see §8 and doc 18 §4.
 

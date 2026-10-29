@@ -5,7 +5,9 @@
   "description": "API contracts shared by the apps and services (Zod schemas and the TypeScript types inferred from them).",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./routes": "./src/routes.ts",
+    "./party-protocol": "./src/partyProtocol.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

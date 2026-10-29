@@ -111,6 +111,7 @@ who-sabi/
 ├── packages/
 │   ├── shared-types/    # Zod schemas → TS types + OpenAPI
 │   ├── game-rules/      # scoring, timing clamp, shuffling, Glicko-2 (pure, 100% tested)
+│   ├── party-client/    # the party room's socket and screen state, shared by app and web-guest
 │   ├── analytics/       # tracking plan + client and server SDK
 │   ├── flags/           # flag and experiment evaluation (server), typed flag keys (clients)
 │   ├── i18n/            # EN / Pidgin strings (ICU)

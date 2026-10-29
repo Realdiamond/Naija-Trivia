@@ -14,8 +14,10 @@ import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
 import type { NotFoundFallback } from './errors';
 import { PREVIEW, type PageMeta } from './share/service';
 
-const API_PATHS = ['/v1/', '/admin/', '/og/', '/.well-known/', '/health'];
+const API_PATHS = ['/v1/', '/admin/', '/og/', '/.well-known/', '/health', '/party-client/'];
 const HASHED = ['_expo', 'assets'];
+/** A party link opened fresh: the light party client, unless it asks for the full app (?app=1). */
+const PARTY_LINK = /^\/r\/[A-Za-z0-9]{5}\/?$/;
 
 export async function serveWebApp(app: FastifyInstance, dir: string): Promise<void> {
   await app.register(fastifyStatic, {
@@ -35,6 +37,24 @@ export async function serveWebApp(app: FastifyInstance, dir: string): Promise<vo
   });
   // Without an index page the static files would refuse "/" as a folder.
   app.get('/', (_request, reply) => reply.callNotFound());
+}
+
+/**
+ * The light party client's files (apps/web-guest/dist) under /party-client/ (step 2.2c). Its
+ * page itself comes from webAppPage, for party links.
+ */
+export async function serveWebGuest(app: FastifyInstance, dir: string): Promise<void> {
+  await app.register(fastifyStatic, {
+    root: path.resolve(dir),
+    prefix: '/party-client/',
+    index: false,
+    wildcard: true,
+    decorateReply: false,
+    setHeaders: (res, filePath) => {
+      const hashed = path.relative(path.resolve(dir), filePath).split(path.sep)[0] === 'assets';
+      void res.header('cache-control', hashed ? 'public, max-age=31536000, immutable' : 'no-cache');
+    },
+  });
 }
 
 const escapeHtml = (s: string) =>
@@ -64,24 +84,31 @@ export function withPageMeta(html: string, meta: PageMeta): string {
  * problem+json 404. A preview that can't be worked out never stops the page loading.
  */
 export function webAppPage(
-  dir: string,
+  dir: string | undefined,
   metaFor: (pathname: string) => Promise<PageMeta>,
   log: FastifyBaseLogger,
+  guestDir?: string,
 ): NotFoundFallback {
-  let template: Promise<string> | null = null;
+  const templates = new Map<string, Promise<string>>();
+  const load = (folder: string) => {
+    let template = templates.get(folder);
+    if (!template) {
+      template = readFile(path.join(path.resolve(folder), 'index.html'), 'utf8');
+      // A failed read is tried again next time.
+      template.catch(() => templates.delete(folder));
+      templates.set(folder, template);
+    }
+    return template;
+  };
   return (request, reply) => {
     if (request.method !== 'GET' && request.method !== 'HEAD') return false;
-    const url = request.url.split('?')[0] ?? '/';
+    const [url = '/', query = ''] = request.url.split('?');
     if (API_PATHS.some((p) => url === p.replace(/\/$/, '') || url.startsWith(p))) return false;
-    template ??= readFile(path.join(path.resolve(dir), 'index.html'), 'utf8');
+    const party = guestDir && PARTY_LINK.test(url) && !new URLSearchParams(query).has('app');
+    const folder = party ? guestDir : dir;
+    if (!folder) return false;
     void (async () => {
-      let html: string;
-      try {
-        html = await template;
-      } catch (err) {
-        template = null;
-        throw err;
-      }
+      const html = await load(folder);
       const meta = await metaFor(url).catch((err: unknown) => {
         log.warn({ err, url }, 'page preview failed');
         return null;
