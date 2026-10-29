@@ -43,6 +43,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'analytics.tech',
     'analytics.integrity',
     'alerts.manage',
+    'compliance.review',
   ],
   admin: [
     ...PLAYER_SUPPORT,
@@ -69,6 +70,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'audit.view',
     'compliance.view',
     'compliance.erase',
+    'compliance.review',
   ],
   support: PLAYER_SUPPORT,
   // Moderators see players masked only.

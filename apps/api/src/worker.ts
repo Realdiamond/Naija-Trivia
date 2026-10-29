@@ -2,8 +2,8 @@
  * The worker (build plan steps 1.3, 2.1, 2.3, 2.5 and 2.6): a second process beside the API that
  * ends overdue duels, seats the Sabi Bot in random duels nobody took and plays its turns, sends
  * pushes and queues turn and Daily reminders, picks the Daily, saves final leaderboard ranks,
- * retires expired questions, moves question stats into Postgres, loads analytics events and
- * checks the threshold alert rules.
+ * retires expired questions, moves question stats into Postgres, loads analytics events,
+ * checks the threshold alert rules and removes data past its retention time.
  *
  * Every job is safe with several workers running (locked rows, claimed reminder rows, a Redis
  * lock, a stream consumer group), so the worker scales by running more copies and needs no job
@@ -28,6 +28,7 @@ import { processCorrections } from './content/rescore';
 import { retireExpiredQuestions } from './jobs/contentExpiry';
 import { expireDueDuels } from './jobs/expiry';
 import { checkLedger } from './jobs/ledgerCheck';
+import { applyRetention } from './jobs/retention';
 import { flushQuestionStats } from './jobs/questionStats';
 import { queueDailyReminders } from './jobs/dailyReminder';
 import { queueTurnReminders } from './jobs/reminders';
@@ -147,6 +148,7 @@ const jobs = [
   every('rescore', MINUTE, () => processCorrections(deps)),
   every('ledger-check', 10 * MINUTE, () => checkLedger(deps)),
   every('alert-rules', MINUTE, () => checkAlertRules(deps, alertOutlets)),
+  every('retention', 10 * MINUTE, () => applyRetention(deps)),
   every('analytics-upkeep', 60 * MINUTE, () => loader.maintain(config.analyticsRetentionDays)),
   loadEvents(),
 ];

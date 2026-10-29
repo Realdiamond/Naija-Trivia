@@ -568,7 +568,7 @@ test('support logs a data request and the DPO erases the account, with reasons',
   await page.getByRole('button', { name: 'Sign out' }).click();
 
   await signIn(dpoEmail);
-  await page.getByRole('link', { name: 'Data requests' }).click();
+  await page.getByRole('link', { name: 'Compliance' }).click();
   await expect(page).toHaveURL(/\/compliance$/);
   const row = page.getByTestId('dsar-queue').locator('tr', { hasText: 'E2E: email to help@' });
   await expect(row).toContainText('Delete the account');
@@ -581,6 +581,27 @@ test('support logs a data request and the DPO erases the account, with reasons',
   expect(refresh.status()).toBe(401);
   await page.goto('/compliance?status=done');
   await expect(page.getByTestId('dsar-queue')).toContainText('E2E: email to help@');
+});
+
+test('the DPO checks what is kept and the consent rates, and records the access review', async ({ page }) => {
+  const email = `e2e-dpo-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'dpo');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page.getByTestId('staff-name')).toBeVisible();
+  await page.getByRole('link', { name: 'Compliance' }).click();
+  await page.getByRole('link', { name: 'Data kept' }).click();
+  await expect(page.getByTestId('retention-duel_timing')).toContainText('180 days');
+  await expect(page.getByTestId('retention-admin_audit_log')).toContainText('6 years');
+  await page.getByRole('link', { name: 'Consent', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Consent by purpose and platform' })).toBeVisible();
+  await page.getByRole('link', { name: 'Access review' }).click();
+  await expect(page.getByTestId('access-staff')).toContainText(email);
+  await page.getByLabel('What you checked and changed').fill('Q4: every role still needed');
+  await page.getByRole('button', { name: 'Record the review' }).click();
+  await expect(page.getByTestId('access-review-done')).toBeVisible();
+  await expect(page.getByTestId('last-review')).toContainText('Q4: every role still needed');
 });
 
 test('someone not on the staff list is turned away', async ({ page }) => {

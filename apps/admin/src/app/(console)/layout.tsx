@@ -32,7 +32,7 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
       : []),
     ...(me.permissions.includes('content.import') ? [{ href: '/import', label: 'Import' }] : []),
     ...(me.permissions.includes('commerce.view') ? [{ href: '/commerce', label: 'Commerce' }] : []),
-    ...(me.permissions.includes('compliance.view') ? [{ href: '/compliance', label: 'Data requests' }] : []),
+    ...(me.permissions.includes('compliance.view') ? [{ href: '/compliance', label: 'Compliance' }] : []),
     ...(me.permissions.includes('audit.view') ? [{ href: '/audit', label: 'Audit log' }] : []),
     ...(me.permissions.includes('staff.manage') ? [{ href: '/staff', label: 'Staff and roles' }] : []),
     ...(me.permissions.includes('alerts.manage') ? [{ href: '/alerts', label: 'Alert rules' }] : []),

@@ -84,6 +84,8 @@ export const AdminPermission = z.enum([
   'analytics.integrity',
   /** Threshold alert rules: make, change and delete them (step 2.7m). */
   'alerts.manage',
+  /** Record the quarterly review of staff access (step 2.7n): the DPO and owners. */
+  'compliance.review',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 

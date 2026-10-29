@@ -153,6 +153,8 @@ export const routes = {
     /** Compliance: data requests, exports and erasure (step 2.8a). */
     dsar: (status?: string) => `/admin/dsar${status ? `?status=${encodeURIComponent(status)}` : ''}`,
     userDsar: (id: string) => `/admin/users/${encodeURIComponent(id)}/dsar`,
+    complianceOverview: '/admin/compliance/overview',
+    accessReview: '/admin/compliance/access-review',
     userExport: (id: string) => `/admin/users/${encodeURIComponent(id)}/export`,
     userErase: (id: string) => `/admin/users/${encodeURIComponent(id)}/erase`,
     flags: () => '/admin/flags',

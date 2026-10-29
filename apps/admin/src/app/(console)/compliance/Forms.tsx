@@ -1,7 +1,10 @@
 'use client';
-/** Compliance's forms (step 2.8a): log a request, export with a reason, erase with a reason. */
+/**
+ * Compliance's forms (step 2.8a): log a request, export with a reason, erase with a reason; and
+ * the quarterly access review (step 2.7n).
+ */
 import { useActionState, useState } from 'react';
-import { eraseUser, startDsar, type FormState } from './actions';
+import { eraseUser, recordAccessReview, startDsar, type FormState } from './actions';
 
 const IDLE: FormState = { done: null, error: null };
 
@@ -85,6 +88,29 @@ export function EraseForm({ userId }: { userId: string }) {
         Erase now
       </button>
       <Outcome state={state} testId={`erase-${userId}`} />
+    </form>
+  );
+}
+
+export function AccessReviewForm() {
+  const [state, action, pending] = useActionState(recordAccessReview, IDLE);
+  return (
+    <form action={action} className="inline" data-testid="access-review">
+      <label>
+        What you checked and changed
+        <input
+          name="note"
+          required
+          minLength={3}
+          maxLength={500}
+          size={60}
+          placeholder="All roles still needed; removed one contractor"
+        />
+      </label>
+      <button type="submit" disabled={pending}>
+        Record the review
+      </button>
+      <Outcome state={state} testId="access-review" />
     </form>
   );
 }

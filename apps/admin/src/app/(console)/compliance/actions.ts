@@ -42,3 +42,14 @@ export async function eraseUser(userId: string, _state: FormState, form: FormDat
   revalidatePath(`/players/${userId}`);
   return { done: 'Erased.', error: null };
 }
+
+/** The DPO (or an owner) confirms the quarterly review of staff access (step 2.7n). */
+export async function recordAccessReview(_state: FormState, form: FormData): Promise<FormState> {
+  try {
+    await adminApi(routes.admin.accessReview, { method: 'POST', body: { note: text(form, 'note') } });
+  } catch (e) {
+    return failed(e);
+  }
+  revalidatePath('/compliance');
+  return { done: 'Review recorded in the audit log.', error: null };
+}
