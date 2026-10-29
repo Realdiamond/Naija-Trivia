@@ -76,6 +76,10 @@ export interface AnswerRow {
   tab_hidden_ms: number | null;
   guess: number | null;
   idempotency_key: string | null;
+  /** The lifeline used on this question, if any (step 2.4b). */
+  lifeline: string | null;
+  /** Extra Time's 10 s. */
+  extra_ms: number;
 }
 
 export interface PlayerRow {

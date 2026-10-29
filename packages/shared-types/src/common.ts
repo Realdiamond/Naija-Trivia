@@ -62,6 +62,8 @@ export const ErrorCode = {
   nicknameRequired: 'NICKNAME_REQUIRED',
   nicknameNotAllowed: 'NICKNAME_NOT_ALLOWED',
   notEnoughCoins: 'NOT_ENOUGH_COINS',
+  lifelineUsed: 'LIFELINE_USED',
+  lifelineNotAllowed: 'LIFELINE_NOT_ALLOWED',
   internal: 'INTERNAL',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

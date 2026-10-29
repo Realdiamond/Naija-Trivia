@@ -7,7 +7,7 @@
  */
 import { z } from 'zod';
 import { GameReward } from './economy';
-import { AnswerResponse } from './rounds';
+import { AnswerResponse, Lifeline, ServedQuestion } from './rounds';
 
 export const DuelState = z.enum([
   'created',
@@ -141,6 +141,22 @@ export const DuelView = DuelSummary.extend({
   tiebreak: TiebreakView.nullable(),
 });
 export type DuelView = z.infer<typeof DuelView>;
+
+/** A lifeline on the question being played (step 2.4b, GDD §5.2). */
+export const LifelineRequest = z.object({
+  type: Lifeline,
+  round: z.number().int().min(1).max(3),
+  seq: z.number().int().min(1).max(3),
+});
+export type LifelineRequest = z.infer<typeof LifelineRequest>;
+
+export const LifelineResponse = z.object({
+  /** The question with the lifeline's effect; after Skip, the new question (its clock starts again). */
+  question: ServedQuestion,
+  /** Coins left. */
+  coins: z.number().int().min(0),
+});
+export type LifelineResponse = z.infer<typeof LifelineResponse>;
 
 export const CreateDuelResponse = z.object({
   duel: DuelView,

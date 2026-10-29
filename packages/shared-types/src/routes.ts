@@ -49,6 +49,8 @@ export const routes = {
     `${API_PREFIX}/duels/${encodeURIComponent(duelId)}/rounds/${round}/questions/${seq}/serve`,
   duelAnswer: (duelId: string, round: number, seq: number) =>
     `${API_PREFIX}/duels/${encodeURIComponent(duelId)}/rounds/${round}/questions/${seq}/answer`,
+  /** A lifeline on the question being played (step 2.4b). */
+  duelLifeline: (duelId: string) => `${API_PREFIX}/duels/${encodeURIComponent(duelId)}/lifelines`,
   duelDecline: (duelId: string) => `${API_PREFIX}/duels/${encodeURIComponent(duelId)}/decline`,
   duelCancel: (duelId: string) => `${API_PREFIX}/duels/${encodeURIComponent(duelId)}/cancel`,
   duelRematch: (duelId: string) => `${API_PREFIX}/duels/${encodeURIComponent(duelId)}/rematch`,

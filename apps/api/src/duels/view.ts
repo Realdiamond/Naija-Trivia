@@ -146,9 +146,14 @@ export const inviteUrl = (publicWebUrl: string, token: string) => `${publicWebUr
 
 /** Question ids whose text a viewer may see: rounds they finished, plus the tie-break. */
 export function visibleQuestionIds(data: DuelData, viewer: string): string[] {
-  return data.rounds
-    .filter((r) => r.round_no === TIEBREAK_ROUND || roundFinished(r, data.answers, viewer))
-    .flatMap((r) => r.question_ids);
+  const rounds = data.rounds.filter(
+    (r) => r.round_no === TIEBREAK_ROUND || roundFinished(r, data.answers, viewer),
+  );
+  // A question Skip swapped in (step 2.4b) is the viewer's own.
+  const swapped = data.answers
+    .filter((a) => a.user_id === viewer && rounds.some((r) => r.round_no === a.round_no))
+    .map((a) => a.question_id);
+  return [...new Set([...rounds.flatMap((r) => r.question_ids), ...swapped])];
 }
 
 function rewardFor(duel: DuelRow, side: DuelSide): GameReward | null {
@@ -182,14 +187,16 @@ function review(
   opponentId: string | null,
   questions: Map<string, DuelQuestion>,
 ): ReviewQuestion[] {
-  return round.question_ids.flatMap((qid, i) => {
-    const q = questions.get(qid);
-    if (!q || q.correct_index === null) return [];
+  return round.question_ids.flatMap((roundQid, i) => {
     const seq = i + 1;
     const mine = answers.find((a) => a.round_no === round.round_no && a.seq === seq && a.user_id === viewer);
     const theirs = answers.find(
       (a) => a.round_no === round.round_no && a.seq === seq && a.user_id === opponentId,
     );
+    // After Skip, the viewer's question at this place is the one swapped in.
+    const qid = mine?.question_id ?? roundQid;
+    const q = questions.get(qid);
+    if (!q || q.correct_index === null) return [];
     const perm = optionPermutation(q.options.length, shuffleSeed(duelId, viewer, qid));
     return [
       {
@@ -200,7 +207,8 @@ function review(
         correct_display_index: toDisplayIndex(perm, q.correct_index),
         your_display_index: mine?.display_index ?? null,
         your_points: mine?.points ?? 0,
-        opponent_correct: theirs?.received_at ? Boolean(theirs.correct) : null,
+        // Only comparable when both played the same question.
+        opponent_correct: theirs?.received_at && theirs.question_id === qid ? Boolean(theirs.correct) : null,
         fact: q.fact,
       },
     ];

@@ -103,6 +103,39 @@ export async function pickRoundQuestions(
   return picked;
 }
 
+/**
+ * Skip's replacement (GDD §5.2): another question of the same category, type and level, unseen by
+ * both players if possible, and not already in this duel. Null when there is none.
+ */
+export async function pickSkipQuestion(
+  db: Db,
+  q: Pick<DuelQuestion, 'category_id' | 'type' | 'difficulty'>,
+  context: PickContext,
+): Promise<string | null> {
+  const result = await db.query<{ id: string }>(
+    `SELECT q.id FROM questions q
+      WHERE q.status = 'live' AND q.category_id = $1 AND q.type = $2
+        AND (q.valid_until IS NULL OR q.valid_until >= $3::date)
+        AND (q.family_safe OR NOT $4)
+        AND NOT (q.id = ANY($5::text[]))
+      ORDER BY EXISTS (SELECT 1 FROM user_question_seen s
+                        WHERE s.question_id = q.id AND s.user_id = ANY($6::text[]) AND s.seen_at > $7),
+               abs(q.difficulty - $8), random()
+      LIMIT 1`,
+    [
+      q.category_id,
+      q.type,
+      watDate(context.now),
+      context.familySafeOnly,
+      context.exclude,
+      context.players,
+      seenSince(context.now),
+      q.difficulty,
+    ],
+  );
+  return result.rows[0]?.id ?? null;
+}
+
 /** One closest-number question for the tie-break, from any category; null if there is none. */
 export async function pickTiebreakQuestion(db: Db, context: PickContext): Promise<string | null> {
   const result = await db.query<{ id: string }>(

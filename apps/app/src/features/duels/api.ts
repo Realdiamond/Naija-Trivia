@@ -8,6 +8,8 @@ import {
   type DuelAnswerResponse,
   type DuelView,
   type InvitePreview,
+  type LifelineRequest,
+  type LifelineResponse,
   type ListDuelsResponse,
   type ServedQuestion,
   type TiebreakAnswerRequest,
@@ -57,6 +59,8 @@ export const duels = {
     api.post<DuelView>(routes.duelCategory(id, round), { category_id: categoryId }),
   serve: (id: string, round: number, seq: number) =>
     api.post<ServedQuestion>(routes.duelServe(id, round, seq)),
+  /** Step 2.4b. A retry of the same lifeline costs nothing more. */
+  lifeline: (id: string, body: LifelineRequest) => api.post<LifelineResponse>(routes.duelLifeline(id), body),
   answer: (id: string, round: number, seq: number, body: AnswerRequest) =>
     api.post<DuelAnswerResponse>(
       routes.duelAnswer(id, round, seq),

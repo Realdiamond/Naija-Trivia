@@ -359,12 +359,25 @@ GDD §5.1, TRD FR-ECO-1, API §2.8, doc 08 "Ledger". Step 2.4 is split in four: 
 - ✅ The app: coins on Home (mockup 08) open the **Coins** screen (balance, how to earn, the history); the duel result shows rating, coins and XP side by side (mockup 13); the Daily result shows "+20 coins · +80 XP"
 - ✅ Tests: the rules in game-rules (duel and Daily coins, level-ups, duel XP); the API (a win and a loss paid once with XP and events, a level-up's 100, a forfeit, grants once per key, spends only what a player has, a guest's coins following them, the nightly check and its alert, the history's pages, a re-scored duel's new winner, the Daily's coins over a streak); the browser (coins after the Daily and a duel, on Home and the Coins screen)
 
+### Step 2.4b · Lifelines ✅
+GDD §5.2, API §2.5, mockup 11.
+
+- ✅ **The four lifelines in duels**, one of each per duel, under the question (rounds 1–3): **50/50** (60 coins) takes two wrong options away; **Ask Naija** (80) shows the share of players who picked each option; **Skip** (100) swaps in another question of the same category and type, unseen if possible, with its own clock; **+10s** (40) gives 10 seconds more, while speed points still count against the usual 15
+- ✅ `POST /v1/duels/{id}/lifelines`: the server checks it is the player's question, unanswered and still in time, takes the coins and applies the lifeline in one transaction (no coins, no effect). The same request again gives the same at no charge; a second use is `LIFELINE_USED`. Never in the tie-break or the Daily, and nothing a lifeline does reaches the opponent's screen
+- ✅ **Ask Naija** uses everyone's answers to the question so far (`question_stats.option_counts`); while a question is new, an imagined crowd of 20 average players (right as often as its difficulty says) fills in. That crowd always leans, if narrowly, to the right answer, so Ask Naija can't be read backwards
+- ✅ After Skip, the round review shows each player their own question, and doesn't compare the two players on it
+- ✅ A served duel question carries its lifelines (`used`, and what 50/50 and Ask Naija show), so a reload keeps them
+- ✅ The app: the lifeline row on the duel question (mockup 11) with each cost, "Used", and the coins left; 50/50's options fade, Ask Naija's shares show on the options, +10s stretches the timer and Skip's question starts its own
+- ✅ Analytics: `lifeline_used`, `coins_changed` and `question_answered.lifeline`
+- Left for later: lifelines in party rooms (two a game in GDD §5.2: web guests have no coins, and the room runs on its own clock) and paying for 50/50 with a rewarded ad (step 2.4c)
+- ✅ Tests: the rules (costs, 50/50 always the same two wrong options, Ask Naija adding up to 100 and leaning right); the API (each lifeline's effect and price, a free retry, once a duel, not enough coins changing nothing, not once answered, after time or out of turn, Extra Time's late answer with base points only, Skip's new question answered and in the review); the browser (the lifeline row under a duel question, off without coins)
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
 | 2.2 Party rooms ✅ (2.2a, 2.2b, 2.2c) | Party room server (WebSockets in the API), party REST side, the app's party screens, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
 | 2.3 Random opponents ✅ | Rating-window matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
-| 2.4 Economy & monetisation (2.4a ✅, 2.4b ⬜, 2.4c ⬜, 2.4d ⬜) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
+| 2.4 Economy & monetisation (2.4a ✅, 2.4b ✅, 2.4c ⬜, 2.4d ⬜) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |

@@ -8,6 +8,7 @@ import { QUESTIONS_PER_ROUND, TIEBREAK_ROUND } from '@whosabi/game-rules';
 import {
   AnswerRequest,
   CreateDuelRequest,
+  LifelineRequest,
   ListDuelsQuery,
   PickCategoryRequest,
   TiebreakAnswerRequest,
@@ -15,6 +16,7 @@ import {
   type DuelAnswerResponse,
   type DuelView,
   type InvitePreview,
+  type LifelineResponse,
   type ListDuelsResponse,
   type ServedQuestion,
   type TiebreakAnswerResponse,
@@ -79,6 +81,18 @@ export function duelRoutes(app: FastifyInstance, deps: AppDeps): void {
       return duels.serve(duelId, round, seq, auth.userId, requestEventContext(request));
     },
   );
+
+  // A lifeline on the question being played (step 2.4b); a retry shows the same at no charge.
+  app.post('/v1/duels/:duelId/lifelines', async (request): Promise<LifelineResponse> => {
+    const auth = requireAuth(request);
+    const { duelId } = parse(DuelParams, request.params);
+    return duels.useLifeline(
+      duelId,
+      parse(LifelineRequest, request.body),
+      auth.userId,
+      requestEventContext(request),
+    );
+  });
 
   app.post(
     '/v1/duels/:duelId/rounds/:round/questions/:seq/answer',

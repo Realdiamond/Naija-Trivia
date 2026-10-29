@@ -33,6 +33,9 @@ test('two players finish a duel through a link, both in the browser', async ({ b
   await expect(tolu).toHaveURL(/\/duel\//);
   const duelPath = new URL(tolu.url()).pathname;
   await pickCategory(tolu);
+  // Lifelines sit under the question (step 2.4b); a new guest has no coins for them yet.
+  await expect(tolu.getByTestId('lifeline-coins')).toHaveText(/^You have 0 coins/);
+  await expect(tolu.getByTestId('lifeline-time')).toBeDisabled();
   await playRound(tolu);
   await expect(tolu.getByTestId('waiting-title')).toBeVisible();
   const invite = new URL((await tolu.getByTestId('invite-url').textContent()) ?? '');
