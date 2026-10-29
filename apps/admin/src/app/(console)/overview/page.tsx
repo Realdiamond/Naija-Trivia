@@ -113,7 +113,10 @@ export default async function OverviewPage() {
         </section>
         <section className="card">
           <h2>Daily players, last 30 days</h2>
-          <DayBars rows={o.charts.active_30d} />
+          <DayBars
+            rows={o.charts.active_30d.map((r) => ({ day: r.day, value: r.players }))}
+            label="Daily players, last 30 days"
+          />
         </section>
       </div>
 

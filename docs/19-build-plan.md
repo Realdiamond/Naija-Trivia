@@ -403,6 +403,19 @@ Doc 18 §4–§6, mockup 31. Step 2.7 is split by module; this is the first.
 - Left for later in 2.7: the platform filter on the Overview, crash-free sessions and API latency (with Sentry, 2.8), the map of players by state, and the other modules
 - ✅ Tests: the API (every Overview number against hand-made players, events, purchases, coins, data requests and alerts on a quiet day; the rollup's totals; who is online; the feed naming nobody and only what is new; rooms listed, a player removed and a room closed with reasons, who may); the console in the browser (an owner lands on the Overview; a moderator closes a party room from Live with a reason)
 
+### Step 2.7b · User 360's other tabs and support's actions ✅
+Doc 18 §7.2 and §8, mockup 32.
+
+- ✅ **Sessions & time**: every session (start, end, time in front, platform, app version, network), minutes in front each WAT day for 90 days (a session across midnight counts on both days, AD-2), by platform and by area of the app, the average session and the busiest hours
+- ✅ **Matches** (duels with the opponent, result, score and coins; Dailies with their grids; party games with the rank), **Money** (coins and gems, every ledger movement, purchases and refunds, ad rewards) and **Devices & consent** (devices with push on or off, sign-in methods masked, consents). A guest merged into the account counts as the same person
+- ✅ The summary adds coins and gems, the Daily streak, lifetime spend in Naira, open integrity flags and the number of notes
+- ✅ **Support**: staff notes (anyone who can see the player can leave one; never shown to the player) and, for support, admins and owners (`players.support`), with a reason in the audit log: grant coins through the ledger (`admin_grant`; support up to 500 per player per WAT day, admins and owners up to 5,000; more needs the second approver, later), restore a Daily streak that broke in the last 14 days (once every 30 days; one not played since stays alive, one started again joins the lost run), and sign the player out everywhere
+- ✅ Each look at a tab is in the audit log (`view_user_tab`)
+- ✅ The console works on a phone: one column, the menu and tabs scroll sideways (doc 18 §17)
+- ✅ The Overview counts "today so far" up to now and no further (a fix to 2.7a that also keeps the tests apart)
+- Left for later in 2.7: the Social and Safety tabs, each duel's questions and answers, time by mode from the server, helpdesk tickets, and moderation (warn, mute, rename, ban) with its own module
+- ✅ Tests: game rules (the streak restore); the API (time split at midnight, sessions, areas, platforms and hours; matches, money and devices; notes; grants within each role's daily limit and again the next day; a streak restored both ways, once in 30 days; signing out everywhere; who may); the console in the browser (support leaves a note, grants coins, is stopped at the limit, sees the ledger and signs the player out)
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
@@ -411,7 +424,7 @@ Doc 18 §4–§6, mockup 31. Step 2.7 is split by module; this is the first.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |

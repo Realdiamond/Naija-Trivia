@@ -182,6 +182,7 @@ h2 {
 }
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   border-bottom: 1px solid var(--border);
 }
@@ -610,4 +611,89 @@ button.link {
   border: 0;
   padding: 0 6px;
   text-decoration: underline;
+}
+
+/* User 360's other tabs and support's actions (step 2.7b) */
+fieldset.choices {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+fieldset.choices legend {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+fieldset.choices label {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.notes {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.notes li {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.notes p {
+  margin: 0 0 4px;
+  white-space: pre-wrap;
+}
+.barlist + h2 {
+  margin-top: 18px;
+}
+
+/* On a phone (doc 18 §17: Overview and Live usable on a phone): one column, the menu scrolls sideways. */
+@media (max-width: 760px) {
+  .topbar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 16px;
+  }
+  .search {
+    order: 3;
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .nav {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+  }
+  .nav a,
+  .tabs a {
+    white-space: nowrap;
+  }
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .main {
+    padding: 16px;
+  }
+  .grid2,
+  .charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  table {
+    display: block;
+    overflow-x: auto;
+  }
 }

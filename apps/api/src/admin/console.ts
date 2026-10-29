@@ -73,8 +73,8 @@ export async function consoleOverview(deps: Deps, rooms: PartyRooms, now: number
   ] = await Promise.all([
     pool.query<{ platform: string | null; n: number }>(
       `SELECT last_platform AS platform, count(*)::int AS n FROM users
-        WHERE last_seen_at >= $1 AND ${PLAYING} GROUP BY last_platform`,
-      [new Date(now - ONLINE_MS)],
+        WHERE last_seen_at >= $1 AND last_seen_at <= $2 AND ${PLAYING} GROUP BY last_platform`,
+      [new Date(now - ONLINE_MS), new Date(now)],
     ),
     pool.query<{ h: number; n: number }>(
       `SELECT floor(extract(epoch FROM ts - $1) / 3600)::int AS h, count(DISTINCT ${PLAYER})::int AS n
@@ -115,19 +115,23 @@ export async function consoleOverview(deps: Deps, rooms: PartyRooms, now: number
     pool.query<{ minutes: number | null; median: number | null }>(
       `WITH s AS (
          SELECT session_id, sum((props->>'foreground_ms')::numeric) AS ms FROM analytics_events
-          WHERE event = 'app_backgrounded' AND ts >= $1 AND props ? 'foreground_ms' GROUP BY session_id)
+          WHERE event = 'app_backgrounded' AND ts >= $1 AND ts <= $2 AND props ? 'foreground_ms'
+          GROUP BY session_id)
        SELECT (SELECT sum(ms) FROM s) / 60000.0 AS minutes,
               (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY ms) FROM s) / 60000.0 AS median`,
-      [new Date(today)],
+      [new Date(today), new Date(now)],
     ),
     pool.query<{ purchases: number; revenue: number; tests: number; ads: number }>(
-      `SELECT (SELECT count(*) FROM purchases WHERE created_at >= $1 AND environment = 'production')::int AS purchases,
+      `SELECT (SELECT count(*) FROM purchases
+                WHERE created_at >= $1 AND created_at <= $2 AND environment = 'production')::int AS purchases,
               (SELECT coalesce(sum(price_micros), 0) / 1000000 FROM purchases
-                WHERE created_at >= $1 AND environment = 'production' AND status = 'completed' AND currency = 'NGN')::int
-                AS revenue,
-              (SELECT count(*) FROM purchases WHERE created_at >= $1 AND environment = 'sandbox')::int AS tests,
-              (SELECT count(*) FROM ad_rewards WHERE received_at >= $1 AND ledger_tx_id IS NOT NULL)::int AS ads`,
-      [new Date(today)],
+                WHERE created_at >= $1 AND created_at <= $2 AND environment = 'production' AND status = 'completed'
+                  AND currency = 'NGN')::int AS revenue,
+              (SELECT count(*) FROM purchases
+                WHERE created_at >= $1 AND created_at <= $2 AND environment = 'sandbox')::int AS tests,
+              (SELECT count(*) FROM ad_rewards
+                WHERE received_at >= $1 AND received_at <= $2 AND ledger_tx_id IS NOT NULL)::int AS ads`,
+      [new Date(today), new Date(now)],
     ),
     // Coins players earned and spent; a guest's coins moving into their account are neither.
     pool.query<{ earned: number; spent: number }>(
@@ -136,8 +140,8 @@ export async function consoleOverview(deps: Deps, rooms: PartyRooms, now: number
          FROM ledger_entries e
          JOIN ledger_accounts a ON a.id = e.account_id AND a.owner_user_id IS NOT NULL AND a.currency = 'coins'
          JOIN ledger_transactions t ON t.id = e.transaction_id AND t.reason <> 'merge'
-        WHERE e.created_at >= $1`,
-      [new Date(today)],
+        WHERE e.created_at >= $1 AND e.created_at <= $2`,
+      [new Date(today), new Date(now)],
     ),
     pool.query<{ reported: number; suspended: number; flags: number; dsars: number; duels: number }>(
       `SELECT (SELECT count(DISTINCT question_id) FROM question_reports WHERE resolution IS NULL)::int AS reported,
@@ -151,8 +155,8 @@ export async function consoleOverview(deps: Deps, rooms: PartyRooms, now: number
     pool.query<{ at: Date | null }>('SELECT max(loaded_at) AS at FROM analytics_events'),
     pool.query<{ title: string; body: string; created_at: Date }>(
       `SELECT title, body, created_at FROM staff_alerts
-        WHERE kind = 'problem' AND created_at >= $1 ORDER BY created_at DESC LIMIT 10`,
-      [new Date(now - DAY)],
+        WHERE kind = 'problem' AND created_at >= $1 AND created_at <= $2 ORDER BY created_at DESC LIMIT 10`,
+      [new Date(now - DAY), new Date(now)],
     ),
     pool.query<{ day: string; players: string }>(
       `SELECT to_char(day, 'YYYY-MM-DD') AS day, players FROM analytics_daily
@@ -166,26 +170,27 @@ export async function consoleOverview(deps: Deps, rooms: PartyRooms, now: number
               count(DISTINCT ${PLAYER}) FILTER (WHERE ts >= $3)::int AS today,
               count(DISTINCT ${PLAYER}) FILTER (WHERE ts < $2)::int AS last_week
          FROM analytics_events
-        WHERE (ts >= $1 AND ts < $2) OR ts >= $3
+        WHERE (ts >= $1 AND ts < $2) OR (ts >= $3 AND ts <= $4)
         GROUP BY 1 ORDER BY 1`,
-      [new Date(today - WEEK), new Date(today - WEEK + DAY), new Date(today)],
+      [new Date(today - WEEK), new Date(today - WEEK + DAY), new Date(today), new Date(now)],
     ),
     pool.query<{ state: string; players: number }>(
       `SELECT coalesce(nullif(home_state, ''), nullif(geo_state, '')) AS state, count(DISTINCT ${PLAYER})::int AS players
-         FROM analytics_events WHERE ts >= $1 AND coalesce(nullif(home_state, ''), nullif(geo_state, '')) IS NOT NULL
+         FROM analytics_events
+        WHERE ts >= $1 AND ts <= $2 AND coalesce(nullif(home_state, ''), nullif(geo_state, '')) IS NOT NULL
         GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 6`,
-      [new Date(today)],
+      [new Date(today), new Date(now)],
     ),
     pool.query<{ category: string; answers: number }>(
       `SELECT props->>'category' AS category, count(*)::int AS answers FROM analytics_events
-        WHERE event = 'question_answered' AND ts >= $1 AND props ? 'category'
+        WHERE event = 'question_answered' AND ts >= $1 AND ts <= $2 AND props ? 'category'
         GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 6`,
-      [new Date(today)],
+      [new Date(today), new Date(now)],
     ),
     pool.query<{ source: string; players: number }>(
       `SELECT coalesce(acquisition_source, 'organic') AS source, count(*)::int AS players FROM users
-        WHERE created_at >= $1 AND status <> 'bot' GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 6`,
-      [new Date(today)],
+        WHERE created_at >= $1 AND created_at <= $2 AND status <> 'bot' GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 6`,
+      [new Date(today), new Date(now)],
     ),
   ]);
 

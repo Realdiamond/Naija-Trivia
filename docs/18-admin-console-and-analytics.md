@@ -74,6 +74,7 @@ Staff sign in with Google Workspace SSO, with 2-step verification enforced. Role
 
 - Owner, Admin, Finance and DPO grants need a second approver, and nobody approves their own grant (`admin_role_grants.approved_by`).
 - Built so far (step 2.7a): Overview and Live for owners, admins, analysts, growth, LiveOps, moderators, on-call engineers and viewers (`overview.view`); removing a player from a party room or closing it for owners, admins, moderators and engineers (`live.manage`).
+- Built in step 2.7b: support's actions on a player (coin grants, streak restores, signing out everywhere) for owners, admins and support (`players.support`); notes for anyone who can see the player. Signing a player out from the on-call engineer's seat comes with tech health.
 - Contractor access expires on its own (`expires_at`).
 - The DPO reviews every staff account and role each quarter.
 
@@ -159,7 +160,7 @@ A guest who later signs in to an existing account appears as one person, with on
 
 | Action | Who | Limits and approval |
 |---|---|---|
-| Grant coins | Support, Admin | Support: up to 500 per player per day. Above 5,000 needs a second approver. Always through the ledger (`reason='support_grant'`) |
+| Grant coins | Support, Admin | Support: up to 500 per player per day; admins and owners up to 5,000. Above 5,000 needs a second approver. Always through the ledger (`reason='admin_grant'`) |
 | Restore a streak | Support | Once per player every 30 days |
 | Warn, mute, rename | Moderator | Logged; the player is told |
 | Shadow-restrict, ban | Moderator | A ban longer than 30 days needs a second moderator or an admin |

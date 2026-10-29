@@ -115,6 +115,13 @@ export const routes = {
     overview: () => '/admin/overview',
     /** The console's Overview and Live (step 2.7a). */
     consoleOverview: () => '/admin/console/overview',
+    /** User 360's other tabs, notes and support's actions (step 2.7b). */
+    userSessions: (id: string) => `/admin/users/${encodeURIComponent(id)}/sessions`,
+    userMatches: (id: string) => `/admin/users/${encodeURIComponent(id)}/matches`,
+    userMoney: (id: string) => `/admin/users/${encodeURIComponent(id)}/money`,
+    userDevices: (id: string) => `/admin/users/${encodeURIComponent(id)}/devices`,
+    userNotes: (id: string) => `/admin/users/${encodeURIComponent(id)}/notes`,
+    userActions: (id: string) => `/admin/users/${encodeURIComponent(id)}/actions`,
     liveOnline: (platform?: string) => `/admin/live/online${platform ? `?platform=${platform}` : ''}`,
     liveRooms: () => '/admin/live/rooms',
     liveFeed: (after?: string) => `/admin/live/feed${after ? `?after=${encodeURIComponent(after)}` : ''}`,

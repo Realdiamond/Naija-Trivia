@@ -1,6 +1,7 @@
 /**
  * User 360 (doc 18 §7.2, mockup 32): who the player is, their activity timeline grouped into
- * sessions, and every staff look at them. Opening this page is itself logged.
+ * sessions, time spent, matches, money, devices and consent, support's notes and actions
+ * (step 2.7b), and every staff look at them. Opening this page, and each tab, is itself logged.
  */
 import Link from 'next/link';
 import type {
@@ -12,8 +13,9 @@ import type {
 import { AdminApiError, adminApi } from '../../../../lib/api';
 import { describeEvent, duration, groupSessions, watDateTime, watTime } from '../../../../lib/format';
 import { Reveal } from './Reveal';
+import { DevicesTab, MatchesTab, MoneyTab, SessionsTab, SupportTab } from './tabs';
 
-type Tab = 'summary' | 'timeline' | 'history';
+type Tab = 'summary' | 'timeline' | 'sessions' | 'matches' | 'money' | 'devices' | 'support' | 'history';
 
 export default async function User360({
   params,
@@ -28,6 +30,11 @@ export default async function User360({
   const tabs: Array<[Tab, string]> = [
     ['summary', 'Summary'],
     ['timeline', 'Timeline'],
+    ['sessions', 'Sessions & time'],
+    ['matches', 'Matches'],
+    ['money', 'Money'],
+    ['devices', 'Devices & consent'],
+    ['support', 'Support'],
     ...(me.permissions.includes('audit.view')
       ? ([['history', 'Admin history']] as Array<[Tab, string]>)
       : []),
@@ -86,10 +93,12 @@ export default async function User360({
         </div>
       </section>
 
-      <div className="tiles">
+      <div className="tiles" data-testid="player-tiles">
         <Tile label="Level" value={String(user.level)} />
         <Tile label="Tier" value={`${user.tier.name} · ${user.rating.toLocaleString('en-NG')}`} />
-        <Tile label="XP" value={user.xp.toLocaleString('en-NG')} />
+        <Tile label="Coins" value={user.coins.toLocaleString('en-NG')} />
+        <Tile label="Daily streak" value={`${user.streak.current} (best ${user.streak.best})`} />
+        <Tile label="Lifetime spend" value={`₦${user.lifetime_spend_ngn.toLocaleString('en-NG')}`} />
         <Tile label="Friends" value={String(user.friends)} />
         <Tile label="Duels active" value={String(user.duels.active)} />
         <Tile
@@ -112,6 +121,13 @@ export default async function User360({
 
       {tab === 'summary' ? <Summary user={user} /> : null}
       {tab === 'timeline' ? <Timeline userId={user.id} before={before} /> : null}
+      {tab === 'sessions' ? <SessionsTab userId={user.id} /> : null}
+      {tab === 'matches' ? <MatchesTab userId={user.id} /> : null}
+      {tab === 'money' ? <MoneyTab userId={user.id} /> : null}
+      {tab === 'devices' ? <DevicesTab user={user} /> : null}
+      {tab === 'support' ? (
+        <SupportTab userId={user.id} canAct={me.permissions.includes('players.support')} />
+      ) : null}
       {tab === 'history' ? <History userId={user.id} /> : null}
     </>
   );
@@ -128,6 +144,8 @@ function Tile({ label, value }: { label: string; value: string }) {
 
 function Summary({ user }: { user: AdminUserSummary }) {
   const rows: Array<[string, string]> = [
+    ['XP', user.xp.toLocaleString('en-NG')],
+    ['Gems', user.gems.toLocaleString('en-NG')],
     ['Language', user.language],
     ['Family mode', user.family_mode ? 'On' : 'Off'],
     ['Findable from contacts', user.discoverable ? 'Yes' : 'No'],
@@ -150,26 +168,30 @@ function Summary({ user }: { user: AdminUserSummary }) {
         </table>
       </section>
       <section className="card">
-        <h2>Consents</h2>
-        {user.consents.length === 0 ? (
-          <p className="muted">No choices recorded yet.</p>
-        ) : (
-          <table>
-            <tbody>
-              {user.consents.map((c) => (
-                <tr key={c.purpose}>
-                  <th scope="row">{c.purpose}</th>
-                  <td>
-                    {c.granted ? 'Allowed' : 'Refused'}
-                    <div className="muted small">
-                      {watDateTime(c.created_at)} · {c.source} · policy {c.policy_version}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <h2>Needs a look?</h2>
+        <table>
+          <tbody>
+            <tr>
+              <th scope="row">Open integrity flags</th>
+              <td>{user.open_flags}</td>
+            </tr>
+            <tr>
+              <th scope="row">Staff notes</th>
+              <td>
+                <Link href={`/players/${user.id}?tab=support`}>{user.notes}</Link>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Daily streak</th>
+              <td>
+                {user.streak.current}
+                {user.streak.last_play_date ? (
+                  <div className="muted small">last Daily {user.streak.last_play_date}</div>
+                ) : null}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </section>
     </div>
   );
