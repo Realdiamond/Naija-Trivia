@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorCode, routes, Username, type HomeState, type Me } from '@whosabi/shared-types';
 import { api, ApiError, errorMessage } from '../api';
 import { updateUser, useSession } from '../auth/session';
+import { useNoticeSeen } from '../features/moderation/notices';
 import { STATE_NAMES, STATES_BY_NAME } from '../features/profile/states';
 import { useT } from '../i18n';
 import { Avatar, AVATARS } from '../ui/Avatar';
@@ -45,11 +46,14 @@ export default function ProfileSetup() {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const noticeSeen = useNoticeSeen();
 
   if (status === 'signed_out') return <Redirect href="/welcome" />;
   if (status === 'guest') return <Redirect href="/sign-in" />;
 
   const ageSet = me.data?.age_band != null;
+  // Back here because a moderator took the username away (step 2.7d).
+  const renamed = me.data?.notices.find((n) => n.kind === 'renamed');
   const checked = Username.safeParse(username);
   const avatarName = AVATARS.find((a) => a.id === avatar)?.name ?? '';
 
@@ -78,6 +82,7 @@ export default function ProfileSetup() {
       if (!updated.age_band && age) updated = await api.post<Me>(routes.meAge(), { age_band: age });
       queryClient.setQueryData(['me'], updated);
       updateUser({ username: updated.username, status: updated.status });
+      if (renamed) noticeSeen(renamed.id);
       router.replace('/home');
     } catch (e) {
       if (e instanceof ApiError && USERNAME_ERRORS.has(e.code)) {
@@ -112,6 +117,11 @@ export default function ProfileSetup() {
         <Text variant="display" accessibilityRole="header">
           {t('profile.title')}
         </Text>
+        {renamed ? (
+          <Text variant="body" color={colors.accentInk} testID="renamed-notice">
+            {t('notice.renamed')}
+          </Text>
+        ) : null}
 
         <Field
           label={t('profile.username')}

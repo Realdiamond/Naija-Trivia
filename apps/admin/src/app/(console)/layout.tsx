@@ -16,6 +16,7 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
         ]
       : []),
     ...(me.permissions.includes('players.search') ? [{ href: '/players', label: 'Players' }] : []),
+    ...(me.permissions.includes('players.moderate') ? [{ href: '/integrity', label: 'Integrity' }] : []),
     ...(me.permissions.includes('liveops.flags') ? [{ href: '/liveops', label: 'LiveOps' }] : []),
     ...(me.permissions.includes('content.view')
       ? [

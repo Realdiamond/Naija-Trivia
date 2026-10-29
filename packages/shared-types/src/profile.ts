@@ -49,6 +49,16 @@ export type ProfileCard = z.infer<typeof ProfileCard>;
 export const PushKind = z.enum(['duels', 'friends', 'daily']);
 export type PushKind = z.infer<typeof PushKind>;
 
+/** Something the Who Sabi team told the player (step 2.7d): a warning, or a username taken away. */
+export const PlayerNotice = z.object({
+  id: z.number().int(),
+  kind: z.enum(['warning', 'renamed']),
+  /** The moderator's words, for a warning. */
+  message: z.string().nullable(),
+  at: z.iso.datetime(),
+});
+export type PlayerNotice = z.infer<typeof PlayerNotice>;
+
 export const Me = z.object({
   id: z.string(),
   username: z.string().nullable(),
@@ -71,6 +81,8 @@ export const Me = z.object({
   staff: z.boolean(),
   /** Kinds of push switched off in the app (step 2.5c). */
   push_off: z.array(PushKind),
+  /** Not seen yet, oldest first (step 2.7d). */
+  notices: z.array(PlayerNotice),
 });
 export type Me = z.infer<typeof Me>;
 

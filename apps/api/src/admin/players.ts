@@ -65,6 +65,8 @@ interface UserRow {
   last_seen_at: Date | null;
   created_at: Date;
   rating: number | null;
+  banned_until: Date | null;
+  hidden_from_boards: boolean;
 }
 
 export function adminPlayerRoutes(app: FastifyInstance, deps: AppDeps, ctx: AdminDeps): void {
@@ -74,7 +76,7 @@ export function adminPlayerRoutes(app: FastifyInstance, deps: AppDeps, ctx: Admi
     const found = await pool.query<UserRow>(
       `SELECT u.id, u.username, u.status, u.avatar_id, u.age_band, u.home_state, u.language, u.family_mode,
               u.discoverable, u.xp, u.signup_platform, u.last_platform, u.acquisition_source, u.last_seen_at,
-              u.created_at, r.rating
+              u.created_at, r.rating, u.banned_until, u.hidden_from_boards
          FROM users u LEFT JOIN ratings r ON r.user_id = u.id AND r.scope = 'overall'
         WHERE u.id = $1`,
       [id],
@@ -296,6 +298,8 @@ export function adminPlayerRoutes(app: FastifyInstance, deps: AppDeps, ctx: Admi
       ),
       open_flags: Number(tallies.rows[0]!.flags),
       notes: Number(tallies.rows[0]!.notes),
+      banned_until: user.banned_until?.toISOString() ?? null,
+      hidden_from_boards: user.hidden_from_boards,
     };
   });
 

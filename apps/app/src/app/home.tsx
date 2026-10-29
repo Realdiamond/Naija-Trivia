@@ -2,13 +2,13 @@
  * Home (mockup 08): your coins, the Daily, your turns, then a new challenge, the duels waiting on
  * the other player and recent results. The tab bar arrives with its features (M2).
  */
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { routes, type DuelSummary, type Me } from '@whosabi/shared-types';
 import { api } from '../api';
-import { signOut, useSession } from '../auth/session';
+import { signOut, updateUser, useSession } from '../auth/session';
 import { SignInOptions } from '../features/auth/SignInOptions';
 import { useDailyToday } from '../features/daily/api';
 import { DailyBanner } from '../features/daily/DailyBanner';
@@ -19,6 +19,7 @@ import { useOpponentName } from '../features/duels/parts';
 import { useRandomDuel } from '../features/duels/useRandomDuel';
 import { useFlag } from '../features/liveops/config';
 import { StatusBanner } from '../features/liveops/StatusBanner';
+import { WarningCard } from '../features/moderation/notices';
 import { useT } from '../i18n';
 import { staffToolsHere } from '../platform/staffLock';
 import { Avatar } from '../ui/Avatar';
@@ -55,6 +56,13 @@ export default function Home() {
       void refetchWallet();
     }, [signedIn, refetchActive, refetchDone, refetchDaily, refetchWallet]),
   );
+
+  // A moderator took the username away (step 2.7d): the player picks a new one.
+  const serverName = me.data?.username;
+  useEffect(() => {
+    if (status === 'account' && me.data && serverName === null && user?.username)
+      updateUser({ username: null });
+  }, [status, me.data, serverName, user?.username]);
 
   if (status === 'signed_out') return <Redirect href="/welcome" />;
   if (status === 'account' && user && !user.username) return <Redirect href="/profile-setup" />;
@@ -137,6 +145,11 @@ export default function Home() {
       </View>
 
       <StatusBanner />
+      {me.data?.notices
+        .filter((n) => n.kind === 'warning')
+        .map((n) => (
+          <WarningCard key={n.id} notice={n} />
+        ))}
       {daily.data ? <DailyBanner today={daily.data} /> : null}
 
       {yourTurn.length > 0 ? (

@@ -10,6 +10,7 @@ import {
   ErrorCode,
   UpdateMeRequest,
   type Me,
+  type PlayerNotice,
   type ProfileCard,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
@@ -18,6 +19,7 @@ import { requireAuth } from '../auth/context';
 import { withTransaction, type Pool, type PoolClient } from '../db';
 import { ApiError, conflict, notFound, parse, unauthorized } from '../errors';
 import { requestEventContext } from '../events';
+import { markNoticeSeen, unseenNotices } from '../moderation/notices';
 import { isBlocked } from '../social/graph';
 import { checkUsername } from './usernames';
 
@@ -59,10 +61,24 @@ const SETTABLE = [
 export function profileRoutes(app: FastifyInstance, deps: AppDeps): void {
   const { pool, clock } = deps;
 
-  const me = async (userId: string): Promise<Me> =>
-    toMe(await loadMe(pool, userId), await isStaffPlayer(pool, userId, clock.now()));
+  const me = async (userId: string): Promise<Me> => {
+    const [row, staff, notices] = await Promise.all([
+      loadMe(pool, userId),
+      isStaffPlayer(pool, userId, clock.now()),
+      unseenNotices(pool, userId),
+    ]);
+    return toMe(row, staff, notices);
+  };
 
   app.get('/v1/me', async (request): Promise<Me> => me(requireAuth(request).userId));
+
+  /** The player read what the team told them (step 2.7d); it stops showing. */
+  app.post('/v1/me/notices/:id/seen', async (request, reply) => {
+    const { userId } = requireAuth(request);
+    const { id } = parse(z.object({ id: z.coerce.number().int().positive() }), request.params);
+    await markNoticeSeen(pool, userId, id, clock.now());
+    return reply.code(204).send();
+  });
 
   app.patch('/v1/me', async (request): Promise<Me> => {
     const auth = requireAuth(request);
@@ -202,7 +218,7 @@ async function loadMe(db: Pool | PoolClient, userId: string, lock = false): Prom
   return row;
 }
 
-function toMe(row: MeRow, staff: boolean): Me {
+function toMe(row: MeRow, staff: boolean, notices: PlayerNotice[]): Me {
   const xp = Number(row.xp);
   const progress = levelForXp(xp);
   const rating = row.rating ?? NEW_PLAYER_RATING.rating;
@@ -227,6 +243,7 @@ function toMe(row: MeRow, staff: boolean): Me {
     tier: { id: tier.id, name: tier.name, badge: tier.badge },
     created_at: row.created_at.toISOString(),
     staff,
+    notices,
   };
 }
 

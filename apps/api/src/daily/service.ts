@@ -520,7 +520,8 @@ export class DailyService {
   /**
    * Board lines with names. On public boards, guests and 13–17s show without a name or avatar
    * (doc 10 §3.3: "Player from Lagos"); friends see each other's names. Banned and deleted
-   * players drop out.
+   * players drop out, and so do players a moderator hid from the boards, except to themselves
+   * (step 2.7d).
    */
   private async entries(
     lines: Array<{ userId: string; rank: number; score: number }>,
@@ -539,8 +540,9 @@ export class DailyService {
     }>(
       `SELECT u.id, u.username, u.avatar_id, u.status, u.home_state, u.xp, r.rating
          FROM users u LEFT JOIN ratings r ON r.user_id = u.id AND r.scope = 'overall'
-        WHERE u.id = ANY($1) AND u.status IN ('guest', 'active', 'restricted')`,
-      [[...new Set(lines.map((l) => l.userId))]],
+        WHERE u.id = ANY($1) AND u.status IN ('guest', 'active', 'restricted')
+          AND (NOT u.hidden_from_boards OR u.id = $2)`,
+      [[...new Set(lines.map((l) => l.userId))], viewer],
     );
     const byId = new Map(users.rows.map((u) => [u.id, u]));
     return lines.flatMap((line) => {

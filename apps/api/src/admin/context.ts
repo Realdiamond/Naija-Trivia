@@ -68,3 +68,10 @@ export async function requireAdmin(
   }
   return { ...admin, token, phoneSessionId: phone?.id ?? null };
 }
+
+/** For a route whose permission depends on what is asked (support's and moderators' actions). */
+export function requirePermission(admin: AdminContext, permission: AdminPermission): void {
+  if (!admin.permissions.includes(permission)) {
+    throw new ApiError(403, ErrorCode.forbidden, 'Not allowed', `Your roles don't include ${permission}.`);
+  }
+}

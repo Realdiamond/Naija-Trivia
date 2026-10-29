@@ -260,6 +260,52 @@ test('an on-call engineer switches party rooms off and back on, and puts up a ba
   await expect(page.getByTestId('flag-state-party-enabled')).toHaveText('On for everyone');
 });
 
+test('a moderator warns a player and bans them for a week, with reasons', async ({ page, request }) => {
+  const email = `e2e-moderator-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'moderator');
+  const guest = await (
+    await request.post(`${API}/v1/auth/guest`, {
+      data: { device_id: randomBytes(24).toString('base64url'), platform: 'android' },
+    })
+  ).json();
+
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page.getByTestId('staff-name')).toContainText('moderator');
+  await page.goto(`/players/${guest.user.id}?tab=safety`);
+
+  await page.getByTestId('mod-message').fill('Please keep party nicknames clean.');
+  await page.getByTestId('mod-reason').fill('E2E report 5');
+  await page.getByTestId('mod-confirm').click();
+  await expect(page.getByTestId('mod-done')).toContainText('Warned');
+  await expect(page.getByTestId('moderation-history')).toContainText('Please keep party nicknames clean.');
+  const me = await (
+    await request.get(`${API}/v1/me`, { headers: { authorization: `Bearer ${guest.access}` } })
+  ).json();
+  expect(me.notices[0].message).toBe('Please keep party nicknames clean.');
+
+  await page.getByTestId('mod-ban').check();
+  await page.getByTestId('mod-days').selectOption('7');
+  await page.getByTestId('mod-reason').fill('E2E: second report');
+  await page.getByTestId('mod-confirm').click();
+  await expect(page.getByTestId('mod-done')).toHaveText('Banned for 7 days, and signed out everywhere.');
+  await expect(page.getByTestId('player-status')).toContainText('banned until');
+  const refresh = await request.post(`${API}/v1/auth/refresh`, { data: { refresh: guest.refresh } });
+  expect(refresh.status()).toBe(401);
+
+  // Longer than 30 days needs an admin.
+  await page.getByTestId('mod-unban').check();
+  await page.getByTestId('mod-reason').fill('E2E: appeal upheld');
+  await page.getByTestId('mod-confirm').click();
+  await expect(page.getByTestId('mod-done')).toHaveText('Ban lifted. They can sign in again.');
+  await page.getByTestId('mod-ban').check();
+  await page.getByTestId('mod-days').selectOption('forever');
+  await page.getByTestId('mod-reason').fill('E2E: for good');
+  await page.getByTestId('mod-confirm').click();
+  await expect(page.getByTestId('mod-error')).toContainText('needs an admin');
+});
+
 test('someone not on the staff list is turned away', async ({ page }) => {
   await page.goto('/login');
   await page.getByTestId('dev-email').fill('stranger@example.com');

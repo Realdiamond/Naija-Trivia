@@ -1,7 +1,31 @@
 /** Steps the end-to-end tests share. */
+import { execFileSync } from 'node:child_process';
+import { randomInt } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Browser, type Page } from '@playwright/test';
+
+export const API = 'http://localhost:3100';
+
+/**
+ * A staff member with these roles, signed in to the admin API (outside production, staff on the
+ * list sign in without Google). Returns the headers for their requests.
+ */
+export async function staffHeaders(
+  request: APIRequestContext,
+  roles: string,
+): Promise<Record<string, string>> {
+  const email = `e2e-staff-${randomInt(1e9)}@whosabi.ng`;
+  const db = new URL(process.env.TEST_PG_ADMIN_URL ?? 'postgres://postgres@127.0.0.1:5432/postgres');
+  db.pathname = '/whosabi_e2e';
+  execFileSync('pnpm', ['--filter', '@whosabi/api', 'admin:add', email, 'E2E Staff', roles], {
+    cwd: path.resolve(process.cwd(), '../..'),
+    env: { ...process.env, DATABASE_URL: db.toString() },
+    stdio: 'ignore',
+  });
+  const session = await (await request.post(`${API}/admin/auth/dev`, { data: { email } })).json();
+  return { authorization: `Bearer ${session.token as string}` };
+}
 
 /** A second player needs their own browser: a new context with the project's phone settings. */
 export async function newPlayer(browser: Browser): Promise<Page> {

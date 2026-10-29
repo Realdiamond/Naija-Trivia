@@ -30,6 +30,7 @@ import { withTransaction, type PoolClient } from '../db';
 import { ApiError, conflict, parse, unauthorized } from '../errors';
 import { eventContextFor } from '../events';
 import { newId } from '../ids';
+import { bannedError, liftEndedBan } from '../moderation/bans';
 import { signInWithIdentity, type IdentityProvider } from './accounts';
 import { sessionFromHeader } from './context';
 import { emailChannel, OtpService, phoneChannel, RESEND_AFTER_SECONDS } from './otp';
@@ -51,6 +52,7 @@ interface UserRow {
   status: PublicUser['status'];
   level: number;
   xp: string | number;
+  banned_until?: Date | null;
 }
 
 const toPublicUser = (u: UserRow): PublicUser => ({
@@ -136,12 +138,22 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
         // Serialise sign-ins for the same device so two quick taps can't create two guests.
         await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [deviceId]);
         const existing = await client.query<UserRow>(
-          `SELECT u.id, u.username, u.status, u.level, u.xp
+          `SELECT u.id, u.username, u.status, u.level, u.xp, u.banned_until
              FROM auth_identities ai JOIN users u ON u.id = ai.user_id
             WHERE ai.provider = 'guest_device' AND ai.subject = $1`,
           [deviceId],
         );
         let row = existing.rows[0];
+        // A banned guest stays out until the ban ends (step 2.7d).
+        if (row?.status === 'banned') {
+          const now = await liftEndedBan(
+            client,
+            { ...row, banned_until: row.banned_until ?? null },
+            deps.clock.now(),
+          );
+          if (now === 'banned') throw bannedError(row.banned_until ?? null);
+          row = { ...row, status: now as UserRow['status'] };
+        }
         if (row && row.status !== 'guest') {
           throw conflict(
             ErrorCode.conflict,
@@ -214,10 +226,18 @@ export function authRoutes(app: FastifyInstance, deps: AppDeps): void {
       if (token.expires_at.getTime() <= clock.now()) throw unauthorized('Refresh token expired.');
       await client.query('UPDATE refresh_tokens SET revoked_at = now() WHERE id = $1', [token.id]);
       const user = (
-        await client.query<UserRow>('SELECT id, username, status, level, xp FROM users WHERE id = $1', [
-          token.user_id,
-        ])
+        await client.query<UserRow>(
+          'SELECT id, username, status, level, xp, banned_until FROM users WHERE id = $1',
+          [token.user_id],
+        )
       ).rows[0];
+      if (user?.status === 'banned') {
+        user.status = (await liftEndedBan(
+          client,
+          { ...user, banned_until: user.banned_until ?? null },
+          clock.now(),
+        )) as UserRow['status'];
+      }
       if (!user || user.status === 'banned' || user.status === 'deleted')
         throw unauthorized('Account unavailable.');
       const platform: Platform = fromCookie ? 'web' : platformFromHeader(request);

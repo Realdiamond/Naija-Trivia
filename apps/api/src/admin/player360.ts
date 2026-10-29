@@ -14,6 +14,7 @@ import {
   AdminNoteRequest,
   AdminPlayerAction,
   ErrorCode,
+  SUPPORT_ACTIONS,
   SUPPORT_GRANT_DAILY_LIMIT,
   type AdminDevicesResponse,
   type AdminMatchesResponse,
@@ -30,7 +31,8 @@ import { grantCoins, userAccount, type CoinChange } from '../economy/ledger';
 import { ApiError, conflict, notFound, parse } from '../errors';
 import { writeAudit } from './audit';
 import { watMidnight } from './console';
-import { requireAdmin, type AdminContext, type AdminDeps } from './context';
+import { requireAdmin, requirePermission, type AdminContext, type AdminDeps } from './context';
+import { moderate } from './moderation';
 
 const UserParams = z.object({ id: z.string().min(3).max(40) });
 const MINUTE = 60_000;
@@ -419,9 +421,14 @@ export function adminPlayer360Routes(app: FastifyInstance, deps: AppDeps, ctx: A
   });
 
   app.post('/admin/users/:id/actions', async (request): Promise<AdminPlayerActionResponse> => {
-    const admin = await requireAdmin(request, ctx, 'players.support');
-    const who = await player(pool, parse(UserParams, request.params).id);
+    const admin = await requireAdmin(request, ctx);
     const action = parse(AdminPlayerAction, request.body);
+    const support = (SUPPORT_ACTIONS as readonly string[]).includes(action.type);
+    requirePermission(admin, support ? 'players.support' : 'players.moderate');
+    const who = await player(pool, parse(UserParams, request.params).id);
+    if (action.type !== 'grant_coins' && action.type !== 'restore_streak' && action.type !== 'sign_out') {
+      return moderate(deps, admin, who.id, action, request.ip);
+    }
     const now = clock.now();
     const audit = {
       actor: admin.id,
