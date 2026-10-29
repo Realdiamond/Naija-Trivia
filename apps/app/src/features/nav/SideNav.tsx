@@ -11,6 +11,7 @@ const ITEMS: Array<{ path: string; label: MessageKey; icon: IconName; accountOnl
   { path: '/home', label: 'nav.home', icon: 'home' },
   { path: '/daily/play', label: 'nav.daily', icon: 'calendar' },
   { path: '/challenge', label: 'nav.play', icon: 'play' },
+  { path: '/practice', label: 'nav.practice', icon: 'book' },
   { path: '/leaderboards', label: 'nav.leaderboards', icon: 'trophy' },
   { path: '/friends', label: 'nav.friends', icon: 'users', accountOnly: true },
   { path: '/notifications', label: 'nav.notifications', icon: 'bell' },

@@ -32,7 +32,8 @@ export type IconName =
   | 'shield'
   | 'search'
   | 'settings'
-  | 'download';
+  | 'download'
+  | 'book';
 
 interface IconProps {
   name: IconName;
@@ -96,6 +97,13 @@ function paths(name: IconName, s: Stroke) {
       return <Path d="M6 6l12 12M18 6L6 18" {...s} />;
     case 'download':
       return <Path d="M12 4v11M7 10l5 5 5-5M5 20h14" {...s} />;
+    case 'book':
+      return (
+        <Path
+          d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5zM12 6.5v13"
+          {...s}
+        />
+      );
     case 'phone':
       return (
         <>

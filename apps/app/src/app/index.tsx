@@ -1,7 +1,9 @@
 /** Sends the player where they belong: the welcome, finishing their profile, or home. */
+import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { restoreSession, useSession } from '../auth/session';
+import { loadPractice, usePractice } from '../features/practice/store';
 import { useT } from '../i18n';
 import { Button } from '../ui/Button';
 import { Screen } from '../ui/Screen';
@@ -11,6 +13,11 @@ import { colors } from '../ui/theme';
 export default function Index() {
   const { status, user } = useSession();
   const t = useT();
+  // Offline, packs saved on this device still play (UX §4).
+  const savedPacks = usePractice((s) => Object.keys(s.packs).length);
+  useEffect(() => {
+    void loadPractice();
+  }, []);
 
   if (status === 'loading') {
     return (
@@ -27,6 +34,15 @@ export default function Index() {
             {t('error.network')}
           </Text>
           <Button label={t('error.retry')} onPress={() => void restoreSession()} />
+          {savedPacks > 0 ? (
+            <Button
+              label={t('practice.offlineCta')}
+              variant="outline"
+              icon="book"
+              onPress={() => router.push('/practice')}
+              testID="practice-offline"
+            />
+          ) : null}
         </View>
       </Screen>
     );

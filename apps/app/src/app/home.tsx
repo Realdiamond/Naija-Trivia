@@ -20,6 +20,7 @@ import { currentRound, isUrgent, timeLeft } from '../features/duels/format';
 import { useOpponentName } from '../features/duels/parts';
 import { useRandomDuel } from '../features/duels/useRandomDuel';
 import { useFlag } from '../features/liveops/config';
+import { sendQueued } from '../features/practice/store';
 import { StatusBanner } from '../features/liveops/StatusBanner';
 import { WarningCard } from '../features/moderation/notices';
 import { useT } from '../i18n';
@@ -49,6 +50,7 @@ export default function Home() {
   const { refetch: refetchDone } = done;
   const { refetch: refetchDaily } = daily;
   const { refetch: refetchWallet } = wallet;
+  const { refetch: refetchMe } = me;
   useFocusEffect(
     useCallback(() => {
       if (!signedIn) return;
@@ -56,7 +58,9 @@ export default function Home() {
       void refetchDone();
       void refetchDaily();
       void refetchWallet();
-    }, [signedIn, refetchActive, refetchDone, refetchDaily, refetchWallet]),
+      // Practice games played offline go now; the XP they pay can move the level.
+      void sendQueued().then((paid) => (paid.size > 0 ? refetchMe() : undefined));
+    }, [signedIn, refetchActive, refetchDone, refetchDaily, refetchWallet, refetchMe]),
   );
 
   // A moderator took the username away (step 2.7d): the player picks a new one.
@@ -194,6 +198,12 @@ export default function Home() {
           busy={random.busy}
           onPress={() => void random.start()}
           testID="random"
+        />
+        <Action
+          icon="book"
+          label={t('home.practice')}
+          onPress={() => router.push('/practice')}
+          testID="practice"
         />
       </View>
       {random.error ? (

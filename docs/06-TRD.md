@@ -127,7 +127,7 @@ This document turns the PRD into technical requirements: the platforms, the stac
 ### 4.10 Web app
 - **FR-WEB-1:** The web app at `whosabi.ng` is the same Expo app built for the web. Every MVP feature works there: guest play, sign-in, duels, party rooms (host and join), the Daily, practice, friends, profile, settings, share and report. Purchases and ads come to the web in v1.1 (FR-ECO-2, FR-ECO-3).
 - **FR-WEB-2:** Platform-specific code sits behind small adapters with a `.native.ts` and a `.web.ts` version (§5.6). Shared screens never import a native-only library directly; a lint rule enforces this.
-- **FR-WEB-3:** Installable PWA: web manifest, and a service worker that caches the app shell, fonts and practice packs, so Practice works offline. An install prompt appears after the second session (Chrome's install prompt on Android; "Add to Home Screen" steps on iPhone).
+- **FR-WEB-3:** Installable PWA: web manifest, and a service worker that caches the app shell and fonts, with practice packs kept in local storage (step 2.8g), so Practice works offline. An install prompt appears after the second session (Chrome's install prompt on Android; "Add to Home Screen" steps on iPhone).
 - **FR-WEB-4:** Layout: a phone-width game column (max 480 px) centred on bigger screens. From 1024 px, a side navigation replaces the tab bar, and leaderboards, profile and shop use two columns.
 - **FR-WEB-5:** Keyboard: 1–4 or A–D answers, Enter continues, Esc opens the leave-match dialog. Focus is always visible.
 - **FR-WEB-6:** Data Saver turns on automatically when the browser reports `saveData` or a 2G/3G connection.

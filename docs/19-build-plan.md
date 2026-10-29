@@ -566,7 +566,7 @@ TRD FR-WEB-3, UX §3 and §4, PRD F18.
 - ✅ **The service worker for every visitor**, not only those with pushes on (not in development). Bundles, fonts and pictures (their names carry content hashes) come from the phone once they've been loaded, so a repeat visit downloads only the page; the newest 150 are kept. Pages come from the network, and the last one is kept as the app shell for when there's no connection or it takes over 4 seconds, so the app opens offline. The API is never cached. Party links still get the light party client
 - ✅ **"Put Who Sabi? on your home screen"** on Home from the second visit on that device: Install opens the browser's own prompt (Chrome, Edge, Samsung Internet); on iPhone and iPad it gives Safari's "Add to Home Screen" steps. "Not now" waits a week; it never shows once installed. `pwa_installed` says whether our card or the browser's menu did it
 - ✅ The manifest gains an id, a language and categories
-- Left for later: Practice packs offline (with Practice itself), the "Get the app" banner for mobile browsers (once the Play Store listing is live), and making the light party client installable
+- Left for later: Practice packs offline (with Practice itself; done in 2.8g), the "Get the app" banner for mobile browsers (once the Play Store listing is live), and making the light party client installable
 - ✅ Tests: the app in the browser (files kept and a repeat visit served from the phone, the app opening offline; the install card from the second visit, "Not now" for a week, Install showing the browser's prompt)
 
 ### Step 2.8d · Guardian consent for 13–17s ✅
@@ -597,8 +597,18 @@ GDD §2.6 and §6.1, TRD FR-CON-3, doc 09 §2.4. Practice is split: the app's sc
 - ✅ **Practice results**: a finished game (up to 10 questions) is sent when online, within 14 days, with an id made on the device, so sending it again pays once. Answers are checked against the questions as they are now and must come from the player's set; XP as in GDD §5.1, up to 300 a day (`practice.xp_daily_cap`, changeable in the console), no coins of its own and no rating. Practice answers never move a question's numbers. New events `pack_unlocked` and `practice_completed`
 - ✅ A guest's unlocked packs, sets and practice results follow them into the account they sign in to; they're in the player's data download (`practice_games`, `packs_unlocked`); practice sets are kept 35 days and results 2 years by the retention job
 - ✅ The console's **Packs** page in Content: every pack with its live and chosen questions and whether players can see it; editors, admins and owners make a pack (free, coins with a price, sponsored or Sabi Pass; optionally a whole category; optional dates), choose its questions by id or reference, take one out, and switch a pack off. All audited
-- Left for later: the app's Practice screens and offline play (2.8g), picture questions in sets (with media), sponsored packs' branding (v2) and the Sabi Pass (v1.1)
+- Left for later: the app's Practice screens and offline play (done in 2.8g), picture questions in sets (with media), sponsored packs' branding (v2) and the Sabi Pass (v1.1)
 - ✅ Tests: the API (the catalogue for a player and in family mode, hidden packs, unlocking with and without coins, the set with answers and without the Daily's question, the same all week, results paid once and capped by the day, games not from the player's set refused, a guest's packs following them, the console's pack routes and who may use them, all audited); the console in the browser (an editor makes a coins pack and chooses and removes a question)
+
+### Step 2.8g · Practice in the app, offline ✅
+GDD §2.6, UX §4 ("Offline"), TRD FR-WEB-3, PRD F18.
+
+- ✅ **Practice** on Home (and in the side navigation on computers): the packs the player can practise, with how many questions each has and which are saved on this device; a coins pack asks before it takes the coins, or says how many more are needed; Sabi Pass packs wait
+- ✅ **Playing a pack**: 10 questions from its practice set, those played least on this device first, so a player goes round the whole set; the same question screen, timer, keys and option shuffle as duels, with the answer and its "Did you know?" checked on the device. The result says how many were right and the XP paid, or that it comes once back online, with "Play 10 more"
+- ✅ **Offline**: opening a pack saves the week's set on the device (AsyncStorage on phones, local storage on the web), so it plays with no connection. When the app opens offline, the start screen offers "Practise offline" if a pack is saved; finished games wait on the device and go when the player is back (from Home or Practice), each once
+- ✅ Signing out takes the saved packs and waiting games off the device; a guest who signs in keeps them, as the server moves their sets into the account
+- Left for later: the Practice tab of the bottom bar (with the tab bar), extended time for accessibility (UX §4), and Practice for the light party client
+- ✅ Tests: the app's rules (the shuffle and scoring on the device, the result in the canonical order, what a failed send keeps); the app in the browser (a guest practises the Food pack online and gets XP, then with no connection opens the app, plays the saved pack, and the game is sent once they're back)
 
 | Step | Scope | Main docs |
 |---|---|---|
@@ -609,7 +619,7 @@ GDD §2.6 and §6.1, TRD FR-CON-3, doc 09 §2.4. Practice is split: the app's sc
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅, 2.7n ✅, 2.7o ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
-| 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅, 2.8f ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
+| 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅, 2.8f ✅, 2.8g ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |
 
