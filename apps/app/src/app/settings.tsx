@@ -144,6 +144,8 @@ export default function Settings() {
         </>
       ) : null}
 
+      <Row icon="arrow-right" label="settings.help" onPress={() => router.push('/help')} testID="open-help" />
+
       <Text variant="heading" style={styles.section}>
         {t('settings.yourData')}
       </Text>

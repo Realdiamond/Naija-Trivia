@@ -8,6 +8,7 @@
  *   practice results           2 years
  *   integrity flags            2 years
  *   question reports           2 years
+ *   messages to support        2 years
  *   consent records            6 years after the account was deleted
  * Raw analytics events go with the analytics loader (ANALYTICS_RETENTION_DAYS); the admin audit
  * log is kept 6 years and the app's database role cannot delete from it.
@@ -113,6 +114,16 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
       rows(
         pool,
         'DELETE FROM question_reports WHERE id IN (SELECT id FROM question_reports WHERE created_at < $1 LIMIT $2)',
+        cutoff,
+      ),
+  },
+  {
+    rule: 'support_tickets',
+    days: 730,
+    run: (pool, cutoff) =>
+      rows(
+        pool,
+        'DELETE FROM support_tickets WHERE id IN (SELECT id FROM support_tickets WHERE created_at < $1 LIMIT $2)',
         cutoff,
       ),
   },

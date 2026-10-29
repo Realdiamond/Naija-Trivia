@@ -140,10 +140,11 @@ erDiagram
 | Consent records | Account lifetime + 6 years | Legal obligation (accountability) |
 | Admin audit log | 6 years | Legal obligation |
 | Question reports | 2 years | Legitimate interest |
+| Messages to support (`support_tickets`) | 2 years; deleted with the account | Contract (support) |
 | Prize claims (v2) | 6 years | Legal and tax |
 | Backups | 35 days (RDS PITR 7 days + snapshots) | – |
 
-**Account deletion:** set `users.status='deleted'` and clear `username`, `display_name`, `avatar_id` and `home_state`. Delete `auth_identities`, `devices` and `refresh_tokens`. Keep duel and party rows with the user reference intact but display them as "Deleted player". Delete the player's rows in ClickHouse (events and rollups, including any merged guest ids) and their internal notes, and delete push tokens. The admin audit log keeps the user ID for accountability, but no profile data.
+**Account deletion:** set `users.status='deleted'` and clear `username`, `display_name`, `avatar_id` and `home_state`. Delete `auth_identities`, `devices`, `refresh_tokens` and the player's messages to support (`support_tickets`). Keep duel and party rows with the user reference intact but display them as "Deleted player". Delete the player's rows in ClickHouse (events and rollups, including any merged guest ids) and their internal notes, and delete push tokens. The admin audit log keeps the user ID for accountability, but no profile data.
 
 ## 5. Sizing estimate (12 months, 250k MAU / 80k DAU) *(inferred)*
 | Table | Rows | Size |

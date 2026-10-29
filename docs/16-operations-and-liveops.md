@@ -32,6 +32,7 @@
 - **Tooling:** a helpdesk (Freshdesk or Zendesk free tier, or Crisp), linked to User 360 in the admin console, so the agent sees the player's timeline, sessions, matches and purchases next to the ticket.
 - **SLAs:** first response within 24 h (P1 issues like a lost purchase within 4 h in working hours); resolution within 72 h.
 - **Top macros:** lost streak, purchase not received (check RevenueCat → re-grant), wrong question dispute, username change, account deletion, banned appeal, OTP not received (check the provider logs per carrier).
+- **Built in step 2.7p:** the app's Help screen (Settings → Help and support) has the common questions in English and Pidgin and a form that sends the topic, the message, an optional email, and the app's version and the device. Each message is kept for the console (**Support**, and User 360's Support tab) and emailed to `SUPPORT_INBOX`, the helpdesk's inbox, with the player's email to reply to and a link to their page. Support answers by email from the helpdesk, or in the console, where the answer shows in the player's Help screen; the ready answers above are in the console in both languages. Whichever helpdesk is chosen (Freshdesk, Zendesk or Crisp), it takes these by email: point `help@whosabi.ng` at it and set `SUPPORT_INBOX`.
 - **Compensation policy:** the support role can grant up to 500 coins a day per player. Larger grants are made by an admin, and anything above 5,000 needs a second approver (doc 18 §8). Every grant goes through the ledger (`reason='support_grant'`).
 
 ## 4. Moderation

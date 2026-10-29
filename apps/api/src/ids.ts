@@ -18,7 +18,7 @@ export function ulid(nowMs: number = Date.now()): string {
 
 /**
  * pr: a party room; pg: one game played in it; lt: a ledger transaction; pu: a purchase; ds: a data
- * request; ar: a threshold alert rule; sg: a segment; sx: a segment export; pk: a pack.
+ * request; ar: a threshold alert rule; sg: a segment; sx: a segment export; pk: a pack; st: a support ticket.
  */
 export type IdPrefix =
   | 'u'
@@ -38,7 +38,8 @@ export type IdPrefix =
   | 'ar'
   | 'sg'
   | 'sx'
-  | 'pk';
+  | 'pk'
+  | 'st';
 
 export function newId(prefix: IdPrefix, nowMs?: number): string {
   return `${prefix}_${ulid(nowMs)}`;

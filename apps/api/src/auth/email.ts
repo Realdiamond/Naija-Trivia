@@ -10,6 +10,8 @@ export interface OutgoingEmail {
   subject: string;
   text: string;
   html: string;
+  /** Where a reply goes, e.g. the player who wrote to support. */
+  replyTo?: string;
 }
 
 export interface EmailSender {
@@ -35,6 +37,7 @@ export class ResendEmail implements EmailSender {
         subject: email.subject,
         text: email.text,
         html: email.html,
+        ...(email.replyTo ? { reply_to: email.replyTo } : {}),
       }),
       signal: AbortSignal.timeout(10_000),
     });
