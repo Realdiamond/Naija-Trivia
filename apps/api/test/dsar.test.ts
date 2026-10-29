@@ -5,7 +5,7 @@ import type { AdminDsarResponse, AdminRole } from '@whosabi/shared-types';
 import { SYSTEM_ADMIN_ID } from '../src/admin/permissions';
 import { AdminSessions } from '../src/admin/sessions';
 import { newId } from '../src/ids';
-import { befriend, bearer, createTestApp, signInGuest } from './helpers';
+import { befriend, bearer, createTestApp, signInGuest, testUsername } from './helpers';
 
 let t: Awaited<ReturnType<typeof createTestApp>>;
 let sessions: AdminSessions;
@@ -40,7 +40,7 @@ async function staff(roles: AdminRole[], name = roles.join('+')): Promise<{ toke
 /** A guest made into an account with a username and a phone, straight in the database. */
 async function account() {
   const guest = await signInGuest(t.app);
-  const username = `dsar_${randomInt(1e7)}`;
+  const username = testUsername('dsar_');
   await t.pool.query(
     "UPDATE users SET status = 'active', username = $2, age_band = '18_plus', home_state = 'LA' WHERE id = $1",
     [guest.user.id, username],

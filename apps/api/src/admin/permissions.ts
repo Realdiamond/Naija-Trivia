@@ -42,6 +42,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'analytics.content',
     'analytics.tech',
     'analytics.integrity',
+    'alerts.manage',
   ],
   admin: [
     ...PLAYER_SUPPORT,
@@ -61,6 +62,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'analytics.content',
     'analytics.tech',
     'analytics.integrity',
+    'alerts.manage',
   ],
   dpo: [
     ...PLAYER_SUPPORT.filter((p) => p !== 'players.support'),

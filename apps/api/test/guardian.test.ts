@@ -6,7 +6,7 @@
 import { createHash, randomInt } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Me, SignInResponse } from '@whosabi/shared-types';
-import { bearer, createTestApp, signInGuest } from './helpers';
+import { bearer, createTestApp, signInGuest, testUsername } from './helpers';
 
 let t: Awaited<ReturnType<typeof createTestApp>>;
 beforeAll(async () => {
@@ -45,7 +45,7 @@ describe('guardian consent (step 2.8d)', () => {
           method: 'PATCH',
           url: '/v1/me',
           headers: bearer(player.access),
-          payload: { username: `teen_${randomInt(1e6)}` },
+          payload: { username: testUsername('teen_') },
         })
       ).json().code,
     ).toBe('GUARDIAN_CONSENT_REQUIRED');
@@ -114,7 +114,7 @@ describe('guardian consent (step 2.8d)', () => {
       method: 'PATCH',
       url: '/v1/me',
       headers: bearer(player.access),
-      payload: { username: `teen_${randomInt(1e6)}` },
+      payload: { username: testUsername('teen_') },
     });
     expect(named.statusCode, named.body).toBe(200);
     expect(

@@ -13,7 +13,7 @@ import type {
 } from '@whosabi/shared-types';
 import { SYSTEM_ADMIN_ID } from '../src/admin/permissions';
 import { newId } from '../src/ids';
-import { bearer, createTestApp, signInGuest } from './helpers';
+import { bearer, createTestApp, signInGuest, testUsername } from './helpers';
 
 let t: Awaited<ReturnType<typeof createTestApp>>;
 beforeAll(async () => {
@@ -186,7 +186,7 @@ describe('players: search and User 360 (doc 18 §7)', () => {
   it('finds players by username, id, phone and device, and logs the search without the number', async () => {
     const phone = newPhone();
     const account = await phoneSignIn(phone);
-    const username = `ada_${randomInt(1e6)}`;
+    const username = testUsername('ada_');
     await t.pool.query('UPDATE users SET username = $2, status = $3 WHERE id = $1', [
       account.user.id,
       username,

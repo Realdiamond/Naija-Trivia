@@ -513,6 +513,15 @@ Doc 18 §9–10. The last part of the MVP dashboards, on the same page and filte
 - Left for later: crash-free sessions and API latency (from Sentry's API, with its key), ANRs, data used per match, the option each player picked (not in the events yet), appeals (no appeals yet)
 - ✅ Tests: the API (funnels in and out of the window, custom funnels and bad ones; each other dashboard's numbers from known answers, reports, events, flags and actions; who may); the console in the browser (an analyst builds a funnel and opens the rest)
 
+### Step 2.7m · Threshold alerts ✅
+Doc 18 §9 "Reports & alerts", §4 (Settings → alert rules).
+
+- ✅ The console's **Alert rules** page for owners and admins (`alerts.manage`): a rule watches one metric over the last 5 minutes to a day, and alerts when it goes below or above a line, or drops by a share on the same time last week. Metrics: players active, sign-ups, matches finished, store purchases, sign-in codes verified, pushes opened, connections restored (as shares of what was tried), question reports and integrity flags. Rules can be switched off and on, changed and deleted; every change is in the audit log
+- ✅ **The worker checks every rule each minute** (one worker at a time). Crossing a line sends one alert; coming back sends one "Back to normal". A share with fewer than 10 attempts behind it is too little to judge and changes nothing. Changing a rule judges it afresh
+- ✅ **Where alerts go:** staff phones (a problem alert in the Staff tab, step 2.9b) always; email through Resend to `ALERT_EMAILS`; Slack through `SLACK_ALERTS_WEBHOOK_URL` (a secret, set only in Heroku). The page shows which are set up
+- Left for later: scheduled email reports and anomaly alerts (v1.1), alert rules on Sentry's crash-free sessions and API latency
+- ✅ Tests: the API (who may; bad rules; changes keep what isn't sent; audited); the job (crossed and back to normal, once each, on each channel; a drop on last week; too few attempts; a rule switched off; once a minute); the console in the browser (an owner adds a rule, switches it off and deletes it)
+
 ### Step 2.8a · Account deletion and data requests ✅
 NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the first.
 
@@ -569,7 +578,7 @@ TRD §2 ("Crash / perf": Sentry), doc 18's `crash_free_sessions`.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |

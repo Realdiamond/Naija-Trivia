@@ -510,6 +510,35 @@ test('finance sees Monetisation and Economy, and not the other dashboards', asyn
   await expect(page.getByTestId('store-revenue')).toBeVisible();
 });
 
+test('an owner adds an alert rule, switches it off and deletes it', async ({ page }) => {
+  const email = `e2e-alerts-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'owner');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page.getByTestId('staff-name')).toBeVisible();
+  await page.getByRole('link', { name: 'Alert rules' }).click();
+
+  const form = page.getByTestId('new-rule');
+  await form.getByLabel('Watch').selectOption('otp_success');
+  await form.getByLabel('Alert when it is').selectOption('below');
+  await form.getByLabel('Line').fill('80');
+  await form.getByLabel('Over the last (minutes)').fill('20');
+  await form.getByLabel('Name (optional)').fill('Codes failing');
+  // Email and Slack are not set up on this server: only staff phones can be chosen.
+  await expect(form.getByLabel('Email')).toBeDisabled();
+  await page.getByTestId('add-rule').click();
+  await expect(page.getByTestId('rule-added')).toBeVisible();
+
+  const row = page.getByTestId('rules').getByRole('row', { name: /Codes failing/ });
+  await expect(row).toContainText('Sign-in codes verified below 80%, over the last 20 minutes');
+  await expect(row).toContainText('Not checked yet');
+  await row.getByRole('button', { name: 'Switch off' }).click();
+  await expect(row).toContainText('Switched off');
+  await row.getByRole('button', { name: 'Delete' }).click();
+  await expect(page.getByTestId('rules').getByRole('row', { name: /Codes failing/ })).toHaveCount(0);
+});
+
 test('support logs a data request and the DPO erases the account, with reasons', async ({
   page,
   request,

@@ -82,6 +82,8 @@ export const AdminPermission = z.enum([
   'analytics.tech',
   /** The Integrity dashboard (step 2.7l). */
   'analytics.integrity',
+  /** Threshold alert rules: make, change and delete them (step 2.7m). */
+  'alerts.manage',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 

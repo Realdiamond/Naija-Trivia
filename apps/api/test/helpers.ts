@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomInt } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { Redis } from 'ioredis';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
@@ -156,6 +156,13 @@ export async function createTestApp(
 }
 
 export const newDeviceId = () => randomBytes(24).toString('base64url');
+
+/**
+ * A random username the profanity filter can't read a word into: it reads look-alike digits as
+ * letters (`p680794559` is "p6bot9ass9"), so only 2, 6 and 9, which look like no letter.
+ */
+export const testUsername = (prefix: string) =>
+  prefix + Array.from({ length: 14 }, () => '269'[randomInt(3)]).join('');
 
 export async function signInGuest(
   app: FastifyInstance,
