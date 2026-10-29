@@ -17,6 +17,7 @@ import {
   Nunito_800ExtraBold,
 } from '@expo-google-fonts/nunito';
 import { Baloo2_800ExtraBold } from '@expo-google-fonts/baloo-2';
+import { countSession } from '../ads/pacing';
 import { appVisible, screenName, startAnalytics, trackEvent, trackScreen } from '../analytics';
 import { queryClient } from '../api/queryClient';
 import { restoreSession, useSession } from '../auth/session';
@@ -70,6 +71,7 @@ export default function RootLayout() {
   useEffect(() => {
     void useLanguage.getState().load();
     void loadConsent();
+    void countSession();
     void restoreSession();
     void startAnalytics().then(() => setAnalyticsReady(true));
     const sub = AppState.addEventListener('change', (state) => appVisible(state === 'active'));

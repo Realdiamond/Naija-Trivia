@@ -12,6 +12,7 @@ import { DevSms } from '../src/auth/sms';
 import { createTokenService } from '../src/auth/tokens';
 import { loadConfig } from '../src/config';
 import { createPool } from '../src/db';
+import type { AdKeys } from '../src/economy/ads';
 
 export const TEST_GOOGLE_CLIENT = 'test-client.apps.googleusercontent.com';
 export const TEST_APPLE_AUDIENCE = 'ng.whosabi.app';
@@ -95,7 +96,7 @@ export class TestClock {
 
 export async function createTestApp(
   env: Record<string, string> = {},
-  overrides: { auth?: Partial<AuthProviders>; partyTimings?: Partial<PartyTimings> } = {},
+  overrides: { auth?: Partial<AuthProviders>; partyTimings?: Partial<PartyTimings>; adKeys?: AdKeys } = {},
 ) {
   const clock = new TestClock();
   const config = loadConfig({
@@ -131,6 +132,7 @@ export async function createTestApp(
     clock,
     auth,
     partyTimings: overrides.partyTimings,
+    adKeys: overrides.adKeys,
   });
   await app.ready();
   return {

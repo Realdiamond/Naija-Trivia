@@ -15,6 +15,7 @@ import type { Config } from './config';
 import { contentRoutes } from './content/routes';
 import { dailyRoutes } from './daily/routes';
 import { duelRoutes } from './duels/routes';
+import { GoogleAdKeys, type AdKeys } from './economy/ads';
 import { economyRoutes } from './economy/routes';
 import type { Pool } from './db';
 import { registerErrorHandlers } from './errors';
@@ -53,6 +54,8 @@ export interface BuildOptions {
   auth?: Partial<AuthProviders>;
   /** Faster party rooms for tests. */
   partyTimings?: Partial<PartyTimings>;
+  /** AdMob's verifier keys; tests sign callbacks with their own. */
+  adKeys?: AdKeys;
 }
 
 export async function buildApp(options: BuildOptions): Promise<FastifyInstance> {
@@ -122,7 +125,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   roundRoutes(app, deps);
   duelRoutes(app, deps);
   dailyRoutes(app, deps);
-  economyRoutes(app, deps);
+  economyRoutes(app, deps, options.adKeys ?? new GoogleAdKeys());
   shareRoutes(app, deps);
   adminRoutes(app, deps);
 

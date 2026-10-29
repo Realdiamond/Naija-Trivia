@@ -88,6 +88,11 @@ export const en = {
   'coins.how':
     'Win a duel for 30 (10 if you lose), play the Daily for 20 and more with a streak, and get 100 for every level.',
   'coins.soon': 'Spend them on lifelines in duels. The shop is coming soon.',
+  'coins.watchAd': 'Watch a video · +{coins} coins',
+  'coins.adsLeft': '{n} more videos pay today',
+  'coins.adsDone': "That's today's videos. More tomorrow.",
+  'coins.adOnTheWay': 'Nice one! Your coins are on the way.',
+  'coins.adFailed': 'No video right now. Try again in a bit.',
   'coins.history': 'History',
   'coins.empty': 'Nothing yet. Play a duel or the Daily to earn your first coins.',
   'coins.more': 'Show more',
@@ -545,6 +550,11 @@ export const pcm: Record<MessageKey, string> = {
   'coins.how':
     'Win duel make you get 30 (10 if you lose), play the Daily for 20 and more if your streak dey, and 100 for every level.',
   'coins.soon': 'Use dem buy lifelines for duel. The shop dey come soon.',
+  'coins.watchAd': 'Watch video · +{coins} coins',
+  'coins.adsLeft': '{n} more videos go pay today',
+  'coins.adsDone': 'Today videos don finish. Come back tomorrow.',
+  'coins.adOnTheWay': 'Correct! Your coins dey come.',
+  'coins.adFailed': 'No video now. Try again small time.',
   'coins.history': 'History',
   'coins.empty': 'Nothing yet. Play duel or the Daily to get your first coins.',
   'coins.more': 'Show more',

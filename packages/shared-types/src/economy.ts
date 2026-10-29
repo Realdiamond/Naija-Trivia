@@ -51,6 +51,13 @@ export const WalletHistory = z.object({
 });
 export type WalletHistory = z.infer<typeof WalletHistory>;
 
+/** Rewarded ads (step 2.4c): what one pays, and how many more will pay today. */
+export const RewardedAdStatus = z.object({
+  coins: z.number().int().min(0),
+  left_today: z.number().int().min(0),
+});
+export type RewardedAdStatus = z.infer<typeof RewardedAdStatus>;
+
 /** What a finished game paid one player. */
 export const GameReward = z.object({
   coins: z.number().int().min(0),

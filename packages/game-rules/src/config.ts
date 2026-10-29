@@ -23,6 +23,7 @@ export const DEFAULT_CONFIG = {
   'econ.lifeline_skip': 100,
   'econ.lifeline_time': 40,
   'ads.interstitial_every_n_matches': 3,
+  'ads.rewarded_daily_cap': 10,
   'content.repeat_window_days': 30,
   'difficulty.k_factor': 8,
   'web.rewarded_daily_cap': 5,
