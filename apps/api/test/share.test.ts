@@ -157,6 +157,25 @@ describe('link previews', () => {
     }
   });
 
+  it('gives a friend code its player, and the player their link and QR code (step 2.12)', async () => {
+    const a = await player();
+    await named(a, 'ada_code');
+    const page = await get(null, '/u/ada_code');
+    expect(page.statusCode).toBe(200);
+    expect(page.body).toContain('<meta property="og:title" content="Add ada_code on Who Sabi?">');
+    // Someone we don't know gets the game's own preview.
+    expect((await get(null, '/u/nobody_here')).body).toContain(
+      '<meta property="og:image" content="https://whosabi.ng/og/default.png">',
+    );
+
+    const code = await get(a, '/v1/me/friend-code');
+    expect(code.statusCode, code.body).toBe(200);
+    expect(code.json().url).toBe('https://whosabi.ng/u/ada_code');
+    expect(code.json().svg).toMatch(/^<svg/);
+    // A guest has no username to share yet.
+    expect((await get(await player(), '/v1/me/friend-code')).statusCode).toBe(403);
+  });
+
   it('never names a 13–17 challenger', async () => {
     const a = await player();
     await named(a, 'young_share', 'restricted');
@@ -336,7 +355,7 @@ describe('app links', () => {
         details: [
           {
             appIDs: ['AB12CD34EF.ng.whosabi.app'],
-            components: [{ '/': '/d/*' }, { '/': '/daily/*' }, { '/': '/duel/*' }],
+            components: [{ '/': '/d/*' }, { '/': '/daily/*' }, { '/': '/duel/*' }, { '/': '/u/*' }],
           },
         ],
       },

@@ -257,3 +257,7 @@ export const MyStats = z.object({
   ),
 });
 export type MyStats = z.infer<typeof MyStats>;
+
+/** A player's friend code (step 2.12): their whosabi.ng/u/{username} link, and it as a QR code (SVG). */
+export const FriendCode = z.object({ url: z.url(), svg: z.string() });
+export type FriendCode = z.infer<typeof FriendCode>;

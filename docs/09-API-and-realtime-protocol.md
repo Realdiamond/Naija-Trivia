@@ -49,6 +49,7 @@ A token that is sent but expired is a `401` before the code is used, so the app 
 |---|---|---|
 | GET | `/me` | Profile, settings, age band, level with XP progress, rating and tier, `staff` (an owner or admin playing with their staff Google account: the app shows the Staff tab, step 2.9a) `push_off` (kinds of push switched off) and `notices` (step 2.7d: a moderator's warning, or the username taken away, until seen). Balances, entitlements and flags join with their steps |
 | GET | `/me/stats` | Step 2.11. The Profile's numbers: `{duels: {played, won, lost, drawn}, daily: {played, streak, best_streak}, party: {played, won}, practice: {games}, categories: [{category_id, answered, correct}]}`. Duels count once finished or forfeited; the streak is as it stands today (0 once it can't be saved); categories add up the player's duel and Daily answers, most answered first |
+| GET | `/me/friend-code` | Step 2.12. `{url, svg}`: the player's `whosabi.ng/u/{username}` link and it as a QR code (SVG) that friends scan with their phone's camera. Accounts with a username (`403 ACCOUNT_REQUIRED` otherwise); 30 a minute |
 | POST | `/me/notices/{id}/seen` | Step 2.7d. The player read a notice → `204`. A banned player can't sign in or refresh: sign-in is `403 ACCOUNT_UNAVAILABLE` saying until when and how to appeal; a ban with an end lifts itself the next time they try |
 | PATCH | `/me` | `{username?, avatar_id?, home_state?, language?, data_saver?, family_mode?, discoverable?, push_off?}`, all optional. `push_off` lists the kinds switched off, from `duels`, `friends` and `daily` (step 2.5c); the push job drops those (`muted`) on every device. `data_saver` is `true` or `false` for the player's choice, or `null` for automatic, where the app turns it on when the phone or browser says data is tight (step 2.8b); `GET /me` returns it the same way. The username needs an account and is chosen once (`USERNAME_LOCKED`; support changes it): 3–20 letters, digits or `_`, unique ignoring case (`USERNAME_TAKEN`), and filtered for offensive and official-looking names (`USERNAME_NOT_ALLOWED`). Restricted (13–17) accounts can't turn family mode off or become discoverable |
 | POST | `/me/age` | `{age_band: under_13 | 13_17 | 18_plus}`. One-time (`AGE_ALREADY_SET`; changes go through support). `under_13` is refused (`AGE_NOT_ALLOWED`). `13_17` makes the account restricted (doc 10 §3.3): family mode on, not discoverable; a guest who answers 13–17 becomes a restricted account when they sign up. A restricted account then needs a parent's or guardian's consent (`guardian: "needed"` on `/me`, step 2.8d): until it's given, a username or anything under `/friends` is refused (`GUARDIAN_CONSENT_REQUIRED`) |
@@ -310,7 +311,7 @@ A player who drops and comes back within a question gets it again, timed from wh
 |---|---|---|
 | `whosabi.ng/d/{token}` | `/duel/accept/{token}` | **Web app**: challenger card, then play your turn in the browser (or get the app) |
 | `whosabi.ng/r/{CODE}` | `/party/join/{CODE}` | **Web party client** (`apps/web-guest`: play in the browser with a nickname); `/r/{CODE}?app=1` opens the room in the full web app, where a signed-in player joins as themselves |
-| `whosabi.ng/u/{username}` | `/profile/{username}` | Web app profile page (`noindex`) |
+| `whosabi.ng/u/{username}` | `/u/{username}` | **Web app** (step 2.12): the player's card; an account adds them as a friend or challenges them, a guest is asked to sign up. It is the player's friend code: the link, or the QR code of it, from `GET /v1/me/friend-code` |
 | `whosabi.ng/daily/{n}` | `/daily` | **Web app**: play today's Daily |
 | `whosabi.ng/l/{invite}` | `/league/join/{invite}` | Web app: join the league |
 
@@ -324,6 +325,6 @@ The link service serves OG tags (`og:title`, `og:description`, and `og:image` 12
 | `GET /v1/share/duels/{id}/card.png` | The duel's two players, 20 a minute | The result for WhatsApp Status (mockup 14), 1080×1920 PNG, `private`; 409 until the duel is over |
 | `GET /v1/share/daily/{n}/card.png` | The player who finished it | Their Daily for Status: score, time, coloured squares, streak and the share beaten, never the answers; 409 until finished |
 | `GET /.well-known/assetlinks.json` | Android | The app (`ng.whosabi.app`) and its signing certificates from `ANDROID_CERT_SHA256`; an empty list while unset |
-| `GET /.well-known/apple-app-site-association` | iOS | `/d/*`, `/daily/*`, `/duel/*` for `{APPLE_TEAM_ID}.ng.whosabi.app`; 404 while unset |
+| `GET /.well-known/apple-app-site-association` | iOS | `/d/*`, `/daily/*`, `/duel/*`, `/u/*` for `{APPLE_TEAM_ID}.ng.whosabi.app`; 404 while unset |
 
 Pictures name only players with a public name: a guest or a 13–17 shows as "Player". When the web app moves to its own origin, the edge sends `/og/` and `/.well-known/` to the API as it does `/v1/`.

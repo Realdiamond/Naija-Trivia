@@ -2,6 +2,7 @@
  * Me and profiles (doc 09 §2.2, PRD F2, TRD FR-AUTH-6, doc 10 §3.3).
  */
 import type { FastifyInstance } from 'fastify';
+import QRCode from 'qrcode';
 import { z } from 'zod';
 import { levelForXp, NEW_PLAYER_RATING, streakOn, tierForRating, watDate } from '@whosabi/game-rules';
 import {
@@ -10,6 +11,7 @@ import {
   ConsentsRequest,
   ErrorCode,
   UpdateMeRequest,
+  type FriendCode,
   type Me,
   type PlayerNotice,
   type ProfileCard,
@@ -261,6 +263,36 @@ export function profileRoutes(app: FastifyInstance, deps: AppDeps): void {
   });
 
   /** The public profile card behind whosabi.ng/u/{username} (doc 09 §5). */
+  /**
+   * The player's friend code (step 2.12): their whosabi.ng/u/{username} link, and the same as a
+   * QR code a friend scans with their phone's camera to open the page that adds them. Accounts
+   * with a username only.
+   */
+  app.get(
+    '/v1/me/friend-code',
+    { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } },
+    async (request): Promise<FriendCode> => {
+      const auth = requireAuth(request);
+      const username = (
+        await pool.query<{ username: string | null }>(
+          "SELECT username FROM users WHERE id = $1 AND status IN ('active', 'restricted')",
+          [auth.userId],
+        )
+      ).rows[0]?.username;
+      if (!username) {
+        throw new ApiError(403, ErrorCode.accountRequired, 'Sign up and pick a username first');
+      }
+      const url = `${deps.config.publicWebUrl}/u/${username}`;
+      const svg = await QRCode.toString(url, {
+        type: 'svg',
+        margin: 1,
+        errorCorrectionLevel: 'M',
+        color: { dark: '#14231B', light: '#FFFFFF' },
+      });
+      return { url, svg };
+    },
+  );
+
   app.get('/v1/users/:username', async (request): Promise<ProfileCard> => {
     const { username } = parse(z.object({ username: z.string().min(1).max(40) }), request.params);
     const found = await pool.query<{ id: string }>(

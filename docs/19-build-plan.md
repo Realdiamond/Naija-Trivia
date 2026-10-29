@@ -80,7 +80,7 @@ Not in this step: the WhatsApp OTP fallback (PRD US-2, v1.1), contact discovery 
 - ✅ Round-trip sampling (TRD §5.3): server-timed pings, median of the last 5, capped at 1.5 s, used by duel and taste-test timing
 - ✅ Tests for each rule, against real Postgres and Redis
 
-Not in this step: guardian consent for 13–17s by guardian phone code (doc 10 §3.3; with the compliance work in step 2.8), reporting players and the moderators' forced rename (with moderation in step 2.7), QR friend codes (with the app in step 1.4).
+Not in this step: guardian consent for 13–17s by guardian phone code (doc 10 §3.3; with the compliance work in step 2.8), reporting players and the moderators' forced rename (with moderation in step 2.7), QR friend codes (with the app in step 1.4; built in 2.12).
 
 #### Step 1.2c · Cheaper launch setup ✅
 Decided on 28 Oct 2026 to keep running costs down before launch.
@@ -282,6 +282,14 @@ UX §1 (the app map), PRD F2, mockup 30.
 - ✅ **Profile**: the avatar, the name (or Guest), the tier with its badge and rating, the home state, the level with the XP to the next; the player's numbers (duels won, lost and drawn, the Daily streak as it stands with the best and how many played, party wins, practice games) and right answers by category from duels and Dailies (`GET /v1/me/stats`); changing the avatar or home state (the username is chosen once); and the way to friends, coins, settings and help. A guest is offered to save their progress
 - Left for later: badges (with achievements), stats by category for party games, other players' profiles beyond the card, and the Leagues tab (v1.1)
 - ✅ Tests: the API (duels by outcome with one still going left out, the Daily and its streak today and once lost, party wins, practice games, answers by category from duels and Dailies, a new player's zeros); the app in the browser (the tab bar between Home, Play, Shop and Profile; Play's modes; the Profile's tier and numbers; changing the avatar and home state)
+
+### Step 2.12 · Friend codes ✅
+PRD F8, doc 09 §5. Left from step 1.2b ("QR friend codes"); with phone sign-in off at launch, contacts find nobody, so this is how friends meet beyond usernames and duels.
+
+- ✅ **Your friend code** at the top of Friends: a QR code friends scan with their phone's camera, and the `whosabi.ng/u/{username}` link to send on WhatsApp, copy or share (`invite_shared` with `context: profile`)
+- ✅ **Opening a friend code** (the app through App Links and Universal Links, or the web app): the player's card with their avatar, tier and level; an account adds them as a friend (source `qr`) or challenges them straight away; a guest is asked to sign up; their own code says it's theirs; an unknown name says so. The link preview names the player ("Add tolu on Who Sabi?")
+- Left for later: scanning a QR code inside the app (the phone's camera and WhatsApp already open links), and contacts discovery in the app (with phone sign-in)
+- ✅ Tests: the API (the link preview, the code's link and QR code, none for a guest, `/u/*` in the iOS app links); the app in the browser (Ada shows her code, Femi opens it and adds her, Ada sees the request and her own code, someone new is asked to sign up)
 
 ### Step 2.6b-1 · Difficulty calibration and quality flags ✅
 GDD §6.3, content doc §4, TRD FR-CON-5.
@@ -642,6 +650,7 @@ GDD §2.6, UX §4 ("Offline"), TRD FR-WEB-3, PRD F18.
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |
 | 2.11 Profile and the tab bar ✅ | The tab bar (Home, Play, Shop, Profile), the Play tab, the Profile with the player's numbers and changes | UX §1, PRD F2 |
+| 2.12 Friend codes ✅ | A QR code and link to add a player, and the page that opens | PRD F8, API §5 |
 
 ## 5. Milestone M3: "Beta" (doc 15, week 14)
 Load tests (doc 14 §5), pen-test fixes, the device and browser matrix including the WhatsApp in-app browser, performance budgets (PRD §8), KPI reconciliation (admin numbers within ±1% of the database), closed track and invite-only web build. Detailed when M2 is close.
