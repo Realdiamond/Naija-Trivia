@@ -19,6 +19,14 @@ let t: Awaited<ReturnType<typeof createTestApp>>;
 let jobs: DailyService;
 beforeAll(async () => {
   t = await createTestApp();
+  // Other files play today's Daily too (the test clock starts on this day) and may change its
+  // questions after it was picked. Start with no Dailies at all: numbering from #1, a fresh
+  // pick from today's questions, and boards holding only this file's players.
+  await t.pool.query('DELETE FROM daily_results');
+  await t.pool.query('DELETE FROM daily_challenges');
+  await t.pool.query('DELETE FROM weekly_standings');
+  const boards = await t.redis.keys('lb:*');
+  if (boards.length > 0) await t.redis.del(...boards);
   t.clock.t = morning('2026-11-02'); // a Monday
   jobs = new DailyService({
     config: t.config,

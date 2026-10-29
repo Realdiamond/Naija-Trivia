@@ -754,3 +754,23 @@ label.check {
   align-self: flex-start;
   margin-top: 8px;
 }
+
+/* Analytics dashboards (step 2.7j) */
+.heatmap {
+  table-layout: fixed;
+  font-size: 11px;
+}
+.heatmap th {
+  font-size: 11px;
+  padding: 2px;
+  white-space: nowrap;
+}
+.heatmap td {
+  background: var(--primary);
+  border: 1px solid var(--surface);
+  height: 18px;
+  padding: 0;
+}
+.filters {
+  margin: 12px 0 4px;
+}

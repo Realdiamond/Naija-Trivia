@@ -54,8 +54,16 @@ export function HourLines({ rows }: { rows: Array<{ hour: number; today: number;
   );
 }
 
-/** One bar per day, today's darker. */
-export function DayBars({ rows, label }: { rows: Array<{ day: string; value: number }>; label: string }) {
+/** One bar per day, the last one darker (today's, unless `lastLabel` names another day). */
+export function DayBars({
+  rows,
+  label,
+  lastLabel = 'Today',
+}: {
+  rows: Array<{ day: string; value: number }>;
+  label: string;
+  lastLabel?: string;
+}) {
   const max = niceMax(Math.max(1, ...rows.map((r) => r.value)));
   const inner = W - PAD.left - PAD.right;
   const slot = inner / Math.max(rows.length, 1);
@@ -84,7 +92,7 @@ export function DayBars({ rows, label }: { rows: Array<{ day: string; value: num
             {rows[0]!.day.slice(5)}
           </text>
           <text x={W - PAD.right} y={H - 6} textAnchor="end" className="axis">
-            Today
+            {lastLabel}
           </text>
         </>
       ) : null}
@@ -116,5 +124,82 @@ export function BarList({
         </li>
       ))}
     </ul>
+  );
+}
+
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+/** Players by weekday and WAT hour: the darker the cell, the busier the hour. */
+export function HourHeatmap({ rows }: { rows: Array<{ weekday: number; hour: number; players: number }> }) {
+  const max = Math.max(1, ...rows.map((r) => r.players));
+  const at = (weekday: number, hour: number) =>
+    rows.find((r) => r.weekday === weekday && r.hour === hour)?.players ?? 0;
+  return (
+    <table className="heatmap" aria-label="Players by weekday and hour (WAT)">
+      <thead>
+        <tr>
+          <th />
+          {Array.from({ length: 24 }, (_, h) => (
+            <th key={h} scope="col">
+              {h % 3 === 0 ? String(h).padStart(2, '0') : ''}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {WEEKDAYS.map((name, weekday) => (
+          <tr key={name}>
+            <th scope="row">{name}</th>
+            {Array.from({ length: 24 }, (_, hour) => {
+              const players = at(weekday, hour);
+              return (
+                <td
+                  key={hour}
+                  title={`${name} ${String(hour).padStart(2, '0')}:00 · ${players.toLocaleString('en-NG')} players`}
+                  style={{ opacity: players === 0 ? 0.06 : 0.15 + 0.85 * (players / max) }}
+                />
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** A share (0–1) for each day since players first came: the retention curve. */
+export function ShareCurve({
+  rows,
+  label,
+}: {
+  rows: Array<{ day: number; share: number | null }>;
+  label: string;
+}) {
+  const known = rows.filter((r): r is { day: number; share: number } => r.share !== null);
+  const last = Math.max(1, ...rows.map((r) => r.day));
+  const x = (d: number) => PAD.left + (d / last) * (W - PAD.left - PAD.right);
+  const y = (v: number) => PAD.top + (1 - v) * (H - PAD.top - PAD.bottom);
+  const path = known
+    .map((r, i) => `${i === 0 ? 'M' : 'L'}${x(r.day).toFixed(1)},${y(r.share).toFixed(1)}`)
+    .join(' ');
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={label}>
+      {[0, 0.5, 1].map((f) => (
+        <g key={f}>
+          <line x1={PAD.left} x2={W - PAD.right} y1={y(f)} y2={y(f)} className="gridline" />
+          <text x={PAD.left - 6} y={y(f) + 4} textAnchor="end" className="axis">
+            {Math.round(f * 100)}%
+          </text>
+        </g>
+      ))}
+      {[0, 7, 14, 30]
+        .filter((d) => d <= last)
+        .map((d) => (
+          <text key={d} x={x(d)} y={H - 6} textAnchor="middle" className="axis">
+            D{d}
+          </text>
+        ))}
+      {known.length > 0 ? <path d={path} className="line today" /> : null}
+    </svg>
   );
 }

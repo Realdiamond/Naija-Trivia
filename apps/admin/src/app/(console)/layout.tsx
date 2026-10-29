@@ -1,7 +1,7 @@
 /** The signed-in console: the top bar with search, and the sections this staff member may use. */
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import type { AdminProfile } from '@whosabi/shared-types';
+import { ANALYTICS_BOARD_PERMISSION, ANALYTICS_BOARDS, type AdminProfile } from '@whosabi/shared-types';
 import { adminApi } from '../../lib/api';
 import { signOut } from '../login/actions';
 import { NavLinks } from './NavLinks';
@@ -14,6 +14,9 @@ export default async function ConsoleLayout({ children }: { children: ReactNode 
           { href: '/overview', label: 'Overview' },
           { href: '/live', label: 'Live' },
         ]
+      : []),
+    ...(ANALYTICS_BOARDS.some((b) => me.permissions.includes(ANALYTICS_BOARD_PERMISSION[b]))
+      ? [{ href: '/analytics', label: 'Analytics' }]
       : []),
     ...(me.permissions.includes('players.search') ? [{ href: '/players', label: 'Players' }] : []),
     ...(me.permissions.includes('players.moderate') ? [{ href: '/integrity', label: 'Integrity' }] : []),
