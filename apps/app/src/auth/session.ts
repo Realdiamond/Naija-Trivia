@@ -10,6 +10,7 @@ import { ErrorCode, type PublicUser } from '@whosabi/shared-types';
 import { ApiError, type Session } from '../api/client';
 import { api, onSession } from '../api';
 import { queryClient } from '../api/queryClient';
+import { forgetPractice } from '../features/practice/store';
 import { forgetPush } from '../platform/push';
 import { storage } from '../platform/storage';
 import { randomId } from '../platform/random';
@@ -84,8 +85,9 @@ export async function ensureSignedIn(): Promise<GuestResult> {
 }
 
 export async function signOut(): Promise<void> {
-  // Pushes for this player stop coming to this phone.
+  // Pushes for this player stop coming to this phone, and their practice packs leave it.
   await forgetPush();
+  await forgetPractice();
   await api.logout().catch(() => undefined);
 }
 
