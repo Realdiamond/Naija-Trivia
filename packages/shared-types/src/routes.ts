@@ -161,6 +161,7 @@ export const routes = {
     /** Store purchases, refunds and the export for finance (step 2.7i). */
     commerce: (query = '') => `/admin/commerce${query}`,
     commerceExport: (month: string) => `/admin/commerce/export?month=${encodeURIComponent(month)}`,
+    analytics: (board: string, query = '') => `/admin/analytics/${encodeURIComponent(board)}${query}`,
     /** Home banners and events (step 2.7h). */
     events: () => '/admin/events',
     eventEnd: (id: number) => `/admin/events/${id}/end`,

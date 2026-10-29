@@ -36,6 +36,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'compliance.view',
     'compliance.erase',
     'commerce.view',
+    'analytics.kpi',
   ],
   admin: [
     ...PLAYER_SUPPORT,
@@ -49,6 +50,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'liveops.config',
     'compliance.view',
     'commerce.view',
+    'analytics.kpi',
   ],
   dpo: [
     ...PLAYER_SUPPORT.filter((p) => p !== 'players.support'),
@@ -59,8 +61,8 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
   support: PLAYER_SUPPORT,
   // Moderators see players masked only.
   moderator: ['players.search', 'players.view', 'overview.view', 'live.manage', 'players.moderate'],
-  analyst: ['content.view', 'overview.view'],
-  growth: ['overview.view'],
+  analyst: ['content.view', 'overview.view', 'analytics.kpi'],
+  growth: ['overview.view', 'analytics.kpi'],
   liveops: ['content.view', 'overview.view', 'liveops.flags', 'liveops.daily', 'liveops.config'],
   editor: CONTENT_ALL,
   fact_checker: ['content.view', 'content.write', 'content.review'],
@@ -70,7 +72,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
   sponsor_manager: [],
   // On call: the live numbers and rooms (doc 18 §6), and the kill switches (§8).
   engineer: ['overview.view', 'live.manage', 'liveops.flags'],
-  viewer: ['overview.view'],
+  viewer: ['overview.view', 'analytics.kpi'],
 };
 
 export function permissionsFor(roles: readonly AdminRole[]): AdminPermission[] {

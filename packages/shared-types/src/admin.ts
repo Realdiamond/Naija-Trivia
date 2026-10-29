@@ -70,6 +70,8 @@ export const AdminPermission = z.enum([
   'compliance.erase',
   /** Store purchases, refunds and the monthly export for finance (step 2.7i). */
   'commerce.view',
+  /** The KPI dashboards: Engagement & time, Growth & invites, Retention (step 2.7j). */
+  'analytics.kpi',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 

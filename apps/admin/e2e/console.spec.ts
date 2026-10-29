@@ -442,6 +442,37 @@ test('finance sees a purchase and its refund in Commerce, and downloads the mont
   expect(file.suggestedFilename()).toBe(`whosabi-purchases-${month}.csv`);
 });
 
+test('an analyst reads the KPI dashboards and narrows them to a platform', async ({ page, request }) => {
+  await playerWhoPlayed(request);
+  const email = `e2e-analyst-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'analyst');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page).toHaveURL(/\/overview$/);
+
+  await page.getByRole('link', { name: 'Analytics' }).click();
+  await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible();
+  await expect(page.getByTestId('dau')).toBeVisible();
+  await expect(
+    page.getByTestId('session-lengths').or(page.getByText('No sessions in this range.')),
+  ).toBeVisible();
+
+  await page.getByRole('link', { name: 'Growth & invites' }).click();
+  await expect(page.getByTestId('new-players').locator('b')).not.toHaveText('0');
+  await expect(page.getByTestId('growth-days')).toBeVisible();
+
+  await page.getByLabel('Platform').selectOption('ios');
+  await page.getByRole('button', { name: 'Show' }).click();
+  await expect(page).toHaveURL(/platform=ios/);
+  await expect(page).toHaveURL(/board=growth/);
+  await expect(page.getByTestId('new-players').locator('b')).toHaveText('0');
+
+  await page.getByRole('link', { name: 'Retention' }).click();
+  await expect(page).toHaveURL(/platform=ios/);
+  await expect(page.getByTestId('d1')).toBeVisible();
+});
+
 test('support logs a data request and the DPO erases the account, with reasons', async ({
   page,
   request,
