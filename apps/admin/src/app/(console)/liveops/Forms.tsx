@@ -1,11 +1,13 @@
 'use client';
 /**
- * The LiveOps forms (step 2.7c): one per flag (on or off, and who gets it), and the status
- * banner. Every change needs a reason; apps pick it up within a minute.
+ * The LiveOps forms (step 2.7c): one per flag (on or off, and who gets it), the status banner,
+ * game and economy values (step 2.7g), and Home banners and events (step 2.7h). Every change
+ * needs a reason; apps pick it up within a minute.
  */
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import type { AdminConfigValue, AdminFlag, StatusBanner } from '@whosabi/shared-types';
-import { saveBanner, saveConfig, saveFlag, type FormState } from './actions';
+import { CATEGORY_NAME } from '../../../lib/content';
+import { endEvent, saveBanner, saveConfig, saveFlag, scheduleEvent, type FormState } from './actions';
 
 const IDLE: FormState = { done: null, error: null };
 
@@ -171,6 +173,119 @@ export function ConfigForm({ value }: { value: AdminConfigValue }) {
         </button>
       ) : null}
       <Outcome state={state} testId={`config-${id}`} />
+    </form>
+  );
+}
+
+const ACTIONS: Record<string, string> = {
+  daily: "Today's Daily",
+  random: 'A random duel',
+  party: 'Party rooms',
+  challenge: 'Challenge a friend',
+  leaderboards: 'Leaderboards',
+  shop: 'The shop',
+  friends: 'Friends',
+};
+
+export function EventForm() {
+  const [state, action, pending] = useActionState(scheduleEvent, IDLE);
+  const [kind, setKind] = useState<'banner' | 'double_xp'>('banner');
+  return (
+    <form action={action} className="stack" data-testid="event-form">
+      <div className="field-grid">
+        <label>
+          Kind
+          <select
+            name="kind"
+            value={kind}
+            onChange={(e) => setKind(e.target.value === 'double_xp' ? 'double_xp' : 'banner')}
+            data-testid="event-kind"
+          >
+            <option value="banner">Home banner</option>
+            <option value="double_xp">Weekend Wahala: double XP in duels</option>
+          </select>
+        </label>
+        {kind === 'double_xp' ? (
+          <label>
+            Category
+            <select name="category_id" defaultValue="" data-testid="event-category">
+              <option value="">Every category</option>
+              {Object.entries(CATEGORY_NAME).map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        <label>
+          Platform
+          <select name="platform" defaultValue="">
+            <option value="">Every platform</option>
+            <option value="android">Android</option>
+            <option value="ios">iPhone</option>
+            <option value="web">Web</option>
+          </select>
+        </label>
+      </div>
+      <label>
+        Title in English
+        <input name="title_en" required minLength={3} maxLength={60} data-testid="event-title" />
+      </label>
+      <label>
+        Title in Pidgin (optional)
+        <input name="title_pcm" minLength={3} maxLength={60} />
+      </label>
+      <label>
+        Line under it in English (optional)
+        <input name="body_en" minLength={3} maxLength={160} data-testid="event-body" />
+      </label>
+      <label>
+        Line under it in Pidgin (optional)
+        <input name="body_pcm" minLength={3} maxLength={160} />
+      </label>
+      <div className="field-grid">
+        <label>
+          Tapping it opens
+          <select name="action" defaultValue="" data-testid="event-action">
+            <option value="">Nothing</option>
+            {Object.entries(ACTIONS).map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Starts (WAT)
+          <input name="starts_at" type="datetime-local" required data-testid="event-starts" />
+        </label>
+        <label>
+          Ends (WAT)
+          <input name="ends_at" type="datetime-local" required data-testid="event-ends" />
+        </label>
+      </div>
+      <label>
+        Reason (goes in the audit log)
+        <input name="reason" required minLength={3} maxLength={300} data-testid="event-reason" />
+      </label>
+      <button className="primary" type="submit" disabled={pending} data-testid="event-save">
+        Schedule
+      </button>
+      <Outcome state={state} testId="event" />
+    </form>
+  );
+}
+
+export function EndEventForm({ id }: { id: number }) {
+  const [state, action, pending] = useActionState(endEvent.bind(null, id), IDLE);
+  return (
+    <form action={action} className="inline" data-testid={`event-end-${id}`}>
+      <input name="reason" required minLength={3} maxLength={300} placeholder="Reason" aria-label="Reason" />
+      <button type="submit" disabled={pending}>
+        End now
+      </button>
+      <Outcome state={state} testId={`event-end-${id}`} />
     </form>
   );
 }

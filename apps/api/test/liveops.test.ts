@@ -71,6 +71,7 @@ describe('flags and kill switches (step 2.7c)', () => {
     expect(anyone).toEqual({
       flags: { 'ads.enabled': true, 'party.enabled': true, 'shop.enabled': true },
       banner: null,
+      home: [],
       values: {
         'econ.rewarded_ad_coins': 25,
         'ads.interstitial_every_n_matches': 3,

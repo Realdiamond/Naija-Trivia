@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { DuelView } from '@whosabi/shared-types';
 import { errorMessage } from '../../api';
 import { useT } from '../../i18n';
+import { useXpBoosted } from '../liveops/HomeBanners';
 import { Icon } from '../../ui/icons';
 import { Screen } from '../../ui/Screen';
 import { Text } from '../../ui/Text';
@@ -18,6 +19,7 @@ export function PickCategory({ duel, round, offered }: { duel: DuelView; round: 
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const boosted = useXpBoosted();
 
   const pick = async (categoryId: string) => {
     setBusy(categoryId);
@@ -68,6 +70,11 @@ export function PickCategory({ duel, round, offered }: { duel: DuelView; round: 
               <View style={styles.optionText}>
                 <Text variant="heading">{c.name}</Text>
                 <Text variant="bodySoft">{c.blurb}</Text>
+                {boosted(id) ? (
+                  <Text variant="label" color={colors.primaryInk} testID={`boost-${id}`}>
+                    {t('event.doubleXp')}
+                  </Text>
+                ) : null}
               </View>
               <View style={styles.chevron}>
                 <Icon name="back" size={20} />

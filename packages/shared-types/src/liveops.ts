@@ -13,10 +13,46 @@ export const StatusBanner = z.object({
 });
 export type StatusBanner = z.infer<typeof StatusBanner>;
 
+// ----- Home banners and events (step 2.7h, doc 18 §11, doc 16 §2) -----
+
+/** A plain Home banner, or Weekend Wahala: double XP in duels on one category (or all). */
+export const LiveEventKind = z.enum(['banner', 'double_xp']);
+export type LiveEventKind = z.infer<typeof LiveEventKind>;
+
+/** The screen a Home banner opens when tapped. */
+export const BannerAction = z.enum([
+  'daily',
+  'random',
+  'party',
+  'challenge',
+  'leaderboards',
+  'shop',
+  'friends',
+]);
+export type BannerAction = z.infer<typeof BannerAction>;
+
+/** A banner on Home while its event runs. */
+export const HomeBanner = z.object({
+  id: z.number().int(),
+  kind: LiveEventKind,
+  title_en: z.string(),
+  /** Pidgin; English is shown when there is none. */
+  title_pcm: z.string().nullable(),
+  body_en: z.string().nullable(),
+  body_pcm: z.string().nullable(),
+  action: BannerAction.nullable(),
+  /** Double XP's category; null for every category. */
+  category_id: z.string().nullable(),
+  ends_at: z.iso.datetime(),
+});
+export type HomeBanner = z.infer<typeof HomeBanner>;
+
 /** `GET /v1/config`: the flags as they apply to this player, and the banner. Looked at again every `refresh_s`. */
 export const ClientConfig = z.object({
   flags: z.record(z.string(), z.boolean()),
   banner: StatusBanner.nullable(),
+  /** Home banners and events running now for this platform, newest first (step 2.7h). */
+  home: z.array(HomeBanner),
   /** The tuned values the apps use too: lifeline prices, rewarded video coins, ad pacing (step 2.7g). */
   values: z.record(z.string(), z.number()),
   refresh_s: z.number().int(),
@@ -109,3 +145,57 @@ export const AdminConfigHistory = z.object({
   ),
 });
 export type AdminConfigHistory = z.infer<typeof AdminConfigHistory>;
+
+// ----- Home banners and events in the console (step 2.7h) -----
+
+export const AdminLiveEvent = HomeBanner.extend({
+  starts_at: z.iso.datetime(),
+  /** null: every platform. */
+  platforms: z.array(z.enum(['android', 'ios', 'web'])).nullable(),
+  state: z.enum(['scheduled', 'live', 'ended']),
+  ended_at: z.iso.datetime().nullable(),
+  created_by: z.string(),
+});
+export type AdminLiveEvent = z.infer<typeof AdminLiveEvent>;
+
+/** Scheduled and running events, then the last 20 that ended. */
+export const AdminLiveEventsResponse = z.object({ events: z.array(AdminLiveEvent) });
+export type AdminLiveEventsResponse = z.infer<typeof AdminLiveEventsResponse>;
+
+const text = (max: number) => z.string().trim().min(3).max(max);
+
+export const AdminLiveEventCreate = z
+  .object({
+    kind: LiveEventKind,
+    title_en: text(60),
+    title_pcm: text(60).nullable().default(null),
+    body_en: text(160).nullable().default(null),
+    body_pcm: text(160).nullable().default(null),
+    action: BannerAction.nullable().default(null),
+    category_id: z.string().min(1).max(40).nullable().default(null),
+    platforms: z
+      .array(z.enum(['android', 'ios', 'web']))
+      .min(1)
+      .nullable()
+      .default(null),
+    starts_at: z.iso.datetime(),
+    ends_at: z.iso.datetime(),
+    reason: text(300),
+  })
+  .strict()
+  .refine((e) => Date.parse(e.ends_at) > Date.parse(e.starts_at), {
+    message: 'it must end after it starts',
+    path: ['ends_at'],
+  })
+  .refine((e) => Date.parse(e.ends_at) - Date.parse(e.starts_at) <= 90 * 86_400_000, {
+    message: 'events run for 90 days at most',
+    path: ['ends_at'],
+  })
+  .refine((e) => e.kind === 'double_xp' || e.category_id === null, {
+    message: 'only double XP has a category',
+    path: ['category_id'],
+  });
+export type AdminLiveEventCreate = z.input<typeof AdminLiveEventCreate>;
+
+export const AdminLiveEventEnd = z.object({ reason: text(300) }).strict();
+export type AdminLiveEventEnd = z.infer<typeof AdminLiveEventEnd>;
