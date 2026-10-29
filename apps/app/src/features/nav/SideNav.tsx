@@ -1,4 +1,4 @@
-/** The side navigation on computers (mockup 30, TRD FR-WEB-4); phones get a tab bar in M2. */
+/** The side navigation on computers (mockup 30, TRD FR-WEB-4); phones get the tab bar (step 2.11). */
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { useSession } from '../../auth/session';
@@ -15,6 +15,8 @@ const ITEMS: Array<{ path: string; label: MessageKey; icon: IconName; accountOnl
   { path: '/leaderboards', label: 'nav.leaderboards', icon: 'trophy' },
   { path: '/friends', label: 'nav.friends', icon: 'users', accountOnly: true },
   { path: '/notifications', label: 'nav.notifications', icon: 'bell' },
+  { path: '/shop', label: 'nav.shop', icon: 'bag' },
+  { path: '/profile', label: 'nav.profile', icon: 'user' },
 ];
 
 /** Which item a page belongs to: duels under "Start a duel", any Daily page under the Daily. */

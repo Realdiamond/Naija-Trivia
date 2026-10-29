@@ -133,7 +133,7 @@ Known gap: the web app's first load is about 460 KB gzipped against the 350 KB b
 - ✅ Fix: the sign-in screen no longer says sign-in is off when phone codes are on and only Google is missing
 - ✅ Tests: unit tests for the time left and answer keys; end-to-end, two players finish a whole duel through a link in two browsers (the tie-break too when the scores are level), and two accounts become friends, one challenges and the other declines
 
-Left for later on purpose: the profile screen and the tab bar (with leagues and the shop in M2), removing friends and blocking from the app (the API has both), lifelines (step 2.4), push notifications and share cards (step 2.5).
+Left for later on purpose: the profile screen and the tab bar (with leagues and the shop in M2; built in 2.11), removing friends and blocking from the app (the API has both), lifelines (step 2.4), push notifications and share cards (step 2.5).
 
 **1.4c · Web polish ✅**
 - ✅ Computers (from 1024 px): a side navigation (Home, Start a duel, Friends) beside the phone-width column (FR-WEB-4); not on the first-run, sign-in and duel-link pages
@@ -273,6 +273,15 @@ doc 18 §16, owner's decisions above.
 - ✅ The app: "Continue with email" wherever the sign-in buttons are, and on the sign-in screen an email form, with a link to switch to the phone number when both are on
 - ✅ Staff: email sign-ins show masked (`c•••@gmail.com`); the console and the Staff tab find a player by their exact address, for roles that may search by phone number, and the audit log keeps it masked
 - ✅ Tests: the API (8: sign-up and sign-in again, a guest keeping progress, expiry and tries and phone codes kept apart, pacing and limits and the human check and refused sends, addresses only, email switched off, staff search, the Resend call) and config; an end-to-end sign-up by email in the browser
+
+### Step 2.11 · The Profile and the tab bar ✅
+UX §1 (the app map), PRD F2, mockup 30.
+
+- ✅ **The tab bar** on phones: Home, Play, Shop and Profile (Leagues joins in v1.1). It shows on those four screens; everything else opens on top of them. Computers keep the side navigation, which gains Shop and Profile
+- ✅ **Play**: every way to play, one tap each: challenge a friend, a random opponent, a party room (marked when staff have switched rooms off), the Daily, Practice and the leaderboards
+- ✅ **Profile**: the avatar, the name (or Guest), the tier with its badge and rating, the home state, the level with the XP to the next; the player's numbers (duels won, lost and drawn, the Daily streak as it stands with the best and how many played, party wins, practice games) and right answers by category from duels and Dailies (`GET /v1/me/stats`); changing the avatar or home state (the username is chosen once); and the way to friends, coins, settings and help. A guest is offered to save their progress
+- Left for later: badges (with achievements), stats by category for party games, other players' profiles beyond the card, and the Leagues tab (v1.1)
+- ✅ Tests: the API (duels by outcome with one still going left out, the Daily and its streak today and once lost, party wins, practice games, answers by category from duels and Dailies, a new player's zeros); the app in the browser (the tab bar between Home, Play, Shop and Profile; Play's modes; the Profile's tier and numbers; changing the avatar and home state)
 
 ### Step 2.6b-1 · Difficulty calibration and quality flags ✅
 GDD §6.3, content doc §4, TRD FR-CON-5.
@@ -632,6 +641,7 @@ GDD §2.6, UX §4 ("Offline"), TRD FR-WEB-3, PRD F18.
 | 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅, 2.8f ✅, 2.8g ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |
+| 2.11 Profile and the tab bar ✅ | The tab bar (Home, Play, Shop, Profile), the Play tab, the Profile with the player's numbers and changes | UX §1, PRD F2 |
 
 ## 5. Milestone M3: "Beta" (doc 15, week 14)
 Load tests (doc 14 §5), pen-test fixes, the device and browser matrix including the WhatsApp in-app browser, performance budgets (PRD §8), KPI reconciliation (admin numbers within ±1% of the database), closed track and invite-only web build. Detailed when M2 is close.

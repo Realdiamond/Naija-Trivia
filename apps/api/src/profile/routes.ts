@@ -3,8 +3,9 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { levelForXp, NEW_PLAYER_RATING, tierForRating } from '@whosabi/game-rules';
+import { levelForXp, NEW_PLAYER_RATING, streakOn, tierForRating, watDate } from '@whosabi/game-rules';
 import {
+  type MyStats,
   AgeBandRequest,
   ConsentsRequest,
   ErrorCode,
@@ -21,6 +22,7 @@ import { ApiError, conflict, notFound, parse, unauthorized } from '../errors';
 import { requestEventContext } from '../events';
 import { markNoticeSeen, unseenNotices } from '../moderation/notices';
 import { isBlocked } from '../social/graph';
+import { loadStreak } from '../daily/repo';
 import { checkUsername } from './usernames';
 
 interface MeRow {
@@ -75,6 +77,61 @@ export function profileRoutes(app: FastifyInstance, deps: AppDeps): void {
   const me = (userId: string): Promise<Me> => currentMe(pool, userId, clock.now());
 
   app.get('/v1/me', async (request): Promise<Me> => me(requireAuth(request).userId));
+
+  /**
+   * The Profile screen's numbers (step 2.11): duels finished and how they ended, the Daily and its
+   * streak, party games and wins, practice games, and right answers by category in duels and
+   * Dailies. Only the player's own.
+   */
+  app.get('/v1/me/stats', async (request): Promise<MyStats> => {
+    const { userId } = requireAuth(request);
+    const [duels, daily, streak, party, practice, categories] = await Promise.all([
+      pool.query<{ played: number; won: number; drawn: number }>(
+        `SELECT count(*)::int AS played,
+                count(*) FILTER (WHERE winner_id = $1)::int AS won,
+                count(*) FILTER (WHERE winner_id IS NULL AND state = 'complete')::int AS drawn
+           FROM duels WHERE (player_a = $1 OR player_b = $1) AND state IN ('complete', 'forfeit')`,
+        [userId],
+      ),
+      pool.query<{ played: number }>('SELECT count(*)::int AS played FROM daily_results WHERE user_id = $1', [
+        userId,
+      ]),
+      loadStreak(pool, userId),
+      pool.query<{ played: number; won: number }>(
+        `SELECT count(*)::int AS played, count(*) FILTER (WHERE rank = 1)::int AS won
+           FROM party_results WHERE user_id = $1`,
+        [userId],
+      ),
+      pool.query<{ games: number }>(
+        'SELECT count(*)::int AS games FROM practice_results WHERE user_id = $1',
+        [userId],
+      ),
+      pool.query<{ category_id: string; answered: number; correct: number }>(
+        `SELECT q.category_id, count(*)::int AS answered, count(*) FILTER (WHERE x.correct)::int AS correct
+           FROM (
+             SELECT a.question_id AS qid, coalesce(a.correct, false) AS correct
+               FROM duels d JOIN duel_answers a ON a.duel_id = d.id AND a.user_id = $1
+              WHERE (d.player_a = $1 OR d.player_b = $1) AND a.received_at IS NOT NULL
+             UNION ALL
+             SELECT e->>'qid', coalesce((e->>'correct')::boolean, false)
+               FROM daily_results r, jsonb_array_elements(coalesce(r.answers, '[]'::jsonb)) e
+              WHERE r.user_id = $1
+           ) x JOIN questions q ON q.id = x.qid
+          GROUP BY q.category_id ORDER BY answered DESC, q.category_id`,
+        [userId],
+      ),
+    ]);
+    const d = duels.rows[0]!;
+    // As it stands today: a streak that can no longer be saved shows 0 (as on the Daily).
+    const today = streakOn(streak, watDate(clock.now()));
+    return {
+      duels: { played: d.played, won: d.won, drawn: d.drawn, lost: d.played - d.won - d.drawn },
+      daily: { played: daily.rows[0]!.played, streak: today.current, best_streak: today.best },
+      party: party.rows[0]!,
+      practice: practice.rows[0]!,
+      categories: categories.rows,
+    };
+  });
 
   /** The player read what the team told them (step 2.7d); it stops showing. */
   app.post('/v1/me/notices/:id/seen', async (request, reply) => {

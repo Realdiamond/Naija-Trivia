@@ -15,6 +15,8 @@ export const routes = {
   authGoogle: () => `${API_PREFIX}/auth/google`,
   authApple: () => `${API_PREFIX}/auth/apple`,
   me: () => `${API_PREFIX}/me`,
+  /** The Profile screen's numbers (step 2.11). */
+  meStats: () => `${API_PREFIX}/me/stats`,
   /** The player saw a notice from the team (step 2.7d). */
   noticeSeen: (id: number) => `${API_PREFIX}/me/notices/${id}/seen`,
   /** Delete my account, and a copy of my data (step 2.8a). */

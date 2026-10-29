@@ -25,6 +25,7 @@ import { ConsentBanner } from '../features/consent/ConsentBanner';
 import { loadConsent } from '../features/consent/store';
 import { startDataSaver } from '../features/dataSaver/store';
 import { showsSideNav, SideNav } from '../features/nav/SideNav';
+import { showsTabBar, TabBar } from '../features/nav/TabBar';
 import { useLanguage } from '../i18n';
 import '../platform/install';
 import { startCrashReports, withCrashReports } from '../platform/crashReports';
@@ -122,6 +123,7 @@ function RootLayout() {
                 <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
                 <Stack.Screen name="taste" options={{ gestureEnabled: false }} />
               </Stack>
+              {!desktop && signedIn && showsTabBar(pathname) ? <TabBar /> : null}
             </View>
           </View>
           <ConsentBanner />

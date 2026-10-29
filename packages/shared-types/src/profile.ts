@@ -239,3 +239,21 @@ export type WebPushKeyResponse = z.infer<typeof WebPushKeyResponse>;
 export const DeleteAccountRequest = z.object({ confirm: z.literal(true) });
 export const DeleteAccountResponse = z.object({ dsar_id: z.string() });
 export type DeleteAccountResponse = z.infer<typeof DeleteAccountResponse>;
+
+/** The Profile screen's numbers (UX §1 "Profile", build plan step 2.11). */
+export const MyStats = z.object({
+  duels: z.object({
+    played: z.number().int(),
+    won: z.number().int(),
+    lost: z.number().int(),
+    drawn: z.number().int(),
+  }),
+  daily: z.object({ played: z.number().int(), streak: z.number().int(), best_streak: z.number().int() }),
+  party: z.object({ played: z.number().int(), won: z.number().int() }),
+  practice: z.object({ games: z.number().int() }),
+  /** Answers in duels and Dailies by category, most answered first. */
+  categories: z.array(
+    z.object({ category_id: z.string(), answered: z.number().int(), correct: z.number().int() }),
+  ),
+});
+export type MyStats = z.infer<typeof MyStats>;
