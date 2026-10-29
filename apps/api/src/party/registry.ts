@@ -94,6 +94,11 @@ export class PartyRooms {
     throw new Error('no free party room code after 10 tries');
   }
 
+  /** The rooms open on this process, newest first (the console's Live page). */
+  list(): PartyRoom[] {
+    return [...this.rooms.values()].filter((r) => !r.closed).reverse();
+  }
+
   /** Shutting down: everyone is told the room closed, rather than left hanging. */
   closeAll(): void {
     for (const room of [...this.rooms.values()]) room.close();

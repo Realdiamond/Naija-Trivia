@@ -12,4 +12,5 @@ export * from './profile';
 export * from './rounds';
 export * from './routes';
 export * from './social';
+export * from './states';
 export * from './timeline';

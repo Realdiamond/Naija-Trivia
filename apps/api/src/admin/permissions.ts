@@ -21,14 +21,14 @@ const CONTENT_ALL: AdminPermission[] = [
 ];
 
 export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
-  owner: [...PLAYER_SUPPORT, 'audit.view', 'staff.manage', ...CONTENT_ALL, 'overview.view'],
-  admin: [...PLAYER_SUPPORT, 'audit.view', ...CONTENT_ALL, 'overview.view'],
+  owner: [...PLAYER_SUPPORT, 'audit.view', 'staff.manage', ...CONTENT_ALL, 'overview.view', 'live.manage'],
+  admin: [...PLAYER_SUPPORT, 'audit.view', ...CONTENT_ALL, 'overview.view', 'live.manage'],
   dpo: [...PLAYER_SUPPORT, 'audit.view'],
   support: PLAYER_SUPPORT,
   // Moderators see players masked only.
-  moderator: ['players.search', 'players.view'],
+  moderator: ['players.search', 'players.view', 'overview.view', 'live.manage'],
   analyst: ['content.view', 'overview.view'],
-  growth: [],
+  growth: ['overview.view'],
   liveops: ['content.view', 'overview.view'],
   editor: CONTENT_ALL,
   fact_checker: ['content.view', 'content.write', 'content.review'],
@@ -36,8 +36,9 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
   writer: ['content.view', 'content.write'],
   finance: [],
   sponsor_manager: [],
-  engineer: [],
-  viewer: [],
+  // On call: the live numbers and rooms (doc 18 §6).
+  engineer: ['overview.view', 'live.manage'],
+  viewer: ['overview.view'],
 };
 
 export function permissionsFor(roles: readonly AdminRole[]): AdminPermission[] {

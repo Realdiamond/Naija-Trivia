@@ -24,3 +24,6 @@ apps/app/android/
 apps/app/ios/
 expo-env.d.ts
 apps/app/e2e/.output/
+
+# Local Redis snapshots
+dump.rdb
