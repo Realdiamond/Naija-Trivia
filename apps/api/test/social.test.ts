@@ -9,7 +9,7 @@ import type {
   Platform,
   SignInResponse,
 } from '@whosabi/shared-types';
-import { bearer, createTestApp, signInGuest } from './helpers';
+import { bearer, createTestApp, signInGuest, testUsername } from './helpers';
 
 let t: Awaited<ReturnType<typeof createTestApp>>;
 beforeAll(async () => {
@@ -50,8 +50,14 @@ async function account(platform: Platform = 'android'): Promise<Account> {
     });
     access = again.json().access;
   }
-  const username = `p${randomInt(1e9)}`;
-  await t.app.inject({ method: 'PATCH', url: '/v1/me', headers: bearer(access), payload: { username } });
+  const username = testUsername('p');
+  const named = await t.app.inject({
+    method: 'PATCH',
+    url: '/v1/me',
+    headers: bearer(access),
+    payload: { username },
+  });
+  expect(named.statusCode, named.body).toBe(200);
   return { id: body.user.id, access, username, phone };
 }
 
