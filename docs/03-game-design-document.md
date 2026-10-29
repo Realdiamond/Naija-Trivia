@@ -128,7 +128,7 @@ points     = (base + speed + streak) × wahala
 ### 5.1 Currencies
 | Currency | Earned | Spent | Notes |
 |---|---|---|---|
-| **Coins** 🪙 (soft) | Win duel +30, lose +10, Daily +20 (+5 per streak day, max +50), rewarded ad +25, level up +100 | Lifelines, cosmetics, extra duel slots | Cannot be cashed out or traded |
+| **Coins** 🪙 (soft) | Win duel +30, lose or draw +10 (a forfeit earns nothing), Daily +20 (+5 per streak day after the first, max +50 in all), rewarded ad +25, level up +100 | Lifelines, cosmetics, extra duel slots | Cannot be cashed out or traded |
 | **Gems** 💎 (hard) | IAP only, plus small Sabi Pass grant | Premium cosmetics, streak repair | **Never** affects prize eligibility (Play policy) |
 | **XP** | Every answer: +10 correct, +2 wrong; match complete +50 | – | Unlocks levels (cosmetics, packs) |
 

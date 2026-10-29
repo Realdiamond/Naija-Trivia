@@ -346,12 +346,25 @@ TRD FR-DUEL-6, GDD §2.1.
 - ✅ The app: "Finding you an opponent" while a random duel waits (checked every 5 s), "{name} is playing round 1" for a player seated before the challenger finished, and no decline screen for a random duel
 - ✅ Tests: the window and the bot's play in game-rules; the API (pairing, the widening window, blocks and duels already going, the bot seated after a minute and playing late, unrated, without pushes or events, a tie-break it loses, no direct challenge or rematch); the browser (two players meet through Random opponent)
 
+### Step 2.4a · Coins and the ledger ✅
+GDD §5.1, TRD FR-ECO-1, API §2.8, doc 08 "Ledger". Step 2.4 is split in four: coins (2.4a), lifelines (2.4b), ads (2.4c) and the shop with coin packs (2.4d).
+
+- ✅ **The ledger** (`src/economy`): every coin movement is one transaction of entries that sum to zero, written once per idempotency key in the game's own database transaction. Grants come from `system:rewards:coins`, spends go to `system:shop:coins`; a player's balance is cached on their account and can't go below zero (spending more is `409 NOT_ENOUGH_COINS`). The system accounts keep no cached balance, so grants never queue on one row
+- ✅ **What pays** (amounts from the remote-config defaults): a duel **+30 for a win, +10 for a loss or a draw**, nothing for a forfeit; the **Daily +20, +5 for each streak day after the first, up to +50** (a week's streak); **+100 for each level reached**, whatever the XP came from. The Sabi Bot and deleted accounts earn nothing
+- ✅ **XP for duels** (left for this step by 2.1): +10 a right answer and +2 a wrong one in rounds 1–3, and +50 for seeing the duel through; a player who forfeits keeps what their answers earned. Duels keep what each player got (`coins_a/b`, `xp_a/b`) for the result screen
+- ✅ Re-scoring (2.6b-2): a new winner after a correction gets the rest of a win's coins; the old winner keeps theirs
+- ✅ A guest who signs in to an account brings their coins, as one `merge` transaction. Levels the added XP reaches pay no coins
+- ✅ **`GET /v1/wallet`** and **`GET /v1/wallet/history`** (newest first, 30 a page); `coins_changed` analytics events for every coin earned
+- ✅ **The nightly check** (`ledger-check`, 04:00 WAT): adds every player's entries up again and checks each transaction balances; anything off is a problem alert to owners and admins (step 2.9b), and nothing is corrected automatically
+- ✅ The app: coins on Home (mockup 08) open the **Coins** screen (balance, how to earn, the history); the duel result shows rating, coins and XP side by side (mockup 13); the Daily result shows "+20 coins · +80 XP"
+- ✅ Tests: the rules in game-rules (duel and Daily coins, level-ups, duel XP); the API (a win and a loss paid once with XP and events, a level-up's 100, a forfeit, grants once per key, spends only what a player has, a guest's coins following them, the nightly check and its alert, the history's pages, a re-scored duel's new winner, the Daily's coins over a streak); the browser (coins after the Daily and a duel, on Home and the Coins screen)
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
 | 2.2 Party rooms ✅ (2.2a, 2.2b, 2.2c) | Party room server (WebSockets in the API), party REST side, the app's party screens, `apps/web-guest` (Preact party client), host screen mode, Wahala Round | GDD §2.2, TRD §4.4, API §3 |
 | 2.3 Random opponents ✅ | Rating-window matchmaking and the labelled Sabi Bot | TRD FR-DUEL-6 |
-| 2.4 Economy & monetisation ⬜ | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
+| 2.4 Economy & monetisation (2.4a ✅, 2.4b ⬜, 2.4c ⬜, 2.4d ⬜) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules ⬜ | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |

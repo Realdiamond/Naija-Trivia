@@ -6,6 +6,7 @@
  * duel can never be looked up ahead of playing it.
  */
 import { z } from 'zod';
+import { GameReward } from './economy';
 import { AnswerResponse } from './rounds';
 
 export const DuelState = z.enum([
@@ -125,6 +126,8 @@ export const DuelSummary = z.object({
   /** Set when the duel finished with a result (not for declined or cancelled duels). */
   result: DuelResult.nullable(),
   rating_delta: z.number().nullable(),
+  /** The coins and XP the duel paid you, once it finished with a result (step 2.4a). */
+  reward: GameReward.nullable(),
   created_at: z.iso.datetime(),
   completed_at: z.iso.datetime().nullable(),
 });

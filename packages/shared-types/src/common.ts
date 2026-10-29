@@ -61,6 +61,7 @@ export const ErrorCode = {
   partyRoomFull: 'PARTY_ROOM_FULL',
   nicknameRequired: 'NICKNAME_REQUIRED',
   nicknameNotAllowed: 'NICKNAME_NOT_ALLOWED',
+  notEnoughCoins: 'NOT_ENOUGH_COINS',
   internal: 'INTERNAL',
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

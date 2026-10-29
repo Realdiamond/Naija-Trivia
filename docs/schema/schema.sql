@@ -285,6 +285,10 @@ CREATE TABLE duels (
   winner_id       text,
   rating_delta_a  real,
   rating_delta_b  real,
+  coins_a         int,                                 -- what each player got when it finished (0020)
+  coins_b         int,
+  xp_a            int,
+  xp_b            int,
   rematch_of      text UNIQUE REFERENCES duels(id),    -- one rematch per finished duel
   created_at      timestamptz NOT NULL DEFAULT now(),
   completed_at    timestamptz,
@@ -376,6 +380,7 @@ CREATE TABLE daily_results (
   home_state      char(2),
   completed_at    timestamptz NOT NULL DEFAULT now(),
   xp              int NOT NULL DEFAULT 0,
+  coins           int NOT NULL DEFAULT 0,              -- 20, +5 a streak day after the first, up to 50 (0020)
   streak          int NOT NULL DEFAULT 0,              -- the streak after this Daily
   used_freeze     boolean NOT NULL DEFAULT false,
   rank            int,                                 -- final ranks, from the nightly snapshot
@@ -439,7 +444,7 @@ CREATE TABLE ledger_accounts (
   id              text PRIMARY KEY,                    -- 'user:<id>:coins', 'system:rewards:coins', 'system:shop:coins'
   owner_user_id   text REFERENCES users(id) ON DELETE CASCADE,
   currency        text NOT NULL CHECK (currency IN ('coins','gems')),
-  balance         bigint NOT NULL DEFAULT 0,           -- cached; verified nightly from entries
+  balance         bigint NOT NULL DEFAULT 0,           -- players' cached, verified nightly; system accounts' left at 0 (0020)
   CHECK (owner_user_id IS NULL OR balance >= 0)
 );
 CREATE TABLE ledger_transactions (
@@ -454,10 +459,12 @@ CREATE TABLE ledger_entries (
   id              bigserial PRIMARY KEY,
   transaction_id  text NOT NULL REFERENCES ledger_transactions(id),
   account_id      text NOT NULL REFERENCES ledger_accounts(id),
-  amount          bigint NOT NULL,                     -- +credit / -debit
+  amount          bigint NOT NULL CHECK (amount <> 0), -- +credit / -debit
   created_at      timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX ON ledger_entries (account_id, created_at DESC);
+CREATE INDEX ON ledger_entries (transaction_id);
+-- 'system:rewards:coins' pays grants, 'system:shop:coins' takes spends (and the same for gems).
 
 CREATE TABLE ad_rewards (
   reward_ref      text PRIMARY KEY,                    -- AdMob SSV transaction_id, or the server-issued web ad session id (dedupe)

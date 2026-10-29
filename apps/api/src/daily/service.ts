@@ -9,6 +9,7 @@ import {
   addDays,
   dailyGrid,
   dailyShareText,
+  dailyCoins,
   dailyXp,
   DEFAULT_CONFIG,
   isoWeek,
@@ -37,6 +38,7 @@ import {
 import { raiseStaffAlert } from '../admin/alerts';
 import type { AppDeps } from '../app';
 import { withTransaction } from '../db';
+import { rewardPlayer } from '../economy/rewards';
 import { ApiError, conflict, notFound } from '../errors';
 import { requestEventContext, type EventContext } from '../events';
 import { answerSolo, serveSolo, type SoloRound } from '../rounds/solo';
@@ -205,8 +207,8 @@ export class DailyService {
 
     const recorded = await withTransaction(pool, async (client) => {
       const user = (
-        await client.query<{ home_state: string | null; xp: string }>(
-          'SELECT home_state, xp FROM users WHERE id = $1 FOR UPDATE',
+        await client.query<{ home_state: string | null }>(
+          'SELECT home_state FROM users WHERE id = $1 FOR UPDATE',
           [userId],
         )
       ).rows[0];
@@ -240,18 +242,21 @@ export class DailyService {
       if (inserted.rowCount === 0) return null;
       const { state, usedFreeze } = recordDailyPlay(await loadStreak(client, userId, true), daily.play_date);
       await saveStreak(client, userId, state);
+      const coins = dailyCoins(state.current);
       await client.query(
-        'UPDATE daily_results SET streak = $3, used_freeze = $4 WHERE daily_id = $1 AND user_id = $2',
-        [daily.id, userId, state.current, usedFreeze],
+        'UPDATE daily_results SET streak = $3, used_freeze = $4, coins = $5 WHERE daily_id = $1 AND user_id = $2',
+        [daily.id, userId, state.current, usedFreeze, coins],
       );
-      const total = Number(user.xp) + xp;
-      await client.query('UPDATE users SET xp = $2, level = $3, updated_at = $4 WHERE id = $1', [
-        userId,
-        total,
-        levelForXp(total).level,
-        new Date(now),
-      ]);
-      return { streak: state.current };
+      const paid = await rewardPlayer(client, userId, {
+        xp,
+        coins,
+        reason: 'daily',
+        key: `daily:${daily.id}:${userId}`,
+        refType: 'daily',
+        refId: String(daily.id),
+        now,
+      });
+      return { streak: state.current, paid: paid?.changes ?? [] };
     });
 
     const result = await dailyResultFor(pool, daily.id, userId);
@@ -270,6 +275,13 @@ export class DailyService {
         { daily_id: daily.id, score, streak: recorded.streak },
         ctx,
       );
+      for (const change of recorded.paid) {
+        await this.deps.events.emit(
+          'coins_changed',
+          { delta: change.delta, reason: change.reason, balance_after: change.balance },
+          ctx,
+        );
+      }
     }
   }
 
@@ -326,6 +338,7 @@ export class DailyService {
         used_freeze: row.used_freeze,
       },
       xp: row.xp,
+      coins: row.coins,
       share_text: dailyShareText({
         number: daily.id,
         correct: row.correct_count,

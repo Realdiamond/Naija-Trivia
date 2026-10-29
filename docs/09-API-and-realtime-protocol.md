@@ -87,7 +87,7 @@ Everything in §2.3 needs an account (`ACCOUNT_REQUIRED`): guests play through i
 |---|---|---|
 | POST | `/duels` | `{opponent: {user_id} | {random: true} | {link: true}}` → `201 {duel, invite_url}`. Takes `Idempotency-Key`. At most 20 duels going per player (`DUEL_LIMIT_REACHED`). `random` seats you in a waiting random duel near your rating (±200, widening by 100 every 10 s of its wait), or starts one; after 60 s with nobody, the Sabi Bot plays it (`source: "bot"`, unrated). The bot can't be challenged by `user_id` (`OPPONENT_UNAVAILABLE`) and plays no rematches (409) |
 | GET | `/duels?state=active|done&limit&cursor` | List for the home screen: active ones with "your turn" first, soonest deadline first; finished ones newest first, paged by `cursor` |
-| GET | `/duels/{id}` | The duel from your side: scores, `next` action, rounds, tie-break. Questions, answers and the opponent's points only for rounds you have finished |
+| GET | `/duels/{id}` | The duel from your side: scores, `next` action, rounds, tie-break, and once it finishes with a result `reward: {coins, xp}` (step 2.4a). Questions, answers and the opponent's points only for rounds you have finished |
 | POST | `/duels/{id}/rounds/{n}/category` | `{category_id}`, one of the 3 offered. Picked by A (rounds 1 and 3) or B (round 2) during their turn → the duel |
 | POST | `/duels/{id}/rounds/{n}/questions/{seq}/serve` | → one question (shuffled, no answer), `time_limit_ms`. Serving again returns the same `served_at`. Round 4 is the tie-break: one `closest_number` question with no options |
 | POST | `/duels/{id}/rounds/{n}/questions/{seq}/answer` | `{display_index | null, client_elapsed_ms, tab_hidden_ms?}` → `{correct, timed_out, correct_display_index, points, breakdown, fact, running_score, streak, next}`. Round 4 takes `{guess | null, client_elapsed_ms}` → `{guess, timed_out, answer, fact, decided, result}`. A retry gets the first answer back; a different `Idempotency-Key` for an answered question is `409 ALREADY_ANSWERED` |
@@ -128,7 +128,7 @@ POST /v1/duels/d_01J9/rounds/2/questions/1/answer
 |---|---|---|
 | GET | `/daily/today` | `{id, date, total, categories, played, answered, streak: {current, best, freezes_left}, closes_at}`. `id` is the Daily's number (#142); `answered` lets the app pick up where the player stopped. Picks today's Daily if the worker has not yet; `503 NO_QUESTIONS_AVAILABLE` with fewer than 7 live family-safe questions |
 | POST | `/daily/{id}/questions/{seq}/serve` · `/answer` | Same contract as the taste test and duels; the answer adds `finished` after the 7th. Today's Daily only (`DAILY_CLOSED` for an earlier one) and once (`DAILY_ALREADY_PLAYED`); an answer to a question shown before midnight still counts just after it |
-| GET | `/daily/{id}/result` | `{correct_count, score, total_ms, grid, categories, percentile, players, state: {code, rank, players}, leading_state, streak: {…, used_freeze}, xp, share_text, share_url, review[]}`. `percentile` is the share of the day's other players you beat (null while you are the only one); `review` has each question, its answer and fact. `DAILY_NOT_FINISHED` before the 7th answer |
+| GET | `/daily/{id}/result` | `{correct_count, score, total_ms, grid, categories, percentile, players, state: {code, rank, players}, leading_state, streak: {…, used_freeze}, xp, coins, share_text, share_url, review[]}`. `percentile` is the share of the day's other players you beat (null while you are the only one); `review` has each question, its answer and fact. `DAILY_NOT_FINISHED` before the 7th answer |
 | GET | `/daily/{id}/leaderboard?scope=global|state|friends` | Top 100 + `me`: `{board, period, scope, state, players, resets_at, entries[], me}`. Each entry: `{rank, kind: player|guest|restricted, username, avatar_id, home_state, level, tier, score, you}`. Guests and 13–17s show no name or avatar on public boards (doc 10 §3.3); friends see each other's names |
 | GET | `/leaderboards/week?scope=global|state|friends` | The same for this week's Daily points, Monday to Sunday WAT |
 
@@ -148,8 +148,8 @@ A **seat** is `{room_id, code, token, socket_path, expires_at}`. The token is a 
 ### 2.8 Economy & shop
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/wallet` | `{coins, gems}` |
-| GET | `/wallet/history` | Ledger view |
+| GET | `/wallet` | `{coins, gems}` (step 2.4a). A guest has one too; it moves into the account they sign in to |
+| GET | `/wallet/history?before=` | Newest first, 30 a page: `{items: [{id, amount, currency, reason, ref_type, ref_id, created_at}], next}`. `reason` is `duel_win`, `duel_loss`, `duel_draw`, `daily`, `level_up`, `merge`, `lifeline`, `rewarded_ad`, `iap`, `refund` or `admin_grant`; `ref_type` is `duel`, `daily`, `level`, `party` or `user` (step 2.4a) |
 | GET | `/shop` | Cosmetics, packs, offers (remote-config priced) |
 | POST | `/shop/purchase` | `{item_id, currency}` (coins/gems only; real money goes through the stores) |
 | POST | `/inventory/equip` | `{cosmetic_id}` |

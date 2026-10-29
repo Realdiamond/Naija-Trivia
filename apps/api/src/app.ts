@@ -15,6 +15,7 @@ import type { Config } from './config';
 import { contentRoutes } from './content/routes';
 import { dailyRoutes } from './daily/routes';
 import { duelRoutes } from './duels/routes';
+import { economyRoutes } from './economy/routes';
 import type { Pool } from './db';
 import { registerErrorHandlers } from './errors';
 import { ingestRoutes } from '@whosabi/ingest';
@@ -121,6 +122,7 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   roundRoutes(app, deps);
   duelRoutes(app, deps);
   dailyRoutes(app, deps);
+  economyRoutes(app, deps);
   shareRoutes(app, deps);
   adminRoutes(app, deps);
 

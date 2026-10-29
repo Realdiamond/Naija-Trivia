@@ -24,6 +24,7 @@ export interface DailyResultRow {
   grid: string;
   home_state: string | null;
   xp: number;
+  coins: number;
   streak: number;
   used_freeze: boolean;
 }
@@ -116,7 +117,7 @@ export async function dailyResultFor(
   userId: string,
 ): Promise<DailyResultRow | null> {
   const result = await db.query<DailyResultRow>(
-    `SELECT daily_id, user_id, correct_count, score, total_ms, grid, home_state, xp, streak, used_freeze
+    `SELECT daily_id, user_id, correct_count, score, total_ms, grid, home_state, xp, coins, streak, used_freeze
        FROM daily_results WHERE daily_id = $1 AND user_id = $2`,
     [dailyId, userId],
   );

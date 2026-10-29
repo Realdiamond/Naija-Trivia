@@ -1,14 +1,18 @@
 /**
  * Finished party games (doc 08: `party_games`, `party_results`). Only results are kept, not each
- * answer: those go to analytics. Signed-in players get their XP (GDD §5.1).
+ * answer: those go to analytics. Signed-in players get their XP (GDD §5.1), and 100 coins for
+ * each level it takes them to.
  */
-import { levelForXp, partyXp } from '@whosabi/game-rules';
+import { partyXp } from '@whosabi/game-rules';
 import type { PartyGameResult, PartyMvp, PartySeatKind } from '@whosabi/shared-types';
 import { withTransaction, type Pool } from '../db';
+import type { CoinChange } from '../economy/ledger';
+import { rewardPlayer } from '../economy/rewards';
 import type { FinishedGame } from './room';
 
-export async function saveGame(pool: Pool, game: FinishedGame): Promise<void> {
-  await withTransaction(pool, async (client) => {
+/** Saves the game and pays its players; returns the coins that moved, for `coins_changed`. */
+export async function saveGame(pool: Pool, game: FinishedGame): Promise<CoinChange[]> {
+  return withTransaction(pool, async (client) => {
     await client.query(
       `INSERT INTO party_games (id, room_code, host_user_id, settings, player_count, started_at, ended_at,
                                 questions, mvp)
@@ -34,22 +38,20 @@ export async function saveGame(pool: Pool, game: FinishedGame): Promise<void> {
     }
     // In id order, so two games ending together never wait on each other.
     const players = game.ranking.filter((p) => p.userId).sort((a, b) => a.userId!.localeCompare(b.userId!));
+    const paid: CoinChange[] = [];
     for (const p of players) {
-      const user = (
-        await client.query<{ xp: string }>(
-          "SELECT xp FROM users WHERE id = $1 AND status IN ('guest', 'active', 'restricted') FOR UPDATE",
-          [p.userId],
-        )
-      ).rows[0];
-      if (!user) continue;
-      const xp = Number(user.xp) + partyXp(p.correct, p.answered);
-      await client.query('UPDATE users SET xp = $2, level = $3, updated_at = $4 WHERE id = $1', [
-        p.userId,
-        xp,
-        levelForXp(xp).level,
-        new Date(game.endedAt),
-      ]);
+      const reward = await rewardPlayer(client, p.userId!, {
+        xp: partyXp(p.correct, p.answered),
+        coins: 0,
+        reason: 'level_up',
+        key: `party:${game.gameId}:${p.userId}`,
+        refType: 'party',
+        refId: game.gameId,
+        now: game.endedAt,
+      });
+      if (reward) paid.push(...reward.changes);
     }
+    return paid;
   });
 }
 

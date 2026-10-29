@@ -110,7 +110,12 @@ export function DailyResultView({ result }: { result: DailyResult }) {
         ) : null}
       </View>
 
-      <Text variant="bodySoft">{t('daily.xp', { xp: result.xp })}</Text>
+      <View style={styles.reward} testID="daily-reward">
+        <Icon name="coin" size={20} color={colors.accentInk} />
+        <Text variant="label" color={colors.accentInk}>
+          {t('daily.reward', { coins: result.coins, xp: result.xp })}
+        </Text>
+      </View>
 
       <DailyShare id={result.id} text={result.share_text} />
       <PushPrompt reason="daily" />
@@ -159,6 +164,16 @@ export function DailyResultView({ result }: { result: DailyResult }) {
 }
 
 const styles = StyleSheet.create({
+  reward: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accentTint,
+  },
   content: { gap: 14, paddingBottom: 24 },
   score: {
     flexDirection: 'row',

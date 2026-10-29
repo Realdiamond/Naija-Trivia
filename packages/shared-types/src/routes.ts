@@ -70,6 +70,10 @@ export const routes = {
   partyGame: (gameId: string) => `${API_PREFIX}/party/games/${encodeURIComponent(gameId)}`,
   /** The room's WebSocket: connect with `?token=` from a seat. */
   partySocket: () => `${API_PREFIX}/party/socket`,
+  /** Coins (step 2.4): the balance, and what moved it, newest first. */
+  wallet: () => `${API_PREFIX}/wallet`,
+  walletHistory: (before?: string) =>
+    `${API_PREFIX}/wallet/history${before ? `?before=${encodeURIComponent(before)}` : ''}`,
   invite: (token: string) => `${API_PREFIX}/invites/${encodeURIComponent(token)}`,
   inviteAccept: (token: string) => `${API_PREFIX}/invites/${encodeURIComponent(token)}/accept`,
   /** Share pictures for WhatsApp Status (PNG, 1080×1920), for the players in it only. */

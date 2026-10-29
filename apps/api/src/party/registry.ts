@@ -159,7 +159,7 @@ export class PartyRooms {
         background(
           'saving the game',
           (async () => {
-            await saveGame(pool, game);
+            const paid = await saveGame(pool, game);
             const webGuests = game.ranking.filter((p) => p.kind === 'web_guest').length;
             for (const p of game.ranking) {
               if (!p.userId) continue;
@@ -167,6 +167,14 @@ export class PartyRooms {
                 'party_game_completed',
                 { game_id: game.gameId, players: game.ranking.length, web_guests: webGuests, rank: p.rank },
                 ctx(p, p.userId),
+              );
+            }
+            for (const change of paid) {
+              const p = game.ranking.find((r) => r.userId === change.userId)!;
+              await events.emit(
+                'coins_changed',
+                { delta: change.delta, reason: change.reason, balance_after: change.balance },
+                ctx(p, change.userId),
               );
             }
           })(),
