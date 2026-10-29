@@ -17,6 +17,8 @@ const Env = z.object({
   REDIS_TLS_VERIFY: z.enum(['true', 'false']).default('true'),
   /** The web app's export (apps/app/web-build) to serve from this origin, e.g. on Heroku. */
   WEB_APP_DIR: z.string().min(1).optional(),
+  /** The light party client's build (apps/web-guest/dist): what a /r/{CODE} link opens on the web. */
+  WEB_GUEST_DIR: z.string().min(1).optional(),
   /** Serve the event intake (POST /v1/events) in this process instead of the ingest service. */
   EVENTS_IN_API: z.enum(['true', 'false']).default('false'),
   /** ES256 keys as PEM (PKCS#8 private, SPKI public). Generated per process outside production. */
@@ -106,6 +108,7 @@ export interface Config {
   redisUrl: string;
   redisTlsVerify: boolean;
   webAppDir?: string;
+  webGuestDir?: string;
   eventsInApi: boolean;
   jwtPrivateKeyPem?: string;
   jwtPublicKeyPem?: string;
@@ -173,6 +176,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     redisUrl: e.REDIS_URL,
     redisTlsVerify: e.REDIS_TLS_VERIFY === 'true',
     webAppDir: e.WEB_APP_DIR,
+    webGuestDir: e.WEB_GUEST_DIR,
     eventsInApi: e.EVENTS_IN_API === 'true',
     // Hosts that take one-line settings may have the PEM's line breaks as "\n".
     jwtPrivateKeyPem: e.JWT_PRIVATE_KEY?.replace(/\\n/g, '\n'),

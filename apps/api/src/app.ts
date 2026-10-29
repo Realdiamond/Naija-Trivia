@@ -29,7 +29,7 @@ import { rttRoutes } from './rtt';
 import { socialRoutes } from './social/routes';
 import { ShareService } from './share/service';
 import { shareRoutes } from './share/routes';
-import { serveWebApp, webAppPage } from './web';
+import { serveWebApp, serveWebGuest, webAppPage } from './web';
 
 export interface AppDeps {
   config: Config;
@@ -69,12 +69,12 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
     auth: { ...createAuthProviders(options.config, app.log, options.clock.now), ...options.auth },
   };
 
-  const webAppDir = options.config.webAppDir;
-  if (webAppDir) {
+  const { webAppDir, webGuestDir } = options.config;
+  if (webAppDir || webGuestDir) {
     const pages = new ShareService(deps);
     registerErrorHandlers(
       app,
-      webAppPage(webAppDir, (pathname) => pages.pageMeta(pathname), app.log),
+      webAppPage(webAppDir, (pathname) => pages.pageMeta(pathname), app.log, webGuestDir),
     );
   } else {
     registerErrorHandlers(app);
@@ -139,5 +139,6 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
     });
   }
   if (webAppDir) await serveWebApp(app, webAppDir);
+  if (webGuestDir) await serveWebGuest(app, webGuestDir);
   return app;
 }

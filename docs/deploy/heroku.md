@@ -79,7 +79,7 @@ heroku git:remote --app whosabi-staging
 git push heroku main
 ```
 
-The build installs everything, builds the API and the web app, and then runs the database migrations (the release phase). It takes about 5–10 minutes. Then start both processes:
+The build installs everything, builds the API, the web app and the light party client (what party links open in a browser), and then runs the database migrations (the release phase). It takes about 5–10 minutes. Then start both processes:
 
 ```sh
 heroku ps:scale web=1:basic worker=1:basic --app whosabi-staging

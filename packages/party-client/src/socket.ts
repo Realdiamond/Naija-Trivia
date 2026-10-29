@@ -3,7 +3,9 @@
  * after a drop with the same seat token (0.5 s, 1 s, 2 s, 4 s … for up to a minute). The room
  * closing, a kick, the seat opening elsewhere, a bad token or a full room end it for good.
  */
-import { PartyCloseCode, type PartyClientMessage, type PartyServerMessage } from '@whosabi/shared-types';
+import type { PartyClientMessage } from '@whosabi/shared-types';
+// The protocol's own entry point keeps the light web client free of the validation library.
+import { PartyCloseCode, type PartyServerMessage } from '@whosabi/shared-types/party-protocol';
 
 export type PartySocketStatus = 'connecting' | 'open' | 'reconnecting' | 'closed';
 

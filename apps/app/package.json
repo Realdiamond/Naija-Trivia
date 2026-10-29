@@ -21,6 +21,7 @@
     "@tanstack/react-query": "^5.105.0",
     "@whosabi/analytics": "workspace:*",
     "@whosabi/game-rules": "workspace:*",
+    "@whosabi/party-client": "workspace:*",
     "@whosabi/shared-types": "workspace:*",
     "expo": "~58.0.20",
     "expo-clipboard": "~58.0.4",
