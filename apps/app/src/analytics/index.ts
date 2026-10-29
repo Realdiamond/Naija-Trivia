@@ -14,6 +14,7 @@ import {
   type SendOutcome,
 } from '@whosabi/analytics';
 import { api, setAnalyticsSession } from '../api';
+import { isDataSaverOn } from '../features/dataSaver/store';
 import { APP_VERSION, EVENTS_URL, PLATFORM } from '../config';
 import { useLanguage } from '../i18n';
 import { storage } from '../platform/storage';
@@ -53,7 +54,8 @@ const tracker = new Tracker({
     app_version: APP_VERSION,
     os_version: String(RNPlatform.Version ?? '').slice(0, 32) || undefined,
     language: useLanguage.getState().language,
-    data_saver: false,
+    // Batches every 2 minutes instead of 30 seconds in Data Saver (doc 18 §15).
+    data_saver: isDataSaverOn(),
   }),
   hasBehaviourConsent: () => behaviourConsent,
   validate: __DEV__,

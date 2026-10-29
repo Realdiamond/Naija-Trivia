@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import type { DailyResult } from '@whosabi/shared-types';
+import { ResultsBanner } from '../../ads/ResultsBanner';
 import { useT } from '../../i18n';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/icons';
@@ -127,6 +128,7 @@ export function DailyResultView({ result }: { result: DailyResult }) {
         onPress={() => router.push('/leaderboards')}
         testID="daily-leaderboards"
       />
+      <ResultsBanner />
       <Button
         label={review ? t('daily.hideAnswers') : t('daily.seeAnswers')}
         variant="link"

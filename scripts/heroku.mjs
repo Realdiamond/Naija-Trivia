@@ -31,6 +31,8 @@ const plans = {
       ],
       // The light party client for /r/{CODE} links (step 2.2c), also on this origin.
       ['pnpm', ['--filter', '@whosabi/web-guest', 'build'], { env: { VITE_API_URL: '' } }],
+      // Brotli and gzip copies of both, served as they are (Data Saver, step 2.8b).
+      ['node', ['scripts/precompress.mjs', 'apps/app/web-build', 'apps/web-guest/dist']],
     ],
     release: [['node', ['dist/scripts/migrate.js'], { cwd: api }]],
     web: [

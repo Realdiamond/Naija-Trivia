@@ -6,21 +6,31 @@ import { randomUUID } from 'node:crypto';
 import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { brotliCompressSync, brotliDecompressSync, gunzipSync } from 'node:zlib';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { pseudonymousId } from '@whosabi/analytics/server';
 import { createRedis } from '../src/redis';
 import { bearer, createTestApp, signInGuest } from './helpers';
+
+const BIG_BUNDLE = `${'export const questions = ["Who sang Ye?", "Jollof or fried rice?"];\n'.repeat(400)}`;
 
 describe('the web app from the API origin', () => {
   let t: Awaited<ReturnType<typeof createTestApp>>;
   beforeAll(async () => {
     const dir = await mkdtemp(path.join(tmpdir(), 'web-build-'));
     await mkdir(path.join(dir, '_expo/static/js'), { recursive: true });
-    await writeFile(path.join(dir, 'index.html'), '<!doctype html><title>Who Sabi?</title>');
+    // About the size of the real one (Expo's styles and script tags).
+    await writeFile(
+      path.join(dir, 'index.html'),
+      `<!doctype html><head><title>Who Sabi?</title><style>${'#root{display:flex;flex:1}'.repeat(60)}</style></head>`,
+    );
     await writeFile(path.join(dir, '_expo/static/js/entry-abc123.js'), 'console.log(1)');
     await writeFile(path.join(dir, 'favicon.ico'), 'icon');
     await writeFile(path.join(dir, 'sw.js'), "self.addEventListener('push', () => {});");
     await writeFile(path.join(dir, 'manifest.webmanifest'), '{"name":"Who Sabi?"}');
+    // What scripts/precompress.mjs leaves next to a big bundle.
+    await writeFile(path.join(dir, '_expo/static/js/big-def456.js'), BIG_BUNDLE);
+    await writeFile(path.join(dir, '_expo/static/js/big-def456.js.br'), brotliCompressSync(BIG_BUNDLE));
     t = await createTestApp({ WEB_APP_DIR: dir });
   });
   afterAll(() => t.close());
@@ -41,6 +51,53 @@ describe('the web app from the API origin', () => {
     expect(bundle.headers['cache-control']).toBe('public, max-age=31536000, immutable');
     const icon = await t.app.inject({ method: 'GET', url: '/favicon.ico' });
     expect(icon.headers['cache-control']).toBe('no-cache');
+  });
+
+  it('sends bundles and replies compressed to browsers that take it (Data Saver, step 2.8b)', async () => {
+    const url = '/_expo/static/js/big-def456.js';
+    const br = await t.app.inject({ method: 'GET', url, headers: { 'accept-encoding': 'gzip, br' } });
+    expect(br.headers['content-encoding']).toBe('br');
+    expect(br.headers['content-type']).toContain('javascript');
+    expect(br.rawPayload.length).toBeLessThan(BIG_BUNDLE.length / 5);
+    expect(brotliDecompressSync(br.rawPayload).toString()).toBe(BIG_BUNDLE);
+    // Without a precompressed copy for it, the file is compressed on the way out.
+    const gz = await t.app.inject({ method: 'GET', url, headers: { 'accept-encoding': 'gzip' } });
+    expect(gz.headers['content-encoding']).toBe('gzip');
+    expect(gunzipSync(gz.rawPayload).toString()).toBe(BIG_BUNDLE);
+    const plain = await t.app.inject({ method: 'GET', url });
+    expect([plain.headers['content-encoding'], plain.body]).toEqual([undefined, BIG_BUNDLE]);
+
+    // Pages, and API replies of 1 KB or more; small ones aren't worth it.
+    const page = await t.app.inject({ method: 'GET', url: '/welcome', headers: { 'accept-encoding': 'br' } });
+    expect(page.headers['content-encoding']).toBe('br');
+    expect(brotliDecompressSync(page.rawPayload).toString()).toContain('<title>Who Sabi?</title>');
+    const guest = await signInGuest(t.app);
+    await t.app.inject({
+      method: 'POST',
+      url: '/v1/me/consents',
+      headers: bearer(guest.access),
+      payload: {
+        source: 'settings',
+        consents: ['terms', 'privacy', 'analytics', 'marketing_push', 'contacts'].map((purpose) => ({
+          purpose,
+          granted: true,
+          policy_version: '2026-10',
+        })),
+      },
+    });
+    const data = await t.app.inject({
+      method: 'GET',
+      url: '/v1/me/export',
+      headers: { ...bearer(guest.access), 'accept-encoding': 'gzip, br' },
+    });
+    expect(data.headers['content-encoding']).toBe('br');
+    expect(JSON.parse(brotliDecompressSync(data.rawPayload).toString()).profile.id).toBe(guest.user.id);
+    const health = await t.app.inject({
+      method: 'GET',
+      url: '/health',
+      headers: { 'accept-encoding': 'br' },
+    });
+    expect([health.headers['content-encoding'], health.json()]).toEqual([undefined, { ok: true }]);
   });
 
   it('serves the service worker and the manifest as browsers need them (web push)', async () => {

@@ -1,7 +1,7 @@
 /**
- * Settings (UX §1): language, notifications, family mode, being findable from contacts, a copy
- * of your data and deleting your account (build plan step 2.8a), and signing out. Data Saver
- * joins with its step.
+ * Settings (UX §1): language, notifications, Data Saver (build plan step 2.8b), family mode,
+ * being findable from contacts, a copy of your data and deleting your account (step 2.8a), and
+ * signing out.
  */
 import { useState } from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
@@ -9,7 +9,10 @@ import { Redirect, router } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { routes, type Me, type UpdateMeRequest } from '@whosabi/shared-types';
 import { api, errorMessage } from '../api';
+import { trackEvent } from '../analytics';
 import { signOut, useSession } from '../auth/session';
+import { dataSaverOn } from '../features/dataSaver/rules';
+import { chooseDataSaver, useDataSaver } from '../features/dataSaver/store';
 import { useLanguage, useT, type MessageKey } from '../i18n';
 import { saveFromApi } from '../platform/saveData';
 import { Button } from '../ui/Button';
@@ -28,6 +31,7 @@ export default function Settings() {
   const setLanguage = useLanguage((s) => s.setLanguage);
   const [note, setNote] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const dataSaver = useDataSaver();
 
   const save = useMutation({
     mutationFn: (changes: UpdateMeRequest) => api.request<Me>('PATCH', routes.me(), { body: changes }),
@@ -41,6 +45,13 @@ export default function Settings() {
   const pickLanguage = (next: 'en' | 'pcm') => {
     setLanguage(next);
     save.mutate({ language: next });
+  };
+
+  // Kept on the device straight away, and in the profile for the player's other phones.
+  const pickDataSaver = (choice: boolean | null) => {
+    chooseDataSaver(choice);
+    save.mutate({ data_saver: choice });
+    if (choice !== null) trackEvent('data_saver_toggled', { on: choice });
   };
 
   const download = async () => {
@@ -87,6 +98,30 @@ export default function Settings() {
         onPress={() => router.push('/notifications')}
         testID="open-notify"
       />
+
+      <Toggle
+        label="settings.dataSaver"
+        hint={
+          dataSaver.choice !== null
+            ? 'settings.dataSaverHint'
+            : dataSaver.slow
+              ? 'settings.dataSaverAutoOn'
+              : 'settings.dataSaverAutoOff'
+        }
+        value={dataSaverOn(dataSaver)}
+        disabled={false}
+        onChange={pickDataSaver}
+        testID="data-saver"
+      />
+      {dataSaver.choice !== null ? (
+        <Button
+          label={t('settings.dataSaverAuto')}
+          variant="link"
+          size="medium"
+          onPress={() => pickDataSaver(null)}
+          testID="data-saver-auto"
+        />
+      ) : null}
 
       {me.data && status === 'account' ? (
         <>

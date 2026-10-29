@@ -22,7 +22,8 @@ const REQUEST = { requestNonPersonalizedAdsOnly: true };
 export const adsAvailable = true;
 
 let started: Promise<unknown> | null = null;
-function start(): Promise<unknown> {
+/** Sets the content rating and starts the SDK, once; every ad waits for it. */
+export function startAds(): Promise<unknown> {
   started ??= mobileAds()
     .setRequestConfiguration({ maxAdContentRating: MaxAdContentRating.PG })
     .then(() => mobileAds().initialize());
@@ -31,7 +32,7 @@ function start(): Promise<unknown> {
 
 export async function showRewarded(userId: string): Promise<RewardedOutcome> {
   try {
-    await start();
+    await startAds();
   } catch {
     return 'failed';
   }
@@ -63,7 +64,7 @@ let interstitialReady = false;
 
 export function prepareInterstitial(): void {
   if (interstitial) return;
-  void start()
+  void startAds()
     .then(() => {
       const ad = InterstitialAd.createForAdRequest(INTERSTITIAL_UNIT, REQUEST);
       interstitial = ad;

@@ -26,6 +26,8 @@ export async function serveWebApp(app: FastifyInstance, dir: string): Promise<vo
     // Pages, "/" included, come from webAppPage with their link preview.
     index: false,
     wildcard: true,
+    // The .br and .gz copies scripts/precompress.mjs wrote at build time (step 2.8b).
+    preCompressed: true,
     // Bundles and assets have content hashes in their names; pages must always be fresh.
     setHeaders: (res, filePath) => {
       const parts = path.relative(path.resolve(dir), filePath).split(path.sep);
@@ -49,6 +51,7 @@ export async function serveWebGuest(app: FastifyInstance, dir: string): Promise<
     prefix: '/party-client/',
     index: false,
     wildcard: true,
+    preCompressed: true,
     decorateReply: false,
     setHeaders: (res, filePath) => {
       const hashed = path.relative(path.resolve(dir), filePath).split(path.sep)[0] === 'assets';

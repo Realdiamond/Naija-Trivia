@@ -1,6 +1,6 @@
 /**
- * The root of the app: fonts, the saved language, the session, the analytics tracker, push
- * notifications and the navigation stack. Screens decide where a player goes from the session
+ * The root of the app: fonts, the saved language, Data Saver, the session, the analytics tracker,
+ * push notifications and the navigation stack. Screens decide where a player goes from the session
  * (see index.tsx).
  */
 import { useEffect, useState } from 'react';
@@ -23,6 +23,7 @@ import { queryClient } from '../api/queryClient';
 import { restoreSession, useSession } from '../auth/session';
 import { ConsentBanner } from '../features/consent/ConsentBanner';
 import { loadConsent } from '../features/consent/store';
+import { startDataSaver } from '../features/dataSaver/store';
 import { showsSideNav, SideNav } from '../features/nav/SideNav';
 import { useLanguage } from '../i18n';
 import { syncPush, usePushHandlers } from '../platform/push';
@@ -71,11 +72,15 @@ export default function RootLayout() {
   useEffect(() => {
     void useLanguage.getState().load();
     void loadConsent();
+    const stopDataSaver = startDataSaver();
     void countSession();
     void restoreSession();
     void startAnalytics().then(() => setAnalyticsReady(true));
     const sub = AppState.addEventListener('change', (state) => appVisible(state === 'active'));
-    return () => sub.remove();
+    return () => {
+      sub.remove();
+      stopDataSaver();
+    };
   }, []);
 
   const screen = screenName(segments);

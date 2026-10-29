@@ -66,7 +66,11 @@ export const Me = z.object({
   avatar_id: z.string().nullable(),
   home_state: HomeState.nullable(),
   language: Language,
-  data_saver: z.boolean(),
+  /**
+   * Data Saver (step 2.8b): the player's choice, or null for automatic, when the app turns it
+   * on by itself if the phone or browser says data is tight (Save-Data, 2G or 3G).
+   */
+  data_saver: z.boolean().nullable(),
   family_mode: z.boolean(),
   discoverable: z.boolean(),
   age_band: AgeBand.nullable(),
@@ -96,7 +100,8 @@ export const UpdateMeRequest = z
     avatar_id: AvatarId,
     home_state: HomeState.nullable(),
     language: Language,
-    data_saver: z.boolean(),
+    /** null goes back to automatic. */
+    data_saver: z.boolean().nullable(),
     family_mode: z.boolean(),
     discoverable: z.boolean(),
     push_off: z.array(PushKind).max(3),

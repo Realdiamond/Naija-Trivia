@@ -81,7 +81,7 @@ describe('me', () => {
       status: 'guest',
       username: null,
       language: 'en',
-      data_saver: false,
+      data_saver: null,
       family_mode: false,
       discoverable: true,
       age_band: null,
@@ -98,6 +98,8 @@ describe('me', () => {
     const guest = await signInGuest(t.app);
     const settings = await patchMe(guest.access, { data_saver: true, home_state: 'LA', language: 'pcm' });
     expect(settings.json()).toMatchObject({ data_saver: true, home_state: 'LA', language: 'pcm' });
+    // Back to automatic: the app decides from the connection (step 2.8b).
+    expect((await patchMe(guest.access, { data_saver: null })).json().data_saver).toBeNull();
     expect((await patchMe(guest.access, { username: uniqueName('guest') })).json().code).toBe(
       'ACCOUNT_REQUIRED',
     );

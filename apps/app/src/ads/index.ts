@@ -7,6 +7,9 @@ export type RewardedOutcome = 'earned' | 'closed' | 'failed' | 'unavailable';
 /** Whether this build can show ads at all. */
 export const adsAvailable = false;
 
+/** Starts the ad SDK; nothing to start on the web. */
+export async function startAds(): Promise<void> {}
+
 /** Shows a rewarded video. The coins arrive through AdMob's callback to our server, not from here. */
 export async function showRewarded(_userId: string): Promise<RewardedOutcome> {
   return 'unavailable';
