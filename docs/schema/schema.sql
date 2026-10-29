@@ -510,8 +510,13 @@ CREATE TABLE purchases (
   price_micros    bigint,
   currency        char(3),
   status          text NOT NULL CHECK (status IN ('completed','refunded','pending')),
+  environment     text NOT NULL DEFAULT 'production' CHECK (environment IN ('production','sandbox')),  -- 0022
+  coins           int,                                 -- what the pack credited (0022)
+  ledger_tx_id    text REFERENCES ledger_transactions(id),
+  refunded_at     timestamptz,
   created_at      timestamptz NOT NULL DEFAULT now()
 );
+CREATE INDEX ON purchases (user_id, created_at DESC);
 
 CREATE TABLE cosmetics (
   id              text PRIMARY KEY,

@@ -1,19 +1,14 @@
 /**
- * Coins (GDD §5.1): the balance, how to earn more, and every coin earned or spent, newest first.
- * Opened from the coins on Home. Lifelines and the shop spend them (step 2.4). On phones, a
- * rewarded video pays 25 coins (step 2.4c); the coins come from AdMob's callback to our server,
- * so the screen looks again for a few seconds after the video.
+ * Coins (GDD §5.1): the balance, how to earn more (a rewarded video on phones, step 2.4c), the
+ * shop, and every coin earned or spent, newest first. Opened from the coins on Home.
  */
-import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { Redirect } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { Redirect, router } from 'expo-router';
 import type { WalletEntry } from '@whosabi/shared-types';
-import { adsAvailable, showRewarded } from '../ads';
-import { trackEvent } from '../analytics';
 import { errorMessage } from '../api';
 import { useSession } from '../auth/session';
-import { useRewardedStatus, useWallet, useWalletHistory, walletKeys } from '../features/economy/api';
+import { useWallet, useWalletHistory } from '../features/economy/api';
+import { WatchAdCard } from '../features/economy/WatchAdCard';
 import { useT, type MessageKey } from '../i18n';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/icons';
@@ -24,33 +19,9 @@ import { colors, fonts, radius } from '../ui/theme';
 export default function Coins() {
   const t = useT();
   const status = useSession((s) => s.status);
-  const userId = useSession((s) => s.user?.id);
   const signedIn = status === 'guest' || status === 'account';
   const wallet = useWallet(signedIn);
   const history = useWalletHistory(signedIn);
-  const rewarded = useRewardedStatus(signedIn && adsAvailable);
-  const queryClient = useQueryClient();
-  const [watching, setWatching] = useState(false);
-  const [adNote, setAdNote] = useState<string | null>(null);
-
-  const watch = async () => {
-    if (!userId) return;
-    setWatching(true);
-    setAdNote(null);
-    trackEvent('ad_requested', { format: 'rewarded', placement: 'coins' });
-    const outcome = await showRewarded(userId);
-    setWatching(false);
-    if (outcome === 'earned') {
-      trackEvent('ad_shown', { format: 'rewarded', placement: 'coins' });
-      setAdNote(t('coins.adOnTheWay'));
-      // The coins land when AdMob calls our server, usually within seconds.
-      for (const ms of [1500, 4000, 9000]) {
-        setTimeout(() => void queryClient.invalidateQueries({ queryKey: walletKeys.all }), ms);
-      }
-    } else if (outcome === 'failed') {
-      setAdNote(t('coins.adFailed'));
-    }
-  };
 
   if (status === 'signed_out') return <Redirect href="/welcome" />;
 
@@ -72,26 +43,16 @@ export default function Coins() {
             {wallet.data ? wallet.data.coins.toLocaleString('en-NG') : '–'}
           </Text>
         </View>
+        <Button
+          label={t('coins.buy')}
+          variant="dark"
+          size="medium"
+          onPress={() => router.push('/shop')}
+          testID="open-shop"
+        />
       </View>
       <Text variant="bodySoft">{t('coins.how')}</Text>
-      {adsAvailable && rewarded.data ? (
-        <View style={styles.ad}>
-          <Button
-            label={t('coins.watchAd', { coins: rewarded.data.coins })}
-            variant="accent"
-            disabled={rewarded.data.left_today === 0}
-            loading={watching}
-            onPress={() => void watch()}
-            testID="watch-ad"
-          />
-          <Text variant="caption" align="center" accessibilityLiveRegion="polite">
-            {adNote ??
-              (rewarded.data.left_today === 0
-                ? t('coins.adsDone')
-                : t('coins.adsLeft', { n: rewarded.data.left_today }))}
-          </Text>
-        </View>
-      ) : null}
+      <WatchAdCard placement="coins" />
       <Text variant="caption">{t('coins.soon')}</Text>
 
       <Text variant="heading" style={styles.section}>
@@ -158,7 +119,6 @@ const styles = StyleSheet.create({
   grow: { flex: 1 },
   amount: { fontFamily: fonts.display, fontSize: 36, lineHeight: 42, color: colors.ink },
   section: { marginTop: 12 },
-  ad: { gap: 6 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -14,5 +14,6 @@ export * from './questionRules';
 export * from './rating';
 export * from './roomCode';
 export * from './scoring';
+export * from './shop';
 export * from './shuffle';
 export * from './timing';

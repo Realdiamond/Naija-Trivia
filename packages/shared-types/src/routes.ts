@@ -74,6 +74,9 @@ export const routes = {
   partySocket: () => `${API_PREFIX}/party/socket`,
   /** Coins (step 2.4): the balance, and what moved it, newest first. */
   wallet: () => `${API_PREFIX}/wallet`,
+  /** The coin packs, and the payment journey for staff alerts (step 2.4d). */
+  shop: () => `${API_PREFIX}/shop`,
+  shopEvents: () => `${API_PREFIX}/shop/events`,
   /** Rewarded ads (step 2.4c): what one pays and how many more will pay today. */
   rewardedAds: () => `${API_PREFIX}/ads/rewarded`,
   walletHistory: (before?: string) =>
