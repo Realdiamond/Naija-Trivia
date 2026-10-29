@@ -1,8 +1,9 @@
 /**
  * The nightly ledger check (doc 08 "Ledger"): every transaction must sum to zero in each
- * currency, and each player's cached balance must equal their entries added up. Anything off is
- * a problem alert for owners and admins, once a night. Nothing is corrected here: a wrong
- * balance needs a person to look at why.
+ * currency, and each player's cached balance must equal their entries added up. Since step
+ * 2.7i it also looks for store purchases whose coins never arrived. Anything off is a problem
+ * alert for owners and admins, once a night. Nothing is corrected here: a wrong balance needs a
+ * person to look at why.
  */
 import { watDate } from '@whosabi/game-rules';
 import { raiseStaffAlert } from '../admin/alerts';
@@ -18,6 +19,8 @@ export interface LedgerCheckResult {
   unbalanced: number;
   /** Players' accounts whose cached balance differs from their entries. */
   drifted: number;
+  /** Paid purchases, over 10 minutes old, whose coins never reached the player. */
+  missingCoins: number;
 }
 
 export async function checkLedger(deps: JobDeps): Promise<LedgerCheckResult | null> {
@@ -45,6 +48,25 @@ export async function checkLedger(deps: JobDeps): Promise<LedgerCheckResult | nu
         )
       ).rows[0]!.n,
     );
+    const missingCoins = Number(
+      (
+        await deps.pool.query<{ n: string }>(
+          `SELECT count(*) AS n FROM purchases
+            WHERE status = 'completed' AND ledger_tx_id IS NULL AND created_at < $1`,
+          [new Date(now - 10 * 60_000)],
+        )
+      ).rows[0]!.n,
+    );
+    if (missingCoins > 0) {
+      deps.log.error({ missingCoins }, 'paid purchases without their coins');
+      await raiseStaffAlert(deps.pool, {
+        kind: 'problem',
+        title: 'Purchases without their coins',
+        body: `${missingCoins} paid ${missingCoins === 1 ? 'purchase has' : 'purchases have'} no coins on the player's balance. Commerce in the console lists them; check RevenueCat before giving coins by hand.`,
+        dedupeKey: `purchases:${watDate(now)}`,
+        now,
+      });
+    }
     if (unbalanced > 0 || drifted > 0) {
       deps.log.error({ unbalanced, drifted }, 'the coin ledger does not add up');
       await raiseStaffAlert(deps.pool, {
@@ -55,7 +77,7 @@ export async function checkLedger(deps: JobDeps): Promise<LedgerCheckResult | nu
         now,
       });
     }
-    return { unbalanced, drifted };
+    return { unbalanced, drifted, missingCoins };
   } catch (err) {
     await deps.redis.del(key); // try again next run
     throw err;

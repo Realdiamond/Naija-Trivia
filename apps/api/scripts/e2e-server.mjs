@@ -34,6 +34,8 @@ const env = {
   PUBLIC_WEB_URL: process.env.E2E_WEB_ORIGIN ?? 'http://localhost:8082',
   GUEST_SIGNUPS_PER_IP_PER_HOUR: '10000',
   OTP_SENDS_PER_IP_PER_HOUR: '10000',
+  // Lets the tests play RevenueCat telling us about a purchase (step 2.7i).
+  REVENUECAT_WEBHOOK_AUTH: 'Bearer e2e-revenuecat',
 };
 
 mkdirSync(output, { recursive: true });

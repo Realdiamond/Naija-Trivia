@@ -393,6 +393,55 @@ test('LiveOps schedules a Home banner that reaches the apps at once, and ends it
   await expect(row.getByText('Ended')).toBeVisible();
 });
 
+test('finance sees a purchase and its refund in Commerce, and downloads the month', async ({
+  page,
+  request,
+}) => {
+  const { id } = await playerWhoPlayed(request);
+  const store = (fields: Record<string, unknown>) =>
+    request.post(`${API}/v1/webhooks/revenuecat`, {
+      headers: { authorization: 'Bearer e2e-revenuecat' },
+      data: {
+        api_version: '1.0',
+        event: {
+          id: randomBytes(12).toString('hex'),
+          type: 'NON_RENEWING_PURCHASE',
+          app_user_id: id,
+          product_id: 'coins_large',
+          store: 'PLAY_STORE',
+          environment: 'PRODUCTION',
+          price_in_purchased_currency: 1500,
+          currency: 'NGN',
+          purchased_at_ms: Date.now(),
+          ...fields,
+        },
+      },
+    });
+  const tx = `GPA.${randomBytes(8).toString('hex')}`;
+  expect((await store({ transaction_id: tx })).status()).toBe(200);
+  expect(
+    (await store({ transaction_id: tx, type: 'CANCELLATION', cancel_reason: 'CUSTOMER_SUPPORT' })).status(),
+  ).toBe(200);
+
+  const email = `e2e-finance-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'finance');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page).toHaveURL(/\/overview$/);
+  await page.getByRole('link', { name: 'Commerce' }).click();
+  await expect(page.getByTestId('commerce-today')).toContainText('refund');
+  await page.getByTestId('only-refunds').click();
+  await expect(page.getByTestId('purchases')).toContainText('coins_large');
+  await expect(page.getByTestId('purchases')).toContainText('Refunded');
+
+  const month = new Date(Date.now() + 3_600_000).toISOString().slice(0, 7);
+  const download = page.waitForEvent('download');
+  await page.getByTestId(`export-${month}`).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe(`whosabi-purchases-${month}.csv`);
+});
+
 test('support logs a data request and the DPO erases the account, with reasons', async ({
   page,
   request,

@@ -58,3 +58,26 @@ export async function adminApi<T>(path: string, options: Options = {}): Promise<
   }
   return data as T;
 }
+
+/** A file from the admin API (a CSV export), as text, with the staff session. */
+export async function adminText(path: string): Promise<string> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const forwardedFor = (await headers()).get('x-forwarded-for');
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: {
+      ...(forwardedFor ? { 'x-forwarded-for': forwardedFor } : {}),
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    cache: 'no-store',
+  });
+  if (res.status === 401) redirect('/login?expired=1');
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    throw new AdminApiError(
+      res.status,
+      String(data.code ?? 'INTERNAL'),
+      String(data.title ?? 'Something went wrong'),
+    );
+  }
+  return res.text();
+}

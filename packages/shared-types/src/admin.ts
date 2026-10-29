@@ -68,6 +68,8 @@ export const AdminPermission = z.enum([
   'compliance.view',
   /** Erasing a player's account for them (step 2.8a): the DPO and owners. */
   'compliance.erase',
+  /** Store purchases, refunds and the monthly export for finance (step 2.7i). */
+  'commerce.view',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 
@@ -818,3 +820,65 @@ export const AdminDsarStart = z.object({
 });
 export type AdminDsarStart = z.infer<typeof AdminDsarStart>;
 export const AdminReasoned = z.object({ reason: z.string().trim().min(3).max(300) });
+
+// ----- Commerce: store purchases (step 2.7i, doc 18 §13) -----
+
+/** Money by currency, in the currency's main unit (naira, not kobo). */
+export const MoneyByCurrency = z.record(z.string(), z.number());
+export type MoneyByCurrency = z.infer<typeof MoneyByCurrency>;
+
+export const CommerceTotals = z.object({
+  purchases: z.number().int(),
+  refunds: z.number().int(),
+  /** Paid, less what was refunded. */
+  revenue: MoneyByCurrency,
+});
+export type CommerceTotals = z.infer<typeof CommerceTotals>;
+
+export const AdminPurchase = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  username: z.string().nullable(),
+  store: z.string(),
+  product_id: z.string(),
+  store_tx_id: z.string(),
+  coins: z.number().int().nullable(),
+  /** As the store charged it, e.g. '₦1,500'. */
+  price: z.string().nullable(),
+  status: z.enum(['completed', 'refunded', 'pending']),
+  environment: z.enum(['production', 'sandbox']),
+  /** The coins reached the player's balance. */
+  granted: z.boolean(),
+  created_at: z.iso.datetime(),
+  refunded_at: z.iso.datetime().nullable(),
+});
+export type AdminPurchase = z.infer<typeof AdminPurchase>;
+
+/** `GET /admin/commerce`: the totals (real purchases only), each day's, by pack, and a page of purchases. */
+export const AdminCommerceResponse = z.object({
+  today: CommerceTotals,
+  last_7_days: CommerceTotals,
+  last_30_days: CommerceTotals,
+  /** The last 30 WAT days, oldest first, in naira. */
+  days: z.array(z.object({ day: z.iso.date(), purchases: z.number().int(), revenue_ngn: z.number() })),
+  by_product: z.array(
+    z.object({ product_id: z.string(), purchases: z.number().int(), revenue: MoneyByCurrency }),
+  ),
+  /** Completed purchases more than 10 minutes old whose coins never arrived. */
+  missing_coins: z.number().int(),
+  purchases: z.array(AdminPurchase),
+  /** For the next page: `before` this time. */
+  next: z.iso.datetime().nullable(),
+});
+export type AdminCommerceResponse = z.infer<typeof AdminCommerceResponse>;
+
+export const AdminCommerceQuery = z.object({
+  status: z.enum(['completed', 'refunded']).optional(),
+  /** Store test purchases too. */
+  sandbox: z.enum(['true', 'false']).optional(),
+  before: z.iso.datetime().optional(),
+});
+export type AdminCommerceQuery = z.infer<typeof AdminCommerceQuery>;
+
+/** A month's purchases as CSV for finance: `GET /admin/commerce/export?month=2026-10`. */
+export const AdminCommerceExportQuery = z.object({ month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/) });
