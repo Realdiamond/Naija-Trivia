@@ -6,7 +6,14 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { pseudonymousId } from '@whosabi/analytics/server';
-import { levelForXp, NEW_PLAYER_RATING, tierForRating } from '@whosabi/game-rules';
+import {
+  coinPack,
+  levelForXp,
+  NEW_PLAYER_RATING,
+  streakOn,
+  tierForRating,
+  watDate,
+} from '@whosabi/game-rules';
 import {
   AdminAuditQuery,
   AdminRevealRequest,
@@ -22,7 +29,9 @@ import {
   type AdminUserSummary,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
+import { loadStreak } from '../daily/repo';
 import { ACTIVE_STATES } from '../duels/repo';
+import { balances } from '../economy/ledger';
 import { ApiError, notFound, parse } from '../errors';
 import { auditPage, writeAudit } from './audit';
 import { requireAdmin, type AdminDeps } from './context';
@@ -182,7 +191,7 @@ export function adminPlayerRoutes(app: FastifyInstance, deps: AppDeps, ctx: Admi
     const admin = await requireAdmin(request, ctx, 'players.view');
     const { id } = parse(UserParams, request.params);
     const user = await userRow(id);
-    const [identities, guests, friends, duels, consents] = await Promise.all([
+    const [identities, guests, friends, duels, consents, wallet, streak, spend, tallies] = await Promise.all([
       pool.query<{ provider: string; subject: string; created_at: Date }>(
         'SELECT provider, subject, created_at FROM auth_identities WHERE user_id = $1 ORDER BY created_at',
         [id],
@@ -209,6 +218,18 @@ export function adminPlayerRoutes(app: FastifyInstance, deps: AppDeps, ctx: Admi
       }>(
         `SELECT DISTINCT ON (purpose) purpose, granted, policy_version, source, created_at
            FROM consent_records WHERE user_id = $1 ORDER BY purpose, id DESC`,
+        [id],
+      ),
+      balances(pool, id),
+      loadStreak(pool, id),
+      pool.query<{ product_id: string; price_micros: string | null; currency: string | null }>(
+        `SELECT product_id, price_micros, currency FROM purchases
+          WHERE user_id = $1 AND status = 'completed' AND environment = 'production'`,
+        [id],
+      ),
+      pool.query<{ flags: string; notes: string }>(
+        `SELECT (SELECT count(*) FROM integrity_flags WHERE user_id = $1 AND status = 'open') AS flags,
+                (SELECT count(*) FROM user_notes WHERE user_id = $1) AS notes`,
         [id],
       ),
     ]);
@@ -256,6 +277,25 @@ export function adminPlayerRoutes(app: FastifyInstance, deps: AppDeps, ctx: Admi
         drawn: Number(counts.drawn),
       },
       consents: consents.rows.map((r) => ({ ...r, created_at: r.created_at.toISOString() })),
+      coins: wallet.coins,
+      gems: wallet.gems,
+      streak: {
+        current: streakOn(streak, watDate(ctx.now())).current,
+        best: streak.best,
+        last_play_date: streak.lastPlayDate,
+      },
+      lifetime_spend_ngn: Math.round(
+        spend.rows.reduce(
+          (sum, p) =>
+            sum +
+            (p.currency === 'NGN' && p.price_micros !== null
+              ? Number(p.price_micros) / 1e6
+              : (coinPack(p.product_id)?.price_ngn ?? 0)),
+          0,
+        ),
+      ),
+      open_flags: Number(tallies.rows[0]!.flags),
+      notes: Number(tallies.rows[0]!.notes),
     };
   });
 

@@ -9,6 +9,7 @@ const PLAYER_SUPPORT: AdminPermission[] = [
   'players.view',
   'players.search_phone',
   'pii.reveal',
+  'players.support',
 ];
 
 // Doc 04 §3: writers draft, a second person fact-checks, editors publish.
@@ -23,7 +24,7 @@ const CONTENT_ALL: AdminPermission[] = [
 export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
   owner: [...PLAYER_SUPPORT, 'audit.view', 'staff.manage', ...CONTENT_ALL, 'overview.view', 'live.manage'],
   admin: [...PLAYER_SUPPORT, 'audit.view', ...CONTENT_ALL, 'overview.view', 'live.manage'],
-  dpo: [...PLAYER_SUPPORT, 'audit.view'],
+  dpo: [...PLAYER_SUPPORT.filter((p) => p !== 'players.support'), 'audit.view'],
   support: PLAYER_SUPPORT,
   // Moderators see players masked only.
   moderator: ['players.search', 'players.view', 'overview.view', 'live.manage'],

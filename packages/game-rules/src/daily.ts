@@ -3,7 +3,7 @@
  * a share grid that gives no answers away, a streak that survives one missed day a week, and
  * the order of the day's leaderboard.
  */
-import { daysBetween, isoWeek, type StreakState } from './calendar';
+import { addDays, daysBetween, isoWeek, type StreakState } from './calendar';
 import { XP_REWARDS } from './progression';
 
 export const DAILY_QUESTIONS = 7;
@@ -75,6 +75,35 @@ export function streakOn(state: StreakState, today: string): StreakView {
   if (gap <= 0) return { ...view, current: state.current, playedToday: true };
   if (gap === 1 || (gap === 2 && freezesLeft > 0)) return { ...view, current: state.current };
   return view;
+}
+
+/** Support restores only a streak that broke recently (doc 18 §8), at most once every 30 days. */
+export const STREAK_RESTORE_WINDOW_DAYS = 14;
+export const STREAK_RESTORE_EVERY_DAYS = 30;
+
+/** The run before the player's current one, from their Daily results. */
+export interface LostRun {
+  /** Its length: the streak on its last Daily. */
+  streak: number;
+  /** Its last Daily (WAT). */
+  lastPlayDate: string;
+}
+
+/**
+ * Support's streak restore (doc 18 §8). A streak that broke and was not played since stays alive
+ * as if the player had played yesterday; one they have started again joins the run they lost.
+ * Only a break in the last 14 days counts. Null when there is nothing to restore.
+ */
+export function restoreStreak(state: StreakState, today: string, lost: LostRun | null): StreakState | null {
+  if (state.lastPlayDate === null) return null;
+  const recent = (date: string) => daysBetween(date, today) <= STREAK_RESTORE_WINDOW_DAYS;
+  if (streakOn(state, today).current === 0) {
+    if (state.current === 0 || !recent(state.lastPlayDate)) return null;
+    return { ...state, lastPlayDate: addDays(today, -1) };
+  }
+  if (!lost || lost.streak <= 0 || !recent(lost.lastPlayDate)) return null;
+  const current = state.current + lost.streak;
+  return { ...state, current, best: Math.max(state.best, current) };
 }
 
 /** 'G' for a right answer and 'R' for a wrong or missing one, in question order (`daily_results.grid`). */

@@ -8,6 +8,7 @@ import {
   percentBeaten,
   pickDailyQuestions,
   pointsFromBoardScore,
+  restoreStreak,
   streakOn,
   type DailyCandidate,
 } from '../src/daily';
@@ -151,5 +152,34 @@ describe('the result', () => {
     expect(percentBeaten(9, 10)).toBe(100);
     expect(percentBeaten(0, 10)).toBe(0);
     expect(percentBeaten(41, 51)).toBe(82);
+  });
+});
+
+describe('restoreStreak', () => {
+  const played = (dates: string[]) => dates.reduce((s, d) => recordDailyPlay(s, d).state, NEW_STREAK);
+
+  it('keeps a broken streak alive when the player has not played since', () => {
+    const s = played(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-06']);
+    expect(streakOn(s, '2026-11-10').current).toBe(0);
+    const restored = restoreStreak(s, '2026-11-10', null)!;
+    expect(restored).toMatchObject({ current: 4, lastPlayDate: '2026-11-09' });
+    expect(streakOn(restored, '2026-11-10')).toMatchObject({ current: 4, playedToday: false });
+    expect(recordDailyPlay(restored, '2026-11-10').state.current).toBe(5);
+  });
+
+  it('joins the lost run to the one started since', () => {
+    const s = played(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-08', '2026-11-09']);
+    expect(s.current).toBe(2);
+    const restored = restoreStreak(s, '2026-11-09', { streak: 3, lastPlayDate: '2026-11-04' })!;
+    expect(restored).toMatchObject({ current: 5, best: 5, lastPlayDate: '2026-11-09' });
+  });
+
+  it('has nothing to restore for an old break, a live unbroken streak or a new player', () => {
+    const s = played(['2026-11-02', '2026-11-03']);
+    expect(restoreStreak(s, '2026-11-30', null)).toBeNull();
+    expect(restoreStreak(s, '2026-11-04', null)).toBeNull();
+    const again = played(['2026-10-01', '2026-11-08']);
+    expect(restoreStreak(again, '2026-11-09', { streak: 1, lastPlayDate: '2026-10-01' })).toBeNull();
+    expect(restoreStreak(NEW_STREAK, '2026-11-09', null)).toBeNull();
   });
 });

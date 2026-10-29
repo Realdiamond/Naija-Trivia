@@ -54,6 +54,8 @@ export const AdminPermission = z.enum([
   'overview.view',
   /** Remove a player from a live party room, or close the room (step 2.7a). */
   'live.manage',
+  /** Support's actions on a player (step 2.7b): coins (within limits), a streak, signing out; notes. */
+  'players.support',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 
@@ -154,6 +156,19 @@ export const AdminUserSummary = z.object({
   }),
   /** The latest choice for each purpose. */
   consents: z.array(AdminConsent),
+  /** Step 2.7b. */
+  coins: z.number().int(),
+  gems: z.number().int(),
+  /** The Daily streak as it stands today (0 once it can no longer be saved). */
+  streak: z.object({
+    current: z.number().int(),
+    best: z.number().int(),
+    last_play_date: z.iso.date().nullable(),
+  }),
+  /** Completed store purchases, in Naira (a sale in another currency counts at the pack's price). */
+  lifetime_spend_ngn: z.number().int(),
+  open_flags: z.number().int(),
+  notes: z.number().int(),
 });
 export type AdminUserSummary = z.infer<typeof AdminUserSummary>;
 
@@ -482,3 +497,150 @@ export const LiveFeedItem = z.object({
 export const LiveFeedQuery = z.object({ after: z.iso.datetime().optional() });
 export const LiveFeed = z.object({ items: z.array(LiveFeedItem) });
 export type LiveFeed = z.infer<typeof LiveFeed>;
+
+// ----- User 360's other tabs and support's actions (step 2.7b, doc 18 §7.2 and §8) -----
+
+export const AdminSession = z.object({
+  id: z.string(),
+  started_at: z.iso.datetime(),
+  ended_at: z.iso.datetime(),
+  /** Time with the app in front, from app_backgrounded; null if it never went to the background. */
+  foreground_minutes: z.number().nullable(),
+  platform: z.string(),
+  app_version: z.string(),
+  network: z.string(),
+  events: z.number().int(),
+});
+export const AdminSessionsResponse = z.object({
+  /** The latest 50. */
+  sessions: z.array(AdminSession),
+  /** Minutes in front each WAT day for the last 90 days (oldest first), split at midnight. */
+  minutes_by_day: z.array(z.object({ day: z.iso.date(), minutes: z.number() })),
+  minutes_by_platform: z.array(z.object({ platform: z.string(), minutes: z.number() })),
+  /** Minutes by area of the app ('duel', 'party', 'daily', 'shop', 'home', ...); needs behaviour consent. */
+  minutes_by_area: z.array(z.object({ area: z.string(), minutes: z.number() })),
+  /** Average minutes in front per session, over the last 90 days. */
+  average_session_minutes: z.number(),
+  /** Events by WAT hour of day (24 numbers), over the last 90 days. */
+  by_hour: z.array(z.number().int()),
+});
+export type AdminSessionsResponse = z.infer<typeof AdminSessionsResponse>;
+
+export const AdminMatchesResponse = z.object({
+  duels: z.array(
+    z.object({
+      id: z.string(),
+      opponent: z.string().nullable(),
+      source: z.string(),
+      state: z.string(),
+      result: z.enum(['win', 'loss', 'draw']).nullable(),
+      score: z.object({ you: z.number().int(), opponent: z.number().int() }),
+      coins: z.number().int().nullable(),
+      created_at: z.iso.datetime(),
+      completed_at: z.iso.datetime().nullable(),
+    }),
+  ),
+  dailies: z.array(
+    z.object({
+      id: z.number().int(),
+      date: z.iso.date(),
+      score: z.number().int(),
+      correct: z.number().int(),
+      grid: z.string(),
+      streak: z.number().int(),
+      coins: z.number().int(),
+    }),
+  ),
+  party_games: z.array(
+    z.object({
+      id: z.string(),
+      room_code: z.string(),
+      rank: z.number().int(),
+      score: z.number().int(),
+      players: z.number().int(),
+      ended_at: z.iso.datetime().nullable(),
+    }),
+  ),
+});
+export type AdminMatchesResponse = z.infer<typeof AdminMatchesResponse>;
+
+export const AdminMoneyResponse = z.object({
+  coins: z.number().int(),
+  gems: z.number().int(),
+  ledger: z.array(
+    z.object({
+      id: z.string(),
+      amount: z.number().int(),
+      currency: z.string(),
+      reason: z.string(),
+      ref_type: z.string().nullable(),
+      ref_id: z.string().nullable(),
+      created_at: z.iso.datetime(),
+    }),
+  ),
+  purchases: z.array(
+    z.object({
+      id: z.string(),
+      store: z.string(),
+      product_id: z.string(),
+      coins: z.number().int().nullable(),
+      /** As the store charged it, e.g. '₦1,500'. */
+      price: z.string().nullable(),
+      status: z.string(),
+      environment: z.string(),
+      created_at: z.iso.datetime(),
+      refunded_at: z.iso.datetime().nullable(),
+    }),
+  ),
+  ad_rewards: z.array(
+    z.object({
+      source: z.string(),
+      ad_unit: z.string(),
+      amount: z.number().int(),
+      received_at: z.iso.datetime(),
+    }),
+  ),
+});
+export type AdminMoneyResponse = z.infer<typeof AdminMoneyResponse>;
+
+export const AdminDevicesResponse = z.object({
+  devices: z.array(
+    z.object({
+      platform: z.string(),
+      model: z.string().nullable(),
+      browser: z.string().nullable(),
+      app_version: z.string().nullable(),
+      push: z.boolean(),
+      last_seen_at: z.iso.datetime(),
+    }),
+  ),
+});
+export type AdminDevicesResponse = z.infer<typeof AdminDevicesResponse>;
+
+export const AdminNote = z.object({
+  id: z.number().int(),
+  author: z.string(),
+  body: z.string(),
+  created_at: z.iso.datetime(),
+});
+export const AdminNotesResponse = z.object({ notes: z.array(AdminNote) });
+export type AdminNotesResponse = z.infer<typeof AdminNotesResponse>;
+export const AdminNoteRequest = z.object({ body: z.string().trim().min(1).max(2000) });
+export type AdminNoteRequest = z.infer<typeof AdminNoteRequest>;
+
+/** Doc 18 §8: what support can do for a player, always with a reason. */
+export const AdminPlayerAction = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('grant_coins'),
+    amount: z.number().int().min(1).max(5000),
+    reason: z.string().trim().min(3).max(300),
+  }),
+  z.object({ type: z.literal('restore_streak'), reason: z.string().trim().min(3).max(300) }),
+  z.object({ type: z.literal('sign_out'), reason: z.string().trim().min(3).max(300) }),
+]);
+/** Doc 18 §8: support grants up to 500 coins per player per WAT day; owners and admins up to 5,000. */
+export const SUPPORT_GRANT_DAILY_LIMIT = 500;
+export const ADMIN_GRANT_DAILY_LIMIT = 5000;
+export type AdminPlayerAction = z.infer<typeof AdminPlayerAction>;
+export const AdminPlayerActionResponse = z.object({ done: z.string() });
+export type AdminPlayerActionResponse = z.infer<typeof AdminPlayerActionResponse>;

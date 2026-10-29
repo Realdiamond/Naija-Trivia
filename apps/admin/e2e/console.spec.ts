@@ -175,6 +175,54 @@ test('a moderator sees the party rooms on Live and closes one, with a reason', a
   expect(preview.status()).toBe(404);
 });
 
+test('support leaves a note, grants coins within the limit and signs a player out', async ({
+  page,
+  request,
+}) => {
+  const email = `e2e-support-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'support');
+  const guest = await (
+    await request.post(`${API}/v1/auth/guest`, {
+      data: { device_id: randomBytes(24).toString('base64url'), platform: 'android' },
+    })
+  ).json();
+  const id = guest.user.id as string;
+
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page.getByTestId('staff-name')).toContainText('support');
+  await page.goto(`/players/${id}?tab=support`);
+
+  await page.getByTestId('note-body').fill('E2E: says a duel froze on question 3');
+  await page.getByTestId('note-save').click();
+  await expect(page.getByTestId('notes')).toContainText('E2E: says a duel froze on question 3');
+
+  // 100 coins, then 450 more is over support's 500 a day.
+  await page.getByTestId('action-amount').fill('100');
+  await page.getByTestId('action-reason').fill('E2E ticket 77: frozen duel');
+  await page.getByTestId('action-confirm').click();
+  await expect(page.getByTestId('action-done')).toHaveText('Granted 100 coins. They now have 100.');
+  await expect(page.getByTestId('player-tiles')).toContainText('Coins100');
+  // The form starts afresh after each action.
+  await page.getByTestId('action-amount').fill('450');
+  await page.getByTestId('action-reason').fill('E2E ticket 77: more');
+  await page.getByTestId('action-confirm').click();
+  await expect(page.getByTestId('action-error')).toContainText('400 left today');
+
+  await page.getByRole('link', { name: 'Money', exact: true }).click();
+  await expect(page.getByTestId('money-coins')).toHaveText('100');
+  await expect(page.getByTestId('ledger')).toContainText('admin grant');
+
+  await page.getByRole('link', { name: 'Support', exact: true }).click();
+  await page.getByTestId('action-sign_out').check();
+  await page.getByTestId('action-reason').fill('E2E: lost phone');
+  await page.getByTestId('action-confirm').click();
+  await expect(page.getByTestId('action-done')).toContainText('Signed out of 1 session');
+  const refresh = await request.post(`${API}/v1/auth/refresh`, { data: { refresh: guest.refresh } });
+  expect(refresh.status()).toBe(401);
+});
+
 test('someone not on the staff list is turned away', async ({ page }) => {
   await page.goto('/login');
   await page.getByTestId('dev-email').fill('stranger@example.com');

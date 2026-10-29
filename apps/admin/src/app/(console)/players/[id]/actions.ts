@@ -1,5 +1,12 @@
 'use server';
-import type { AdminRevealResponse } from '@whosabi/shared-types';
+import { revalidatePath } from 'next/cache';
+import {
+  routes,
+  type AdminNotesResponse,
+  type AdminPlayerAction,
+  type AdminPlayerActionResponse,
+  type AdminRevealResponse,
+} from '@whosabi/shared-types';
 import { AdminApiError, adminApi } from '../../../../lib/api';
 
 export interface RevealState {
@@ -18,4 +25,53 @@ export async function reveal(userId: string, _state: RevealState, form: FormData
   } catch (e) {
     return { value: null, error: e instanceof AdminApiError ? e.message : 'Reveal failed.' };
   }
+}
+
+export interface ActionState {
+  done: string | null;
+  error: string | null;
+}
+
+const failed = (e: unknown, fallback: string): ActionState => ({
+  done: null,
+  error: e instanceof AdminApiError ? e.message : fallback,
+});
+
+/** A staff note on the player, never shown to them. */
+export async function addNote(userId: string, _state: ActionState, form: FormData): Promise<ActionState> {
+  try {
+    await adminApi<AdminNotesResponse>(routes.admin.userNotes(userId), {
+      method: 'POST',
+      body: { body: String(form.get('body') ?? '') },
+    });
+  } catch (e) {
+    return failed(e, 'The note was not saved.');
+  }
+  revalidatePath(`/players/${userId}`);
+  return { done: 'Note saved.', error: null };
+}
+
+/** Support's actions (doc 18 §8): grant coins, restore a streak, sign out everywhere; always with a reason. */
+export async function playerAction(
+  userId: string,
+  _state: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const type = String(form.get('type') ?? '');
+  const reason = String(form.get('reason') ?? '');
+  const body: AdminPlayerAction =
+    type === 'grant_coins'
+      ? { type, amount: Number(form.get('amount') ?? 0), reason }
+      : { type: type === 'restore_streak' ? 'restore_streak' : 'sign_out', reason };
+  let res: AdminPlayerActionResponse;
+  try {
+    res = await adminApi<AdminPlayerActionResponse>(routes.admin.userActions(userId), {
+      method: 'POST',
+      body,
+    });
+  } catch (e) {
+    return failed(e, 'That did not work. Try again.');
+  }
+  revalidatePath(`/players/${userId}`);
+  return { done: res.done, error: null };
 }

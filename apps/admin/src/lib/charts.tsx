@@ -55,13 +55,13 @@ export function HourLines({ rows }: { rows: Array<{ hour: number; today: number;
 }
 
 /** One bar per day, today's darker. */
-export function DayBars({ rows }: { rows: Array<{ day: string; players: number }> }) {
-  const max = niceMax(Math.max(1, ...rows.map((r) => r.players)));
+export function DayBars({ rows, label }: { rows: Array<{ day: string; value: number }>; label: string }) {
+  const max = niceMax(Math.max(1, ...rows.map((r) => r.value)));
   const inner = W - PAD.left - PAD.right;
   const slot = inner / Math.max(rows.length, 1);
   const y = (v: number) => PAD.top + (1 - v / max) * (H - PAD.top - PAD.bottom);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label="Daily players, last 30 days">
+    <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={label}>
       <text x={PAD.left - 6} y={y(max) + 4} textAnchor="end" className="axis">
         {max}
       </text>
@@ -71,11 +71,11 @@ export function DayBars({ rows }: { rows: Array<{ day: string; players: number }
           key={r.day}
           x={PAD.left + i * slot + slot * 0.15}
           width={slot * 0.7}
-          y={y(r.players)}
-          height={Math.max(0, y(0) - y(r.players))}
+          y={y(r.value)}
+          height={Math.max(0, y(0) - y(r.value))}
           className={i === rows.length - 1 ? 'bar today' : 'bar'}
         >
-          <title>{`${r.day}: ${r.players}`}</title>
+          <title>{`${r.day}: ${r.value.toLocaleString('en-NG')}`}</title>
         </rect>
       ))}
       {rows.length > 0 ? (
@@ -96,12 +96,14 @@ export function DayBars({ rows }: { rows: Array<{ day: string; players: number }
 export function BarList({
   rows,
   testId,
+  empty = 'Nothing yet today.',
 }: {
   rows: Array<{ label: string; value: number }>;
   testId?: string;
+  empty?: string;
 }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
-  if (rows.length === 0) return <p className="muted small">Nothing yet today.</p>;
+  if (rows.length === 0) return <p className="muted small">{empty}</p>;
   return (
     <ul className="barlist" data-testid={testId}>
       {rows.map((r) => (
