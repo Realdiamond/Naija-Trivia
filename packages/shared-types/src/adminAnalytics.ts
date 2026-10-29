@@ -111,6 +111,12 @@ export const AnalyticsQuery = z.object({
 });
 export type AnalyticsQuery = z.infer<typeof AnalyticsQuery>;
 
+/** Exporting a dashboard's numbers (doc 18 §8, step 2.7r): the same filters, and why. */
+export const AnalyticsExportQuery = AnalyticsQuery.extend({
+  reason: z.string().trim().min(5).max(200),
+});
+export type AnalyticsExportQuery = z.infer<typeof AnalyticsExportQuery>;
+
 /** The boards about players' own activity, which the version and segment filters narrow (step 2.7q). */
 export const FILTERED_BOARDS: readonly AnalyticsBoard[] = [
   'engagement',

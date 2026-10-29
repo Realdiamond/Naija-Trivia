@@ -475,6 +475,18 @@ test('an analyst reads the KPI dashboards and narrows them to a platform', async
   await expect(page).toHaveURL(/platform=ios/);
   await expect(page.getByTestId('d1')).toBeVisible();
 
+  // Its numbers as CSV, with a reason and the analyst's name on it (step 2.7r).
+  const exportForm = page.getByTestId('export-board');
+  await exportForm.getByLabel('Why export it?').fill('Weekly KPI pack');
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    exportForm.getByRole('button', { name: 'Download CSV' }).click(),
+  ]);
+  const csv = await readFile((await download.path())!, 'utf8');
+  expect(csv).toContain('# Who Sabi? retention dashboard');
+  expect(csv).toContain('Reason: Weekly KPI pack');
+  expect(csv).toContain('# curve\nday,share');
+
   await page.getByRole('link', { name: 'Gameplay' }).click();
   await expect(page.getByTestId('duels-finished')).toBeVisible();
   await expect(page.getByText('Matches count every platform')).toBeVisible();

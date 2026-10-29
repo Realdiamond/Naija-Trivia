@@ -989,6 +989,25 @@ export default async function Analytics({
         )}
         <button type="submit">Show</button>
       </form>
+      <form className="inline filters" method="get" action="/analytics/export" data-testid="export-board">
+        <input type="hidden" name="board" value={board} />
+        {Object.entries({ ...filters, ...funnel }).map(([key, value]) => (
+          <input key={key} type="hidden" name={key} value={value} />
+        ))}
+        <label>
+          Why export it?
+          <input
+            name="reason"
+            required
+            minLength={5}
+            maxLength={200}
+            size={28}
+            placeholder="Weekly KPI pack"
+          />
+        </label>
+        <button type="submit">Download CSV</button>
+        <span className="muted small">With your name on it, and logged.</span>
+      </form>
       {!filtered && (asked.version || asked.segment) ? (
         <p className="muted small">
           The app version and segment narrow Engagement, Growth, Retention, Funnels and Tech health; this

@@ -1,7 +1,8 @@
 /**
  * The dashboards' app version and segment filters (build plan step 2.7q): Engagement, Growth,
  * Retention, Funnels and Tech health narrowed to one version of the app or a saved segment's
- * players; the other dashboards show everyone. Early February 2029, which no other file plays in.
+ * players; the other dashboards show everyone. And a dashboard exported as CSV (step 2.7r). Early
+ * February 2029, which no other file plays in.
  */
 import { randomInt, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -153,5 +154,67 @@ describe('dashboard filters (step 2.7q)', () => {
       headers: bearer(analyst),
     });
     expect(bad.statusCode).toBe(400);
+  });
+});
+
+describe('exporting a dashboard (step 2.7r)', () => {
+  it('gives every table as CSV under who exported it and why, and logs it', async () => {
+    const res = await t.app.inject({
+      method: 'GET',
+      url: `/admin/analytics/engagement/export?${RANGE}&segment=${segment}&reason=${encodeURIComponent('Weekly KPI pack')}`,
+      headers: bearer(analyst),
+    });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.headers['content-type']).toContain('text/csv');
+    expect(res.headers['content-disposition']).toBe(
+      'attachment; filename="whosabi-engagement-2029-02-05-2029-02-08.csv"',
+    );
+    const lines = res.body.split('\n');
+    expect(lines[0]).toBe(
+      '# Who Sabi? engagement dashboard · 2029-02-05 to 2029-02-08 (WAT) · platform all · segment Katsina',
+    );
+    expect(lines[1]).toMatch(
+      /^# Exported by Analyst <filters-\d+@whosabi\.ng> at 2029-02-09 10:00 WAT\. Reason: Weekly KPI pack$/,
+    );
+    expect(res.body).toContain('# summary\nname,value\ndau,');
+    expect(res.body).toContain(
+      '# days\nday,dau,sessions,minutes,daily_started,daily_completed\n2029-02-05,2,',
+    );
+    expect(res.body).toContain('# hours\nweekday,hour,players');
+
+    const audit = await t.pool.query(
+      `SELECT reason, after FROM admin_audit_log WHERE action = 'export_analytics' AND entity_id = 'engagement'
+        ORDER BY id DESC LIMIT 1`,
+    );
+    expect(audit.rows[0]).toMatchObject({
+      reason: 'Weekly KPI pack',
+      after: { segment, from: '2029-02-05' },
+    });
+  });
+
+  it('needs a reason, and the dashboard', async () => {
+    const noReason = await t.app.inject({
+      method: 'GET',
+      url: `/admin/analytics/engagement/export?${RANGE}`,
+      headers: bearer(analyst),
+    });
+    expect(noReason.statusCode).toBe(400);
+    const id = newId('adm');
+    await t.pool.query('INSERT INTO admin_users (id, email, name) VALUES ($1, $2, $3)', [
+      id,
+      `finance-${randomInt(1e9)}@whosabi.ng`,
+      'Finance',
+    ]);
+    await t.pool.query(
+      "INSERT INTO admin_role_grants (admin_id, role, granted_by) VALUES ($1, 'finance', $2)",
+      [id, SYSTEM_ADMIN_ID],
+    );
+    const finance = (await new AdminSessions(t.redis, t.clock.now).create(id)).token;
+    const refused = await t.app.inject({
+      method: 'GET',
+      url: `/admin/analytics/engagement/export?${RANGE}&reason=curious`,
+      headers: bearer(finance),
+    });
+    expect(refused.statusCode).toBe(403);
   });
 });

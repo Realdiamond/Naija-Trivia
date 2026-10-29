@@ -16,6 +16,7 @@ import {
   ANALYTICS_BOARD_PERMISSION,
   ANALYTICS_MAX_DAYS,
   AnalyticsBoard,
+  AnalyticsExportQuery,
   AnalyticsQuery,
   ErrorCode,
   FILTERED_BOARDS,
@@ -38,7 +39,9 @@ import {
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
 import { ApiError, notFound, parse } from '../errors';
+import { writeAudit } from './audit';
 import { requireAdmin, type AdminDeps } from './context';
+import { csvRow } from './csv';
 import { compileSegment } from './segmentSql';
 
 const WAT = 3_600_000;
@@ -1077,7 +1080,45 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
   app.get('/admin/analytics/:board', async (request): Promise<AnalyticsResponse> => {
     const { board } = parse(Params, request.params);
     await requireAdmin(request, ctx, ANALYTICS_BOARD_PERMISSION[board]);
-    const query = parse(AnalyticsQuery, request.query);
+    return boardFor(board, parse(AnalyticsQuery, request.query));
+  });
+
+  /**
+   * A dashboard's numbers as CSV (doc 18 §8, step 2.7r): every table on it, under who exported it,
+   * when and why. Counts and shares only, players never named; audited.
+   */
+  app.get('/admin/analytics/:board/export', async (request, reply) => {
+    const { board } = parse(Params, request.params);
+    const admin = await requireAdmin(request, ctx, ANALYTICS_BOARD_PERMISSION[board]);
+    const query = parse(AnalyticsExportQuery, request.query);
+    const data = await boardFor(board, query);
+    const now = clock.now();
+    const { reason, ...filters } = query;
+    await writeAudit(pool, {
+      actor: admin.id,
+      action: 'export_analytics',
+      entity: 'analytics',
+      entityId: board,
+      reason,
+      after: filters,
+      ip: request.ip,
+    });
+    const stamp = new Date(now + WAT).toISOString().slice(0, 16).replace('T', ' ');
+    const head = [
+      `# Who Sabi? ${board} dashboard · ${data.from} to ${data.to} (WAT) · platform ${data.platform}` +
+        ('version' in data && data.version ? ` · version ${data.version}` : '') +
+        ('segment' in data && data.segment ? ` · segment ${data.segment.name}` : ''),
+      `# Exported by ${admin.name} <${admin.email}> at ${stamp} WAT. Reason: ${reason}`,
+      '# Counts and shares only; keep it inside the team.',
+    ].map((line) => csvRow([line]));
+    return reply
+      .type('text/csv; charset=utf-8')
+      .header('content-disposition', `attachment; filename="whosabi-${board}-${data.from}-${data.to}.csv"`)
+      .header('cache-control', 'no-store')
+      .send([...head, ...boardCsv(data)].join('\n') + '\n');
+  });
+
+  async function boardFor(board: AnalyticsBoard, query: AnalyticsQuery): Promise<AnalyticsResponse> {
     const range = rangeOf(query, clock.now());
     if (FILTERED_BOARDS.includes(board)) await narrow(range, query);
     switch (board) {
@@ -1102,5 +1143,38 @@ export function adminAnalyticsRoutes(app: FastifyInstance, deps: AppDeps, ctx: A
       case 'integrity':
         return integrity(range);
     }
-  });
+  }
+}
+
+/**
+ * A dashboard as CSV sections: its summary as name and value, then each of its tables under its
+ * name, with a column for each value (one level of nesting flattened, e.g. `revenue.NGN`).
+ */
+export function boardCsv(data: object): string[] {
+  const lines: string[] = [];
+  const flat = (row: Record<string, unknown>): Record<string, unknown> => {
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(row)) {
+      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        for (const [sub, v] of Object.entries(value)) out[`${key}.${sub}`] = v;
+      } else if (!Array.isArray(value)) out[key] = value;
+    }
+    return out;
+  };
+  const record = data as Record<string, unknown>;
+  if (record.summary && typeof record.summary === 'object') {
+    lines.push('', csvRow(['# summary']), csvRow(['name', 'value']));
+    for (const [name, value] of Object.entries(flat(record.summary as Record<string, unknown>))) {
+      lines.push(csvRow([name, value]));
+    }
+  }
+  for (const [name, value] of Object.entries(record)) {
+    if (!Array.isArray(value) || value.length === 0 || typeof value[0] !== 'object' || value[0] === null)
+      continue;
+    const rows = (value as Record<string, unknown>[]).map(flat);
+    const columns = [...new Set(rows.flatMap((r) => Object.keys(r)))];
+    lines.push('', csvRow([`# ${name}`]), csvRow(columns));
+    for (const r of rows) lines.push(csvRow(columns.map((c) => r[c])));
+  }
+  return lines;
 }
