@@ -12,6 +12,7 @@
 import { levelForXp } from '@whosabi/game-rules';
 import { ErrorCode, type Platform } from '@whosabi/shared-types';
 import type { PoolClient } from '../db';
+import { moveAllCoins } from '../economy/ledger';
 import { ApiError } from '../errors';
 import { newId } from '../ids';
 import type { AccessClaims } from './tokens';
@@ -121,12 +122,12 @@ export async function signInWithIdentity(client: PoolClient, input: SignInInput)
 
 /**
  * FR-AUTH-4: a guest signing in to an existing account keeps their progress there. Their
- * duels, answers, ratings, seen questions, consents, devices, waiting pushes and XP move to the
- * account; the guest is retired and the link is kept for analytics. A duel between the guest and
+ * duels, answers, ratings, seen questions, consents, devices, waiting pushes, XP and coins move
+ * to the account; the guest is retired and the link is kept for analytics. A duel between the guest and
  * that same account would become a duel against yourself, so an unfinished one is cancelled and
  * a finished one stays as history.
  *
- * Every table keyed by a user must be handled here; later steps add coins and friends.
+ * Every table keyed by a user must be handled here.
  */
 export async function mergeGuestInto(
   client: PoolClient,
@@ -231,6 +232,9 @@ export async function mergeGuestInto(
     g,
     at,
   ]);
+
+  // The guest's coins, as one ledger transaction. Levels the added XP reaches pay no coins.
+  await moveAllCoins(client, g, x, { key: `merge:${g}`, reason: 'merge', refType: 'user', refId: g, now });
 
   const xp = Number(account.xp) + Number(guest.xp);
   await client.query('UPDATE users SET xp = $2, level = $3, updated_at = $4 WHERE id = $1', [

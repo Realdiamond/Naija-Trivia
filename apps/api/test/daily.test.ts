@@ -170,6 +170,7 @@ describe("today's Daily", () => {
       correct_count: 6,
       grid: 'GGGRGGG',
       xp: 112,
+      coins: 20,
       score: replies.at(-1)!.running_score,
       streak: { current: 1, best: 1, freezes_left: 1, used_freeze: false },
       share_url: 'https://whosabi.ng/daily/1',
@@ -199,6 +200,13 @@ describe("today's Daily", () => {
     expect(retry.json()).toMatchObject({ finished: true, correct: true });
     expect(await xpOf(p.id)).toBe(xpBefore + 112);
     expect(await today(p)).toMatchObject({ played: true, answered: 7, streak: { current: 1 } });
+    // The Daily's coins, once (step 2.4a).
+    const coins = await t.pool.query<{ reason: string; amount: string; ref_id: string }>(
+      `SELECT t.reason, e.amount, t.ref_id FROM ledger_entries e JOIN ledger_transactions t ON t.id = e.transaction_id
+        WHERE e.account_id = $1`,
+      [`user:${p.id}:coins`],
+    );
+    expect(coins.rows).toEqual([{ reason: 'daily', amount: '20', ref_id: '1' }]);
 
     const events = (await eventsOf(p.id)).filter((e) => e.event.startsWith('daily_'));
     expect(events).toEqual([
@@ -318,7 +326,7 @@ describe('streaks, days and weeks', () => {
 
     await at('2026-11-04');
     await play(p, 'GRGRGRG');
-    expect((await result(p, 3)).streak).toMatchObject({ current: 2, used_freeze: false });
+    expect(await result(p, 3)).toMatchObject({ streak: { current: 2, used_freeze: false }, coins: 25 });
     // Yesterday's Daily is closed.
     const closed = await post(p, '/v1/daily/2/questions/1/serve');
     expect(closed.json().code).toBe('DAILY_CLOSED');
@@ -328,6 +336,7 @@ describe('streaks, days and weeks', () => {
     expect(await today(p)).toMatchObject({ id: 5, streak: { current: 2, freezes_left: 1 } });
     await play(p, 'GGGRRRR');
     expect((await result(p, 5)).streak).toEqual({ current: 3, best: 3, freezes_left: 0, used_freeze: true });
+    expect((await result(p, 5)).coins).toBe(30);
 
     const scores = (
       await t.pool.query<{ score: number }>('SELECT score FROM daily_results WHERE user_id = $1', [p.id])

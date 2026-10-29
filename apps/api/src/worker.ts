@@ -22,6 +22,7 @@ import { calibrateQuestions } from './jobs/calibration';
 import { processCorrections } from './content/rescore';
 import { retireExpiredQuestions } from './jobs/contentExpiry';
 import { expireDueDuels } from './jobs/expiry';
+import { checkLedger } from './jobs/ledgerCheck';
 import { flushQuestionStats } from './jobs/questionStats';
 import { queueDailyReminders } from './jobs/dailyReminder';
 import { queueTurnReminders } from './jobs/reminders';
@@ -121,6 +122,7 @@ const jobs = [
   every('question-stats', MINUTE, () => flushQuestionStats(deps)),
   every('question-calibration', 10 * MINUTE, () => calibrateQuestions(deps)),
   every('rescore', MINUTE, () => processCorrections(deps)),
+  every('ledger-check', 10 * MINUTE, () => checkLedger(deps)),
   every('analytics-upkeep', 60 * MINUTE, () => loader.maintain(config.analyticsRetentionDays)),
   loadEvents(),
 ];

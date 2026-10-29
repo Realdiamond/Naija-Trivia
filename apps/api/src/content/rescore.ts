@@ -8,7 +8,8 @@
  *   under the old key stay right.
  * - A finished duel's result changes only if the totals flip (a draw that is no longer level
  *   counts). A forfeit stays with the player who waited: it was decided by time, not points.
- *   Ratings stay as they are; they have moved on with later games.
+ *   Ratings stay as they are; they have moved on with later games. A new winner gets the rest of
+ *   a win's coins; the old one keeps theirs.
  * - A Daily's score, grid and boards follow, and its ranks (and the week's) when already final.
  * - Each player whose games changed is told in one push; a changed duel result goes to both.
  */
@@ -16,6 +17,7 @@ import {
   DEFAULT_CONFIG,
   addDays,
   dailyGrid,
+  duelCoins,
   isoWeek,
   isoWeekStart,
   scoreAnswer,
@@ -24,6 +26,7 @@ import {
 import { recordResult } from '../daily/boards';
 import { rankDaily, rankWeek } from '../daily/repo';
 import { withTransaction, type PoolClient } from '../db';
+import { grantCoins, type CoinChange } from '../economy/ledger';
 import type { JobDeps } from '../jobs/deps';
 import { queuePush } from '../push/queue';
 import { addHistory } from './bank';
@@ -70,10 +73,11 @@ interface Told {
 export async function processCorrections(deps: JobDeps, limit = 5): Promise<number> {
   let done = 0;
   while (done < limit) {
-    const boards = await withTransaction(deps.pool, (client) => rescoreNext(deps, client));
-    if (!boards) break;
+    const next = await withTransaction(deps.pool, (client) => rescoreNext(deps, client));
+    if (!next) break;
     // Redis boards hold absolute scores, so they are set again once the new ones are saved.
-    for (const entry of boards) await recordResult(deps.pool, deps.redis, entry);
+    for (const entry of next.boards) await recordResult(deps.pool, deps.redis, entry);
+    await reportCoins(deps, next.paid);
     done++;
   }
   return done;
@@ -81,7 +85,29 @@ export async function processCorrections(deps: JobDeps, limit = 5): Promise<numb
 
 type BoardEntry = Parameters<typeof recordResult>[2];
 
-async function rescoreNext(deps: JobDeps, client: PoolClient): Promise<BoardEntry[] | null> {
+async function reportCoins(deps: JobDeps, paid: readonly CoinChange[]): Promise<void> {
+  if (paid.length === 0) return;
+  const platforms = new Map(
+    (
+      await deps.pool.query<{ id: string; last_platform: 'android' | 'ios' | 'web' | null }>(
+        'SELECT id, last_platform FROM users WHERE id = ANY($1)',
+        [paid.map((c) => c.userId)],
+      )
+    ).rows.map((r) => [r.id, r.last_platform ?? 'android'] as const),
+  );
+  for (const c of paid) {
+    await deps.events.emit(
+      'coins_changed',
+      { delta: c.delta, reason: c.reason, balance_after: c.balance },
+      { userId: c.userId, platform: platforms.get(c.userId) ?? 'android' },
+    );
+  }
+}
+
+async function rescoreNext(
+  deps: JobDeps,
+  client: PoolClient,
+): Promise<{ boards: BoardEntry[]; paid: CoinChange[] } | null> {
   const now = deps.clock.now();
   const correction = (
     await client.query<Correction>(
@@ -101,7 +127,8 @@ async function rescoreNext(deps: JobDeps, client: PoolClient): Promise<BoardEntr
     return t;
   };
 
-  const duels = await rescoreDuels(client, correction, now, tell);
+  const paid: CoinChange[] = [];
+  const duels = await rescoreDuels(client, correction, now, tell, paid);
   const { dailies, boards, answers: dailyAnswers } = await rescoreDailies(client, correction, now, tell);
 
   const names = await usernames(
@@ -147,7 +174,7 @@ async function rescoreNext(deps: JobDeps, client: PoolClient): Promise<BoardEntr
     version: correction.version,
     at: now,
   });
-  return boards;
+  return { boards, paid };
 }
 
 function summary(r: RescoreResult): string {
@@ -167,6 +194,7 @@ async function rescoreDuels(
   c: Correction,
   now: number,
   tell: (userId: string) => Told,
+  paid: CoinChange[],
 ): Promise<{ answers: number; duels: number; flipped: number }> {
   const window = [c.question_id, c.new_index, new Date(now - RESCORE_DAYS * DAY)];
   const match = `da.question_id = $1 AND da.chosen_index = $2 AND NOT da.correct AND da.round_no <= 3
@@ -225,8 +253,11 @@ async function rescoreDuels(
       score_a: number;
       score_b: number;
       winner_id: string | null;
+      coins_a: number | null;
+      coins_b: number | null;
     }>(
-      'SELECT id, player_a, player_b, state, score_a, score_b, winner_id FROM duels WHERE id = ANY($1) ORDER BY id',
+      `SELECT id, player_a, player_b, state, score_a, score_b, winner_id, coins_a, coins_b
+         FROM duels WHERE id = ANY($1) ORDER BY id`,
       [[...gains.keys()]],
     )
   ).rows;
@@ -256,6 +287,25 @@ async function rescoreDuels(
     }
     if (winner !== duel.winner_id && duel.player_b) {
       flipped++;
+      const side = winner === duel.player_a ? 'a' : 'b';
+      const had = side === 'a' ? duel.coins_a : duel.coins_b;
+      // Duels from before coins (and the Sabi Bot's side) have none recorded: nothing to top up.
+      if (winner && had !== null) {
+        const change = await grantCoins(client, winner, duelCoins('win') - had, {
+          key: `duel:${duel.id}:${winner}:corrected`,
+          reason: 'duel_win',
+          refType: 'duel',
+          refId: duel.id,
+          now,
+        });
+        if (change) {
+          paid.push(change);
+          await client.query(`UPDATE duels SET coins_${side} = $2 WHERE id = $1`, [
+            duel.id,
+            had + change.delta,
+          ]);
+        }
+      }
       for (const userId of [duel.player_a, duel.player_b]) {
         const t = tell(userId);
         t.games.add(`duel:${duel.id}`);

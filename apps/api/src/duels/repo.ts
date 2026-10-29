@@ -38,6 +38,11 @@ export interface DuelRow {
   winner_id: string | null;
   rating_delta_a: number | null;
   rating_delta_b: number | null;
+  /** What each player got once the duel finished (step 2.4a). */
+  coins_a: number | null;
+  coins_b: number | null;
+  xp_a: number | null;
+  xp_b: number | null;
   rematch_of: string | null;
   created_at: Date;
   completed_at: Date | null;

@@ -182,13 +182,31 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
                   {t('duel.botNote')}
                 </Text>
               ) : null}
-              {duel.rating_delta !== null ? (
-                <View style={styles.rating}>
-                  <Text variant="heading" color={colors.primaryInk}>
-                    {duel.rating_delta >= 0 ? '+' : ''}
-                    {Math.round(duel.rating_delta)}
-                  </Text>
-                  <Text variant="caption">{t('duel.rating')}</Text>
+              {duel.rating_delta !== null || duel.reward ? (
+                <View style={styles.tiles} testID="duel-reward">
+                  {duel.rating_delta !== null ? (
+                    <View style={[styles.tile, { backgroundColor: colors.primaryTint }]}>
+                      <Text variant="heading" color={colors.primaryInk}>
+                        {duel.rating_delta >= 0 ? '+' : ''}
+                        {Math.round(duel.rating_delta)}
+                      </Text>
+                      <Text variant="caption">{t('duel.rating')}</Text>
+                    </View>
+                  ) : null}
+                  {duel.reward ? (
+                    <>
+                      <View style={[styles.tile, { backgroundColor: colors.accentTint }]}>
+                        <Text variant="heading" testID="duel-coins">
+                          +{duel.reward.coins}
+                        </Text>
+                        <Text variant="caption">{t('duel.coins')}</Text>
+                      </View>
+                      <View style={[styles.tile, { backgroundColor: XP_TINT }]}>
+                        <Text variant="heading">+{duel.reward.xp}</Text>
+                        <Text variant="caption">{t('duel.xp')}</Text>
+                      </View>
+                    </>
+                  ) : null}
                 </View>
               ) : null}
             </>
@@ -239,6 +257,9 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
   );
 }
 
+/** The XP tile's lilac (mockup 13). */
+const XP_TINT = '#F0E8F7';
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   scroll: { flexGrow: 1 },
@@ -270,14 +291,13 @@ const styles = StyleSheet.create({
   cellWide: { flex: 1 },
   roundName: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 8 },
   cell: { width: 72, textAlign: 'right' },
-  rating: {
-    marginTop: 16,
-    alignSelf: 'flex-start',
+  tiles: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  tile: {
+    flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 8,
     paddingVertical: 12,
     borderRadius: radius.card,
-    backgroundColor: colors.primaryTint,
   },
   actions: { gap: 10, marginTop: 24, marginBottom: 16 },
 });

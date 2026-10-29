@@ -77,6 +77,9 @@ test('two players finish a duel through a link, both in the browser', async ({ b
       ['Draw!', 'Draw!'],
     ].map(String),
   ).toContain(String(results));
+  // Coins and XP for each (step 2.4a): 30 for the win, 10 otherwise.
+  const coins = results[0] === 'You win!' ? '+30' : '+10';
+  await expect(tolu.getByTestId('duel-coins')).toHaveText(coins);
 
   // Either player can share the result as a picture for WhatsApp Status.
   const download = tolu.waitForEvent('download');
@@ -87,4 +90,5 @@ test('two players finish a duel through a link, both in the browser', async ({ b
   await expect(tolu.getByTestId('rematch')).toBeVisible();
   await tolu.getByTestId('result-home').click();
   await expect(tolu.getByText('Recent results')).toBeVisible();
+  await expect(tolu.getByTestId('coin-balance')).toHaveText(coins.slice(1));
 });

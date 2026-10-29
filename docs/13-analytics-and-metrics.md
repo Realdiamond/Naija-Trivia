@@ -53,7 +53,7 @@ Common properties on every event: `event_id`, `ts`, `session_id`, `seq`, `screen
 | `daily_started` / `daily_completed` | Server | `daily_id`, `score`, `streak` | |
 | `daily_shared` | Client | `channel` | |
 | `question_reported` | Server | `qid`, `reason` | |
-| `coins_changed` | Server | `delta`, `reason`, `balance_after` | Every ledger movement |
+| `coins_changed` | Server | `delta`, `reason`, `balance_after` | Every coin a player earns or spends (a guest's coins moving into their account on sign-in are not counted again) |
 | `ad_requested` / `ad_shown` | Client | `format`, `placement`, `network` | |
 | `ad_paid` | Client | `value_micros`, `currency`, `precision`, `format` | AdMob impression-level revenue (an estimate) |
 | `ad_reward_granted` | Server | `format`, `amount` | After SSV (app) or the ad-session check (web) |

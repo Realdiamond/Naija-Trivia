@@ -69,6 +69,8 @@ export const DailyResult = z.object({
   /** The streak after this Daily, and whether the week's freeze saved it. */
   streak: DailyStreak.extend({ used_freeze: z.boolean() }),
   xp: z.number().int().min(0),
+  /** 20, plus 5 a streak day after the first, up to 50 (step 2.4a). */
+  coins: z.number().int().min(0),
   share_text: z.string(),
   share_url: z.string(),
   /** The questions, right answers and facts ("See answers and facts"). */

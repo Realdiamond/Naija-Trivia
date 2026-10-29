@@ -33,6 +33,8 @@ test('a guest plays the Daily, shares the grid and finds themselves on the board
   await expect(page.getByTestId('daily-title')).toHaveText(`Daily Sabi #${id}`);
   await expect(page.getByTestId('daily-score')).toHaveText(/^[0-7]\/7$/);
   await expect(page.getByTestId('daily-streak')).toHaveText('1 day');
+  // The first day of a streak pays 20 coins (step 2.4a).
+  await expect(page.getByTestId('daily-reward')).toHaveText(/^\+20 coins · \+\d+ XP$/);
   const share = await page.getByTestId('daily-share-text').textContent();
   expect(share).toMatch(new RegExp(`^Who Sabi\\? #${id} [0-7]/7 ⏱ \\d+s`));
   expect(share).toMatch(/[🟩🟥]{7}/u);
@@ -61,6 +63,11 @@ test('a guest plays the Daily, shares the grid and finds themselves on the board
   // Back home, the Daily is done for today; the result stays one tap away.
   await page.goto('/home');
   await expect(page.getByTestId('daily-banner')).toContainText(`Daily #${id} done`);
+  // The coins show on Home, and what earned them on the Coins screen.
+  await expect(page.getByTestId('coin-balance')).toHaveText('20');
+  await page.getByTestId('open-coins').click();
+  await expect(page.getByTestId('coins-balance')).toHaveText('20');
+  await expect(page.getByTestId('coins-entry')).toHaveText(new RegExp(`Daily #${id}.*\\+20$`));
 
   // A friend opens the shared link in their own browser and goes straight into today's Daily.
   const friend = await newPlayer(browser);

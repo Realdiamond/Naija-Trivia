@@ -22,7 +22,9 @@ import {
   DEFAULT_CONFIG,
   displayOrder,
   DUEL_ROUNDS,
+  duelCoins,
   DuelTransitionError,
+  duelXp,
   isFinished,
   MATCH_WAIT_MS,
   NEW_PLAYER_RATING,
@@ -37,6 +39,7 @@ import {
   toCanonicalIndex,
   toDisplayIndex,
   turnSide,
+  type DuelOutcome,
   type DuelSide,
   type DuelSnapshot,
 } from '@whosabi/game-rules';
@@ -57,6 +60,7 @@ import {
 import type { AppDeps } from '../app';
 import { overallRating, recordQuestionStats } from '../content/stats';
 import { withTransaction, type Pool, type PoolClient } from '../db';
+import { rewardPlayer } from '../economy/rewards';
 import { ApiError, conflict, notFound } from '../errors';
 import type { EventContext } from '../events';
 import { newId } from '../ids';
@@ -954,7 +958,10 @@ export class DuelService {
     );
     this.deps.log.info({ duel_id: duel.id, from: duel.state, to: next.state }, 'duel moved on');
     tx.duel = updated.rows[0]!;
-    if (decisive) await this.queueCompleted(tx, actor);
+    if (decisive) {
+      await this.reward(tx, actor);
+      await this.queueCompleted(tx, actor);
+    }
     if (next.state === 'tiebreak') await this.startTiebreak(tx, actor);
     await this.queuePushes(tx, duel, actor);
   }
@@ -1051,6 +1058,55 @@ export class DuelService {
   }
 
   /** `duel_completed`, one per player (doc 13). The player who timed out gets `forfeit`. */
+  /**
+   * Coins and XP for a finished duel (GDD §5.1), with its result: +30 a win, +10 a loss or draw,
+   * nothing for a forfeit, and XP for the answers plus 50 for seeing it through. Each level
+   * reached pays 100 more. The Sabi Bot earns nothing.
+   */
+  private async reward(tx: Tx, actor?: EventContext): Promise<void> {
+    const { client, duel, now, outbox } = tx;
+    const answers = await getAnswers(client, [duel.id]);
+    const players = await getPlayers(client, playersOf(duel));
+    // In id order, so two duels between the same players finishing together never wait on each other.
+    for (const userId of humansOf(duel).sort()) {
+      const side = sideOf(duel, userId)!;
+      const result = resultFor(duel, side);
+      const outcome: DuelOutcome =
+        result === 'loss' && duel.state === 'forfeit' ? 'forfeit' : (result ?? 'draw');
+      const played = playedRows(answers, userId);
+      const xp = duelXp(played.filter((a) => a.correct).length, played.length, outcome !== 'forfeit');
+      const coins = duelCoins(outcome);
+      const paid = await rewardPlayer(client, userId, {
+        xp,
+        coins,
+        reason: outcome === 'win' ? 'duel_win' : outcome === 'draw' ? 'duel_draw' : 'duel_loss',
+        key: `duel:${duel.id}:${userId}`,
+        refType: 'duel',
+        refId: duel.id,
+        now,
+      });
+      if (!paid) continue;
+      const updated = await client.query<DuelRow>(
+        `UPDATE duels SET coins_${side} = $2, xp_${side} = $3 WHERE id = $1 RETURNING *`,
+        [duel.id, coins, xp],
+      );
+      tx.duel = updated.rows[0]!;
+      const ctx: EventContext =
+        actor?.userId === userId
+          ? actor
+          : { userId, platform: players.get(userId)?.last_platform ?? 'android' };
+      for (const change of paid.changes) {
+        outbox.push(() =>
+          this.deps.events.emit(
+            'coins_changed',
+            { delta: change.delta, reason: change.reason, balance_after: change.balance },
+            ctx,
+          ),
+        );
+      }
+    }
+  }
+
   private async queueCompleted(tx: Tx, actor?: EventContext): Promise<void> {
     const { duel, now, outbox } = tx;
     const players = await getPlayers(tx.client, playersOf(duel));

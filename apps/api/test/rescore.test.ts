@@ -91,13 +91,16 @@ async function duel(d: {
   winner: string | null;
   picks: Array<{ user: string; chosen: number; ms: number }>;
   servedAgo?: number;
+  /** The coins each side was paid when it finished (step 2.4a). */
+  coins?: [number, number];
 }): Promise<string> {
   const id = newId('d', t.clock.now());
   const served = new Date(t.clock.now() - (d.servedAgo ?? HOUR));
   await t.pool.query(
-    `INSERT INTO duels (id, player_a, player_b, source, state, score_a, score_b, winner_id, created_at)
-     VALUES ($1, $2, $3, 'friend', $4, $5, $6, $7, $8)`,
-    [id, d.a, d.b, d.state, d.scoreA, d.scoreB, d.winner, served],
+    `INSERT INTO duels (id, player_a, player_b, source, state, score_a, score_b, winner_id, created_at, coins_a,
+                        coins_b)
+     VALUES ($1, $2, $3, 'friend', $4, $5, $6, $7, $8, $9, $10)`,
+    [id, d.a, d.b, d.state, d.scoreA, d.scoreB, d.winner, served, d.coins?.[0] ?? null, d.coins?.[1] ?? null],
   );
   for (const p of d.picks) {
     const correct = p.chosen === 0;
@@ -169,6 +172,7 @@ describe('re-scoring a corrected question', () => {
         { user: ada, chosen: 0, ms: 3000 },
         { user: bayo, chosen: 1, ms: 4000 },
       ],
+      coins: [30, 10],
     });
     const active = await duel({
       a: ada,
@@ -246,6 +250,18 @@ describe('re-scoring a corrected question', () => {
       [flip, ada],
     );
     expect(adaAnswer.rows).toEqual([{ correct: true, points: pointsAt(3000) }]);
+    // Bayo gets the rest of a win's coins; Ada keeps hers.
+    const coins = await t.pool.query(
+      `SELECT e.account_id, e.amount, t.reason, t.ref_id FROM ledger_entries e
+         JOIN ledger_transactions t ON t.id = e.transaction_id
+        WHERE e.account_id = ANY($1)`,
+      [[`user:${ada}:coins`, `user:${bayo}:coins`]],
+    );
+    expect(coins.rows).toEqual([
+      { account_id: `user:${bayo}:coins`, amount: '20', reason: 'duel_win', ref_id: flip },
+    ]);
+    const paid = await t.pool.query('SELECT coins_a, coins_b FROM duels WHERE id = $1', [flip]);
+    expect(paid.rows).toEqual([{ coins_a: 30, coins_b: 30 }]);
     // Still being played: the points count; a forfeit stays with the player who waited.
     expect(await duelRow(active)).toEqual({ score_a: 0, score_b: 120 + pointsAt(6000), winner_id: null });
     expect(await duelRow(forfeit)).toEqual({ score_a: 100, score_b: 500 + pointsAt(5000), winner_id: ada });

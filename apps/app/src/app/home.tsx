@@ -1,6 +1,6 @@
 /**
- * Home (mockup 08): the Daily, your turns, then a new challenge, the duels waiting on the other
- * player and recent results. Coins and the tab bar arrive with their features (M2).
+ * Home (mockup 08): your coins, the Daily, your turns, then a new challenge, the duels waiting on
+ * the other player and recent results. The tab bar arrives with its features (M2).
  */
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -13,6 +13,7 @@ import { SignInOptions } from '../features/auth/SignInOptions';
 import { useDailyToday } from '../features/daily/api';
 import { DailyBanner } from '../features/daily/DailyBanner';
 import { useDuelList } from '../features/duels/api';
+import { useWallet } from '../features/economy/api';
 import { currentRound, isUrgent, timeLeft } from '../features/duels/format';
 import { useOpponentName } from '../features/duels/parts';
 import { useRandomDuel } from '../features/duels/useRandomDuel';
@@ -34,19 +35,22 @@ export default function Home() {
   const active = useDuelList('active', signedIn);
   const done = useDuelList('done', signedIn);
   const daily = useDailyToday(signedIn);
+  const wallet = useWallet(signedIn);
   const random = useRandomDuel();
 
   // Coming back from a duel or the Daily: show the new state at once.
   const { refetch: refetchActive } = active;
   const { refetch: refetchDone } = done;
   const { refetch: refetchDaily } = daily;
+  const { refetch: refetchWallet } = wallet;
   useFocusEffect(
     useCallback(() => {
       if (!signedIn) return;
       void refetchActive();
       void refetchDone();
       void refetchDaily();
-    }, [signedIn, refetchActive, refetchDone, refetchDaily]),
+      void refetchWallet();
+    }, [signedIn, refetchActive, refetchDone, refetchDaily, refetchWallet]),
   );
 
   if (status === 'signed_out') return <Redirect href="/welcome" />;
@@ -73,6 +77,20 @@ export default function Home() {
             {me.data ? ` · ${me.data.tier.name} · ${Math.round(me.data.rating).toLocaleString('en-NG')}` : ''}
           </Text>
         </View>
+        {wallet.data ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('home.coins', { coins: wallet.data.coins })}
+            onPress={() => router.push('/coins')}
+            style={({ pressed }) => [styles.coins, pressed && styles.pressed]}
+            testID="open-coins"
+          >
+            <Icon name="coin" size={18} color={colors.accentInk} />
+            <Text variant="label" testID="coin-balance">
+              {wallet.data.coins.toLocaleString('en-NG')}
+            </Text>
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('nav.leaderboards')}
@@ -344,6 +362,15 @@ function Action({
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 8 },
   headerText: { flex: 1, gap: 2 },
+  coins: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accentTint,
+  },
   time: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 16 },
   action: {

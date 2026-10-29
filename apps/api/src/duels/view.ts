@@ -22,6 +22,7 @@ import type {
   DuelRoundView,
   DuelSummary,
   DuelView,
+  GameReward,
   ReviewQuestion,
   RoundProgress,
   TiebreakView,
@@ -100,6 +101,7 @@ export function buildSummary(data: DuelData, viewer: string): DuelSummary {
     score: { you, opponent },
     result: resultFor(duel, side),
     rating_delta: side === 'a' ? duel.rating_delta_a : duel.rating_delta_b,
+    reward: rewardFor(duel, side),
     created_at: duel.created_at.toISOString(),
     completed_at: iso(duel.completed_at),
   };
@@ -147,6 +149,12 @@ export function visibleQuestionIds(data: DuelData, viewer: string): string[] {
   return data.rounds
     .filter((r) => r.round_no === TIEBREAK_ROUND || roundFinished(r, data.answers, viewer))
     .flatMap((r) => r.question_ids);
+}
+
+function rewardFor(duel: DuelRow, side: DuelSide): GameReward | null {
+  const xp = side === 'a' ? duel.xp_a : duel.xp_b;
+  if (xp === null) return null;
+  return { coins: (side === 'a' ? duel.coins_a : duel.coins_b) ?? 0, xp };
 }
 
 export function resultFor(duel: DuelRow, side: DuelSide): DuelResult | null {

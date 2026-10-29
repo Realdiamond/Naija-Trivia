@@ -3,6 +3,7 @@ export * from './config';
 export * from './content';
 export * from './daily';
 export * from './duel';
+export * from './economy';
 export * from './hash';
 export * from './matchmaking';
 export * from './party';
