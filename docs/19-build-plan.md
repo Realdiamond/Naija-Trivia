@@ -434,8 +434,19 @@ Doc 18 §8 and §12, doc 10 §2.
 - ✅ A ban signs the player out everywhere; signing in again says until when and how to appeal (`help@whosabi.ng`), and a ban with an end lifts itself the next time they try, back to a guest, a 13–17 account or a full account
 - ✅ The Safety tab lists the moderation history (with whether the player saw what they were told) and integrity flags with their evidence
 - ✅ The **Integrity** page: the nightly checks' flags, riskiest first; a moderator dismisses one or marks it acted on, with a note. Nothing bans anyone automatically
-- Left for later: the nightly integrity checks that raise the flags, mute (there is nothing players can say yet), reports of players, appeals in the console, and the second moderator's approval for long bans
+- Left for later: mute (there is nothing players can say yet), reports of players, appeals in the console, and the second moderator's approval for long bans
 - ✅ Tests: the API (a warning read once; a username taken away and a new one picked; a player off others' boards but on their own; bans by length and role, signed out, the message on sign-in, a ban ending itself, lifted early; the queue riskiest first, dismissed and acted on, who may); the console in the browser (a moderator warns, bans for a week, lifts it, and is told a ban for good needs an admin); the app in the browser (the warning on Home until read)
+
+### Step 2.7e · The nightly integrity checks ✅
+Doc 10 §2, doc 18 §12.
+
+- ✅ Once a night from 04:00 WAT (`jobs/integrity.ts`), over the last 7 days of duel answers, using rules in `@whosabi/game-rules`:
+  - **Accuracy against difficulty**: right answers against what the questions' own share of right answers predicts (questions with 50 plays or more), flagged from a z-score of 4; or 95% right on hard questions (fewer than half of players right) at a near-constant speed, the screen-reader or OCR bot pattern
+  - **Faked clocks**: the app's time far below what the server saw after the round trip (a median gap of 3 seconds or more)
+  - **Searching in another tab** (web): the tab hidden for 2 seconds or more on a quarter of questions, with 20 points more right answers when it was
+- ✅ Each finding is a flag in the Integrity queue with its risk score and evidence; a player is flagged for the same thing at most once a week, whatever a moderator decided. New flags raise one staff alert a night. Nothing bans anyone automatically
+- Left for later: the Daily's answers, multi-accounting by device, collusion rings, ad reward abuse and the Play Integrity verdict
+- ✅ Tests: game rules (each check's thresholds and scores); the API (a bot-like reader, a faked clock and a tab-hider flagged and an honest player not, on the right night only, once a night, once a week, with the staff alert)
 
 | Step | Scope | Main docs |
 |---|---|---|
@@ -445,7 +456,7 @@ Doc 18 §8 and §12, doc 10 §2.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |

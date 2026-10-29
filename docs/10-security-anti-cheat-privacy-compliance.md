@@ -44,7 +44,7 @@ HQ Trivia showed that cheating destroys trivia economies, with bots answering 90
 | Searching in another browser tab (web) | Time with the tab hidden during each question (`tab_hidden_ms`) feeds the integrity score; speed and accuracy are compared by platform. Never an automatic ban |
 | Scripted play in a desktop browser | Turnstile at guest creation, the same server-side timing clamp, accuracy-vs-difficulty z-scores. Play Integrity doesn't exist on the web, so ranked play and prize events need a phone-verified account |
 
-**Enforcement ladder:** shadow-exclude from leaderboards → warning → ranked ban (30 days) → permanent ban. Every action is logged in `moderation_actions` with an appeal route through support (`help@whosabi.ng`). Built in step 2.7d: moderators take each step from User 360; bans longer than 30 days or for good need an admin.
+**Enforcement ladder:** shadow-exclude from leaderboards → warning → ranked ban (30 days) → permanent ban. Every action is logged in `moderation_actions` with an appeal route through support (`help@whosabi.ng`). Built in step 2.7d: moderators take each step from User 360; bans longer than 30 days or for good need an admin. Built in step 2.7e: the nightly checks for accuracy against difficulty, faked clocks and searching in another tab, which raise flags for moderators.
 
 ## 3. Privacy by design (NDPA 2023 + GAID 2025)
 

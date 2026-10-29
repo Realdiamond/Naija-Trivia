@@ -19,6 +19,7 @@ import { DuelService } from './duels/service';
 import { ServerEvents } from './events';
 import { AnalyticsLoader } from './jobs/analyticsLoader';
 import { calibrateQuestions } from './jobs/calibration';
+import { checkIntegrity } from './jobs/integrity';
 import { processCorrections } from './content/rescore';
 import { retireExpiredQuestions } from './jobs/contentExpiry';
 import { expireDueDuels } from './jobs/expiry';
@@ -121,6 +122,7 @@ const jobs = [
   every('question-expiry', 60 * MINUTE, () => retireExpiredQuestions(deps)),
   every('question-stats', MINUTE, () => flushQuestionStats(deps)),
   every('question-calibration', 10 * MINUTE, () => calibrateQuestions(deps)),
+  every('integrity-checks', 10 * MINUTE, () => checkIntegrity(deps)),
   every('rescore', MINUTE, () => processCorrections(deps)),
   every('ledger-check', 10 * MINUTE, () => checkLedger(deps)),
   every('analytics-upkeep', 60 * MINUTE, () => loader.maintain(config.analyticsRetentionDays)),
