@@ -162,6 +162,8 @@ export const routes = {
     commerce: (query = '') => `/admin/commerce${query}`,
     commerceExport: (month: string) => `/admin/commerce/export?month=${encodeURIComponent(month)}`,
     analytics: (board: string, query = '') => `/admin/analytics/${encodeURIComponent(board)}${query}`,
+    alertRules: '/admin/alert-rules',
+    alertRule: (id: string) => `/admin/alert-rules/${encodeURIComponent(id)}`,
     /** Home banners and events (step 2.7h). */
     events: () => '/admin/events',
     eventEnd: (id: number) => `/admin/events/${id}/end`,

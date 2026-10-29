@@ -12,6 +12,10 @@ const Env = z.object({
   SENTRY_DSN: z.url().optional(),
   /** Which build is running, for error reports: Heroku sets it with runtime dyno metadata. */
   HEROKU_SLUG_COMMIT: z.string().min(7).max(64).optional(),
+  /** Threshold alerts (step 2.7m) by email go to these addresses, comma-separated, through Resend. */
+  ALERT_EMAILS: z.string().default(''),
+  /** Threshold alerts to Slack: an incoming webhook URL. It is a secret: Heroku config only. */
+  SLACK_ALERTS_WEBHOOK_URL: z.url().optional(),
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   /**
@@ -112,6 +116,9 @@ export interface Config {
   logLevel: string;
   sentryDsn?: string;
   release?: string;
+  /** Where threshold alerts go besides staff phones (step 2.7m). */
+  alertEmails: string[];
+  slackAlertsWebhookUrl?: string;
   databaseUrl: string;
   redisUrl: string;
   redisTlsVerify: boolean;
@@ -184,6 +191,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     logLevel: e.LOG_LEVEL,
     sentryDsn: e.SENTRY_DSN,
     release: e.HEROKU_SLUG_COMMIT,
+    alertEmails: list(e.ALERT_EMAILS),
+    slackAlertsWebhookUrl: e.SLACK_ALERTS_WEBHOOK_URL,
     databaseUrl: e.DATABASE_URL,
     redisUrl: e.REDIS_URL,
     redisTlsVerify: e.REDIS_TLS_VERIFY === 'true',

@@ -2,7 +2,8 @@
  * The worker (build plan steps 1.3, 2.1, 2.3, 2.5 and 2.6): a second process beside the API that
  * ends overdue duels, seats the Sabi Bot in random duels nobody took and plays its turns, sends
  * pushes and queues turn and Daily reminders, picks the Daily, saves final leaderboard ranks,
- * retires expired questions, moves question stats into Postgres and loads analytics events.
+ * retires expired questions, moves question stats into Postgres, loads analytics events and
+ * checks the threshold alert rules.
  *
  * Every job is safe with several workers running (locked rows, claimed reminder rows, a Redis
  * lock, a stream consumer group), so the worker scales by running more copies and needs no job
@@ -14,9 +15,11 @@ import { raiseStaffAlert, sendStaffAlerts } from './admin/alerts';
 import { systemClock } from './clock';
 import { loadConfig } from './config';
 import { DailyService } from './daily/service';
+import { DevEmail, ResendEmail } from './auth/email';
 import { createPool } from './db';
 import { DuelService } from './duels/service';
 import { ServerEvents } from './events';
+import { checkAlertRules } from './jobs/alertRules';
 import { AnalyticsLoader } from './jobs/analyticsLoader';
 import { calibrateQuestions } from './jobs/calibration';
 import { checkIntegrity } from './jobs/integrity';
@@ -62,6 +65,16 @@ const transport = new PushRouter(
   new LogTransport(log, 'iOS build'),
 );
 const loader = new AnalyticsLoader({ ...deps, redis: streamRedis });
+// Threshold alerts (step 2.7m) go to staff phones, and to email and Slack once those are set up.
+const alertOutlets = {
+  email: config.resend
+    ? new ResendEmail(config.resend)
+    : config.env === 'production'
+      ? undefined
+      : new DevEmail(log),
+  emailTo: config.alertEmails,
+  slackWebhookUrl: config.slackAlertsWebhookUrl,
+};
 
 if (config.env !== 'production') await migrate(pool);
 await loader.ensureGroup();
@@ -133,6 +146,7 @@ const jobs = [
   every('integrity-checks', 10 * MINUTE, () => checkIntegrity(deps)),
   every('rescore', MINUTE, () => processCorrections(deps)),
   every('ledger-check', 10 * MINUTE, () => checkLedger(deps)),
+  every('alert-rules', MINUTE, () => checkAlertRules(deps, alertOutlets)),
   every('analytics-upkeep', 60 * MINUTE, () => loader.maintain(config.analyticsRetentionDays)),
   loadEvents(),
 ];
