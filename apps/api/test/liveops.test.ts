@@ -80,6 +80,7 @@ describe('flags and kill switches (step 2.7c)', () => {
         'econ.lifeline_skip': 100,
         'econ.lifeline_time': 40,
       },
+      experiments: {},
       refresh_s: 45,
     });
   });

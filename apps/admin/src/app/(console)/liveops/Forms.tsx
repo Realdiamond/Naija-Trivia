@@ -1,13 +1,22 @@
 'use client';
 /**
  * The LiveOps forms (step 2.7c): one per flag (on or off, and who gets it), the status banner,
- * game and economy values (step 2.7g), and Home banners and events (step 2.7h). Every change
- * needs a reason; apps pick it up within a minute.
+ * game and economy values (step 2.7g), Home banners and events (step 2.7h), and experiments (step
+ * 2.7s). Every change needs a reason; apps pick it up within a minute.
  */
 import { useActionState, useState } from 'react';
 import type { AdminConfigValue, AdminFlag, StatusBanner } from '@whosabi/shared-types';
 import { CATEGORY_NAME } from '../../../lib/content';
-import { endEvent, saveBanner, saveConfig, saveFlag, scheduleEvent, type FormState } from './actions';
+import {
+  endEvent,
+  moveExperiment,
+  saveBanner,
+  saveConfig,
+  saveExperiment,
+  saveFlag,
+  scheduleEvent,
+  type FormState,
+} from './actions';
 
 const IDLE: FormState = { done: null, error: null };
 
@@ -286,6 +295,111 @@ export function EndEventForm({ id }: { id: number }) {
         End now
       </button>
       <Outcome state={state} testId={`event-end-${id}`} />
+    </form>
+  );
+}
+
+export function ExperimentForm() {
+  const [state, action, pending] = useActionState(saveExperiment, IDLE);
+  return (
+    <form action={action} className="stack" data-testid="experiment-form">
+      <div className="field-grid">
+        <label>
+          Key
+          <input
+            name="key"
+            required
+            pattern="[a-z][a-z0-9_.]{2,39}"
+            placeholder="duel.timer"
+            className="mono"
+            data-testid="experiment-key"
+          />
+        </label>
+        <label>
+          What it changes
+          <input
+            name="description"
+            required
+            minLength={3}
+            maxLength={200}
+            placeholder="Duel timer: 15 s or 12 s"
+            data-testid="experiment-description"
+          />
+        </label>
+      </div>
+      <label>
+        What we expect, and why
+        <textarea
+          name="hypothesis"
+          required
+          minLength={10}
+          maxLength={500}
+          data-testid="experiment-hypothesis"
+        />
+      </label>
+      <label>
+        Variants and their weights; the first is the control
+        <input
+          name="variants"
+          required
+          defaultValue="control:50, test:50"
+          className="mono"
+          data-testid="experiment-variants"
+        />
+      </label>
+      <div className="field-grid">
+        <label>
+          Platform
+          <select name="platform" defaultValue="">
+            <option value="">Every platform</option>
+            <option value="android">Android</option>
+            <option value="ios">iPhone</option>
+            <option value="web">Web</option>
+          </select>
+        </label>
+        <label>
+          From app version (optional)
+          <input name="min_app_version" placeholder="1.2.0" />
+        </label>
+        <label>
+          Share of those players (%)
+          <input name="percent" type="number" min={1} max={100} defaultValue={100} required />
+        </label>
+      </div>
+      <div className="field-grid">
+        <label>
+          Primary metric (an event)
+          <input
+            name="primary_metric"
+            required
+            placeholder="duel_completed"
+            className="mono"
+            data-testid="experiment-metric"
+          />
+        </label>
+        <label>
+          Guardrails (events, comma separated)
+          <input name="guardrails" placeholder="question_reported, app_crashed" className="mono" />
+        </label>
+      </div>
+      <button className="primary" type="submit" disabled={pending} data-testid="experiment-save">
+        Save as a draft
+      </button>
+      <Outcome state={state} testId="experiment" />
+    </form>
+  );
+}
+
+export function ExperimentMoveForm({ experimentKey, to }: { experimentKey: string; to: 'start' | 'stop' }) {
+  const [state, action, pending] = useActionState(moveExperiment.bind(null, experimentKey, to), IDLE);
+  const id = experimentKey.replaceAll('.', '-');
+  return (
+    <form action={action} className="inline" data-testid={`experiment-${to}-${id}`}>
+      <input name="reason" required minLength={3} maxLength={200} placeholder="Reason" aria-label="Reason" />
+      <button type="submit" disabled={pending}>
+        {to === 'start' ? 'Start' : 'Stop'}
+      </button>
+      <Outcome state={state} testId={`experiment-${to}-${id}`} />
     </form>
   );
 }

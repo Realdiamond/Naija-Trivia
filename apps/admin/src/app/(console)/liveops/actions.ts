@@ -1,11 +1,13 @@
 'use server';
 /**
  * LiveOps changes: a flag or kill switch and the status banner (step 2.7c), game and economy
- * values (step 2.7g), and Home banners and events (step 2.7h). The API checks who may.
+ * values (step 2.7g), Home banners and events (step 2.7h), and experiments (step 2.7s). The API
+ * checks who may.
  */
 import { revalidatePath } from 'next/cache';
 import {
   routes,
+  type AdminExperimentInput,
   type AdminFlagRule,
   type AdminFlagUpdate,
   type AdminLiveEventCreate,
@@ -131,4 +133,64 @@ export async function endEvent(id: number, _state: FormState, form: FormData): P
   }
   revalidatePath('/liveops');
   return { done: 'Ended.', error: null };
+}
+
+/** 'control:50, twelve:50' → the variants; a missing weight counts as 1. */
+function variantsFrom(value: string): AdminExperimentInput['variants'] {
+  return value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const [key = '', weight] = part.split(':').map((x) => x.trim());
+      return { key, weight: weight ? Number(weight) : 1 };
+    });
+}
+
+/** Writes down an experiment, or changes one that hasn't started (step 2.7s). */
+export async function saveExperiment(_state: FormState, form: FormData): Promise<FormState> {
+  const platform = text(form, 'platform');
+  const body: AdminExperimentInput = {
+    key: text(form, 'key'),
+    description: text(form, 'description'),
+    hypothesis: text(form, 'hypothesis'),
+    variants: variantsFrom(text(form, 'variants')),
+    audience: {
+      ...(platform === 'android' || platform === 'ios' || platform === 'web'
+        ? { platforms: [platform] }
+        : {}),
+      ...(text(form, 'min_app_version') ? { min_app_version: text(form, 'min_app_version') } : {}),
+      percent: Number(text(form, 'percent') || 100),
+    },
+    primary_metric: text(form, 'primary_metric'),
+    guardrails: text(form, 'guardrails')
+      .split(',')
+      .map((g) => g.trim())
+      .filter(Boolean),
+  };
+  try {
+    await adminApi(routes.admin.experiments(), { method: 'POST', body });
+  } catch (e) {
+    return failed(e);
+  }
+  revalidatePath('/liveops');
+  return { done: 'Saved as a draft. Start it when it is ready.', error: null };
+}
+
+export async function moveExperiment(
+  key: string,
+  action: 'start' | 'stop',
+  _state: FormState,
+  form: FormData,
+): Promise<FormState> {
+  try {
+    await adminApi(routes.admin.experiment(key), {
+      method: 'POST',
+      body: { action, reason: text(form, 'reason') },
+    });
+  } catch (e) {
+    return failed(e);
+  }
+  revalidatePath('/liveops');
+  return { done: action === 'start' ? 'Running. Players get it within a minute.' : 'Stopped.', error: null };
 }

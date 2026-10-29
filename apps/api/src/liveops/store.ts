@@ -14,7 +14,9 @@ import {
   MAX_HOME_BANNERS,
   TUNABLE,
   tunable,
+  variantFor,
   XP_BOOST_MULTIPLIER,
+  type Experiment,
   type Flag,
   type FlagAudience,
   type FlagPlatform,
@@ -51,6 +53,8 @@ interface Snapshot {
   values: GameConfig;
   /** Running, or starting before the next look at the database (step 2.7h). */
   events: EventRow[];
+  /** Running experiments (step 2.7s). */
+  experiments: Experiment[];
 }
 
 const live = (e: EventRow, now: number) =>
@@ -91,7 +95,7 @@ export class LiveOpsStore {
   private async current(): Promise<Snapshot> {
     const now = this.now();
     if (this.snapshot && now - this.snapshot.at < CACHE_MS) return this.snapshot;
-    const [flags, config, events] = await Promise.all([
+    const [flags, config, events, experiments] = await Promise.all([
       this.pool.query<{ key: string; enabled: boolean; rules: Flag['rules'] }>(
         'SELECT key, enabled, rules FROM feature_flags',
       ),
@@ -102,6 +106,9 @@ export class LiveOpsStore {
           WHERE ended_at IS NULL AND ends_at > $1 AND starts_at <= $2
           ORDER BY starts_at DESC, id DESC LIMIT 50`,
         [new Date(now), new Date(now + CACHE_MS)],
+      ),
+      this.pool.query<Experiment>(
+        "SELECT key, status, variants, audience FROM experiments WHERE status = 'running'",
       ),
     ]);
     const values: Record<string, number> = { ...DEFAULT_CONFIG };
@@ -118,6 +125,7 @@ export class LiveOpsStore {
       banner: shown.success ? shown.data : null,
       values: values as GameConfig,
       events: events.rows,
+      experiments: experiments.rows,
     };
     return this.snapshot;
   }
@@ -148,7 +156,25 @@ export class LiveOpsStore {
     for (const key of [...keys].sort()) flags[key] = await this.isOn(key, who);
     const values: Record<string, number> = {};
     for (const t of TUNABLE) if (t.client) values[t.key] = snap.values[t.key];
-    return { flags, banner: snap.banner, home: this.home(snap, who), values, refresh_s: CONFIG_REFRESH_S };
+    const experiments: Record<string, string> = {};
+    for (const e of snap.experiments) {
+      const variant = variantFor(e, who);
+      if (variant) experiments[e.key] = variant;
+    }
+    return {
+      flags,
+      banner: snap.banner,
+      home: this.home(snap, who),
+      values,
+      experiments,
+      refresh_s: CONFIG_REFRESH_S,
+    };
+  }
+
+  /** A player's variant in a running experiment, for the server's own code; null when not in it. */
+  async variant(key: string, who: FlagAudience): Promise<string | null> {
+    const experiment = (await this.current()).experiments.find((e) => e.key === key);
+    return experiment ? variantFor(experiment, who) : null;
   }
 
   /** The Home banners running now for this platform, newest first. */

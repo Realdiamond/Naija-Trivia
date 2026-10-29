@@ -240,7 +240,7 @@ Each metric has one definition, used by every dashboard, export and alert. All d
 | Daily scheduler | Calendar of the next 30 Dailies; swap questions until 22:00 WAT the day before; preview exactly what players will see |
 | Remote config | Every game and economy value (GDD §10) with its current value, history, diff and one-click rollback; changes can target a platform, an app version or a segment |
 | Flags & kill switches | On/off and percentage rollouts by platform and version; kill switches for ads, shop, party rooms, Question Factory and web purchases |
-| Experiments | Variants and weights, audience, primary metric and guardrails. Assignment hashes the experiment key with the user ID, so a player always sees the same variant on every device; exposures are logged as events. Results with confidence intervals arrive in the v1.1 UI |
+| Experiments | Variants and weights, audience, primary metric and guardrails. Assignment hashes the experiment key with the user ID, so a player always sees the same variant on every device; exposures are logged as events. Built in step 2.7s: write one down as a draft, start and stop it with a reason; variants and audience are fixed once it starts; the players who saw each variant are counted. Results with confidence intervals arrive in the v1.1 UI |
 | Banners & status | Home banners and the in-app status banner ("Party rooms are having issues. Duels still work") |
 | Events | Flash packs, Weekend Wahala and Live Party Nights (doc 16) with start and end times |
 | Push campaigns (v1.1) | Segment → message (English and Pidgin) → schedule → approval → send; results show delivered, opened and played within 24 hours |

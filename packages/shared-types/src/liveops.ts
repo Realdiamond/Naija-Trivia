@@ -55,6 +55,8 @@ export const ClientConfig = z.object({
   home: z.array(HomeBanner),
   /** The tuned values the apps use too: lifeline prices, rewarded video coins, ad pacing (step 2.7g). */
   values: z.record(z.string(), z.number()),
+  /** Running experiments this player is in: experiment key → their variant (step 2.7s). */
+  experiments: z.record(z.string(), z.string()),
   refresh_s: z.number().int(),
 });
 export type ClientConfig = z.infer<typeof ClientConfig>;
@@ -199,3 +201,54 @@ export type AdminLiveEventCreate = z.input<typeof AdminLiveEventCreate>;
 
 export const AdminLiveEventEnd = z.object({ reason: text(300) }).strict();
 export type AdminLiveEventEnd = z.infer<typeof AdminLiveEventEnd>;
+
+/** Experiments (doc 13 §4, doc 18 §11, step 2.7s). */
+const ExperimentKey = z.string().regex(/^[a-z][a-z0-9_.]{2,39}$/, 'lowercase, e.g. taste.length');
+export const ExperimentVariant = z.object({
+  key: z.string().regex(/^[a-z0-9_]{1,24}$/, 'lowercase, e.g. control'),
+  weight: z.number().int().min(1).max(100),
+});
+export const ExperimentAudience = z.object({
+  platforms: z
+    .array(z.enum(['android', 'ios', 'web']))
+    .max(3)
+    .optional(),
+  min_app_version: z
+    .string()
+    .regex(/^\d+(\.\d+){0,3}$/, 'a version like 1.2.0')
+    .optional(),
+  percent: z.number().int().min(1).max(100),
+});
+export const AdminExperimentInput = z.object({
+  key: ExperimentKey,
+  description: z.string().trim().min(3).max(200),
+  hypothesis: z.string().trim().min(10).max(500),
+  variants: z
+    .array(ExperimentVariant)
+    .min(2)
+    .max(5)
+    .refine((v) => new Set(v.map((x) => x.key)).size === v.length, { message: 'each variant once' }),
+  audience: ExperimentAudience,
+  primary_metric: z.string().trim().min(3).max(60),
+  guardrails: z.array(z.string().trim().min(3).max(60)).max(6),
+});
+export type AdminExperimentInput = z.infer<typeof AdminExperimentInput>;
+
+export const AdminExperimentAction = z.object({
+  action: z.enum(['start', 'stop']),
+  reason: z.string().trim().min(3).max(200),
+});
+export type AdminExperimentAction = z.infer<typeof AdminExperimentAction>;
+
+export interface AdminExperiment extends AdminExperimentInput {
+  status: 'draft' | 'running' | 'stopped';
+  started_at: string | null;
+  stopped_at: string | null;
+  created_by: string;
+  /** Players who saw each variant (`experiment_exposed`) since it started. */
+  exposed: Record<string, number>;
+}
+
+export interface AdminExperimentsResponse {
+  experiments: AdminExperiment[];
+}
