@@ -17,6 +17,9 @@ export const routes = {
   me: () => `${API_PREFIX}/me`,
   /** The player saw a notice from the team (step 2.7d). */
   noticeSeen: (id: number) => `${API_PREFIX}/me/notices/${id}/seen`,
+  /** Delete my account, and a copy of my data (step 2.8a). */
+  meDelete: () => `${API_PREFIX}/me/delete`,
+  meExport: () => `${API_PREFIX}/me/export`,
   meAge: () => `${API_PREFIX}/me/age`,
   meConsents: () => `${API_PREFIX}/me/consents`,
   /** POST to turn pushes on for this phone, DELETE (same body shape, the token) to turn them off. */
@@ -144,6 +147,11 @@ export const routes = {
     configValue: (key: string) => `/admin/config/${encodeURIComponent(key)}`,
     configHistory: (key: string) => `/admin/config/${encodeURIComponent(key)}/history`,
     configRollback: (key: string) => `/admin/config/${encodeURIComponent(key)}/rollback`,
+    /** Compliance: data requests, exports and erasure (step 2.8a). */
+    dsar: (status?: string) => `/admin/dsar${status ? `?status=${encodeURIComponent(status)}` : ''}`,
+    userDsar: (id: string) => `/admin/users/${encodeURIComponent(id)}/dsar`,
+    userExport: (id: string) => `/admin/users/${encodeURIComponent(id)}/export`,
+    userErase: (id: string) => `/admin/users/${encodeURIComponent(id)}/erase`,
     flags: () => '/admin/flags',
     flag: (key: string) => `/admin/flags/${encodeURIComponent(key)}`,
     banner: () => '/admin/banner',

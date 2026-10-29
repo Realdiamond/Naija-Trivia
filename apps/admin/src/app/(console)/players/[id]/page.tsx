@@ -138,7 +138,13 @@ export default async function User360({
       ) : null}
       {tab === 'devices' ? <DevicesTab user={user} /> : null}
       {tab === 'support' ? (
-        <SupportTab userId={user.id} canAct={me.permissions.includes('players.support')} />
+        <SupportTab
+          userId={user.id}
+          canAct={me.permissions.includes('players.support')}
+          canLogDsar={
+            me.permissions.includes('players.support') || me.permissions.includes('compliance.view')
+          }
+        />
       ) : null}
       {tab === 'history' ? <History userId={user.id} /> : null}
     </>

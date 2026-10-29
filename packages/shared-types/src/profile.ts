@@ -197,3 +197,8 @@ export type ForgetDeviceRequest = z.infer<typeof ForgetDeviceRequest>;
 /** The key browsers subscribe with; null while web push is off. */
 export const WebPushKeyResponse = z.object({ public_key: z.string().nullable() });
 export type WebPushKeyResponse = z.infer<typeof WebPushKeyResponse>;
+
+/** Deleting your account (step 2.8a): at once and for good, so the app asks the player to confirm. */
+export const DeleteAccountRequest = z.object({ confirm: z.literal(true) });
+export const DeleteAccountResponse = z.object({ dsar_id: z.string() });
+export type DeleteAccountResponse = z.infer<typeof DeleteAccountResponse>;

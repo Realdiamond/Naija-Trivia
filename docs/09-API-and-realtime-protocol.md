@@ -55,8 +55,8 @@ A token that is sent but expired is a `401` before the code is used, so the app 
 | DELETE | `/me/devices` | `{push_token}` (the FCM token, or a browser's endpoint): pushes off there (on sign-out); `204` |
 | GET | `/push/web-key` | – → `{public_key}`: the VAPID public key browsers subscribe with, or `null` while web push is off |
 | GET | `/me/stats` | Per-category accuracy, best streak, duel W/L |
-| POST | `/me/delete` | Starts erasure (30-day SLA); returns a `dsar_id` |
-| POST | `/me/export` | DSAR access export (emailed / in-app download link) |
+| POST | `/me/delete` | Step 2.8a. `{confirm: true}` → `{dsar_id}`: erases the account at once (doc 08 §4) and signs it out everywhere. In Settings and at `/delete-account` on the web (Google Play's rule). 5 an hour |
+| GET | `/me/export` | Step 2.8a. The player's data as a JSON download (`content-disposition: attachment`): profile, sign-in methods, consents, duels, Dailies, party games, coins and gems, purchases, devices and what the team told them. Logged as a completed access request. 10 an hour |
 | GET | `/users/{username}` | Public profile card `{id, username, avatar_id, level, tier}`. `404` for unknown players and when either side has blocked the other |
 | POST | `/ping` · `/ping/{ping_id}` | Round-trip sampling (TRD §5.3): ask for a ping and answer it at once; the server times both ends and keeps the session's last 5 samples (`X-Session-Id`). Answer timing uses their median, capped at 1.5 s, or the default before any sample |
 
@@ -188,7 +188,7 @@ The Content module (step 2.6a): `GET /admin/questions?status=&category=&q=&repor
 | Content | `/admin/questions` (CRUD, workflow transitions, CSV import) · `/admin/media` · `/admin/packs` · `/admin/reports` |
 | Safety | `/admin/moderation` · `/admin/integrity` (flags: dismiss or act) · `/admin/appeals`. Built in step 2.7d: `GET /admin/users/{id}/safety` (moderation history and integrity flags, `players.view`) · `GET /admin/integrity?status=open|dismissed|actioned` (riskiest first) · `POST /admin/integrity/{id} {status: dismissed|actioned, note}` (`players.moderate`, audited) |
 | Commerce & sponsors | `/admin/purchases` · `/admin/refunds` · `/admin/reconciliation` · `/admin/sponsors` · `/admin/prize-events` (v2) |
-| Compliance & settings | `/admin/dsar` · `/admin/consents` · `/admin/retention` · `/admin/audit` · `/admin/staff` (roles, with four-eyes approval) |
+| Compliance & settings | `/admin/dsar` · `/admin/consents` · `/admin/retention` · `/admin/audit` · `/admin/staff` (roles, with four-eyes approval). Built in step 2.8a: `GET /admin/dsar?status=open|done` (`compliance.view`) · `POST /admin/users/{id}/dsar {kind: access|erasure, note}` (support or the DPO log a request made by email or the help centre; due in 30 days) · `POST /admin/users/{id}/export {reason}` (`compliance.view`, logged before the data leaves) · `POST /admin/users/{id}/erase {reason}` (`compliance.erase`: the DPO and owners) |
 
 ### 2.11 Analytics ingest
 The load balancer routes `POST /v1/events` to the ingest service, not the core API.

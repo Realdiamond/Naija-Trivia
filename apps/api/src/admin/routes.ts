@@ -30,6 +30,7 @@ import { isActiveGrant, SYSTEM_ADMIN_ID, type GrantRow } from './permissions';
 import { adminContentRoutes } from './content';
 import { adminPhoneRoutes } from './phoneRoutes';
 import { isPhoneToken, phoneSessionFor, revokePhoneSession } from './phones';
+import { adminComplianceRoutes } from './compliance';
 import { adminDailyRoutes } from './dailyScheduler';
 import { adminLiveOpsRoutes } from './liveops';
 import { adminModerationRoutes } from './moderation';
@@ -281,6 +282,7 @@ export function adminRoutes(app: FastifyInstance, deps: AppDeps): void {
   adminLiveOpsRoutes(app, deps, ctx);
   adminModerationRoutes(app, deps, ctx);
   adminDailyRoutes(app, deps, ctx);
+  adminComplianceRoutes(app, deps, ctx);
 }
 
 async function requireStaff(pool: Pool, id: string): Promise<void> {

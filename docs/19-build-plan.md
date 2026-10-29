@@ -466,6 +466,16 @@ GDD §10, doc 18 §8 and §11, TRD FR-ECO-5.
 - Left for later: changes for one platform, app version or segment, and experiments
 - ✅ Tests: game rules (coins and prices from tuned values; every default within its bounds); the API (the list and who may; a change paying at once and reaching the apps, refusals out of range, unknown or unchanged; another process catching up within 10 seconds; rollback and the history; a stored value out of bounds ignored); the console in the browser (LiveOps changes rewarded video coins and rolls it back)
 
+### Step 2.8a · Account deletion and data requests ✅
+NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the first.
+
+- ✅ **Settings** in the app (from the gear on Home): language, notifications, family mode, being findable from contacts, a copy of your data, deleting your account and signing out
+- ✅ **Download a copy of my data**: one JSON file (profile, sign-in methods, consents, duels, Dailies, party games, coins and gems, purchases, devices, what the team told the player); a download on the web, the share sheet on a phone. Logged as a completed access request
+- ✅ **Delete my account**, at once and for good after typing DELETE, in the app and at `/delete-account` on the web (Google Play's rule; a signed-out visitor is told to sign in, or to write to help@whosabi.ng). The profile is cleared; sign-in methods, devices, sessions, friendships, staff notes and analytics events (merged guests' included) are deleted; past games show "Deleted player"; consent records, the ledger, purchases, moderation and the audit log stay for their legal reasons
+- ✅ The console's **Data requests** page: support logs a request made by email or the help centre (on User 360's Support tab); the queue shows each one's 30-day due date, overdue in orange; the DPO (and owners) export the data with a reason, or erase the account with a reason and ERASE typed. Everything is audited
+- Left for later in 2.8: ClickHouse deletion when it arrives, rectification and objection requests, and the retention jobs
+- ✅ Tests: the API (the export's contents and record; deletion: what goes and what stays, signed out, can't come back; the queue, a request logged, exported and erased, who may, all audited); the console in the browser (support logs a request and the DPO erases the account); the app in the browser (a player downloads their data and deletes their account; the web page for a signed-out visitor)
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
@@ -475,7 +485,7 @@ GDD §10, doc 18 §8 and §11, TRD FR-ECO-5.
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
-| 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
+| 2.8 Platform & compliance (2.8a ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |
 

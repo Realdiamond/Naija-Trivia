@@ -33,6 +33,8 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'players.moderate',
     'liveops.daily',
     'liveops.config',
+    'compliance.view',
+    'compliance.erase',
   ],
   admin: [
     ...PLAYER_SUPPORT,
@@ -44,8 +46,14 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'players.moderate',
     'liveops.daily',
     'liveops.config',
+    'compliance.view',
   ],
-  dpo: [...PLAYER_SUPPORT.filter((p) => p !== 'players.support'), 'audit.view'],
+  dpo: [
+    ...PLAYER_SUPPORT.filter((p) => p !== 'players.support'),
+    'audit.view',
+    'compliance.view',
+    'compliance.erase',
+  ],
   support: PLAYER_SUPPORT,
   // Moderators see players masked only.
   moderator: ['players.search', 'players.view', 'overview.view', 'live.manage', 'players.moderate'],

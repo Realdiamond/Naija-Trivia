@@ -79,6 +79,7 @@ Staff sign in with Google Workspace SSO, with 2-step verification enforced. Role
 - Built in step 2.7d: warnings, renames, hiding from the boards, bans and the integrity queue for owners, admins and moderators (`players.moderate`); a ban longer than 30 days, or for good, needs an admin or owner (the second-moderator approval comes later).
 - Built in step 2.7f: the Daily scheduler for owners, admins and LiveOps (`liveops.daily`).
 - Built in step 2.7g: the game and economy values, with history and rollback, for owners, admins and LiveOps (`liveops.config`).
+- Built in step 2.8a: the data request queue for the DPO, owners and admins (`compliance.view`); erasing an account for the DPO and owners (`compliance.erase`); support logs requests.
 - Contractor access expires on its own (`expires_at`).
 - The DPO reviews every staff account and role each quarter.
 

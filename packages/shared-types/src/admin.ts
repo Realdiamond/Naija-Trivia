@@ -64,6 +64,10 @@ export const AdminPermission = z.enum([
   'liveops.daily',
   /** Game and economy values, with history and rollback (step 2.7g). */
   'liveops.config',
+  /** The data request queue and a player's data export (step 2.8a). */
+  'compliance.view',
+  /** Erasing a player's account for them (step 2.8a): the DPO and owners. */
+  'compliance.erase',
 ]);
 export type AdminPermission = z.infer<typeof AdminPermission>;
 
@@ -783,3 +787,34 @@ export const AdminDailySwap = z.object({
   reason: z.string().trim().min(3).max(300),
 });
 export type AdminDailySwap = z.infer<typeof AdminDailySwap>;
+
+// ----- Compliance: data requests and erasure (step 2.8a, doc 18 §14) -----
+
+export const DsarKind = z.enum(['access', 'erasure', 'rectification', 'portability', 'objection']);
+export const AdminDsar = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  username: z.string().nullable(),
+  kind: DsarKind,
+  status: z.enum(['received', 'in_progress', 'completed', 'rejected']),
+  source: z.enum(['app', 'console']),
+  note: z.string().nullable(),
+  started_by: z.string().nullable(),
+  /** Staff member's name, or 'The player' when they did it themselves. */
+  handled_by: z.string().nullable(),
+  due_at: z.iso.datetime(),
+  completed_at: z.iso.datetime().nullable(),
+  created_at: z.iso.datetime(),
+});
+export type AdminDsar = z.infer<typeof AdminDsar>;
+export const AdminDsarQuery = z.object({ status: z.enum(['open', 'done']).default('open') });
+export const AdminDsarResponse = z.object({ requests: z.array(AdminDsar) });
+export type AdminDsarResponse = z.infer<typeof AdminDsarResponse>;
+
+/** Support logs a player's request (by email or the help centre); the DPO completes it. */
+export const AdminDsarStart = z.object({
+  kind: z.enum(['access', 'erasure']),
+  note: z.string().trim().min(3).max(500),
+});
+export type AdminDsarStart = z.infer<typeof AdminDsarStart>;
+export const AdminReasoned = z.object({ reason: z.string().trim().min(3).max(300) });

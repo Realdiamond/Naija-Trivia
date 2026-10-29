@@ -16,6 +16,7 @@ import {
 import { adminApi } from '../../../../lib/api';
 import { BarList, DayBars } from '../../../../lib/charts';
 import { watDateTime } from '../../../../lib/format';
+import { StartDsar } from '../../compliance/Forms';
 import { ModerationActions } from './ModerationActions';
 import { NoteForm, SupportActions } from './SupportActions';
 
@@ -381,7 +382,15 @@ export async function DevicesTab({ user }: { user: AdminUserSummary }) {
   );
 }
 
-export async function SupportTab({ userId, canAct }: { userId: string; canAct: boolean }) {
+export async function SupportTab({
+  userId,
+  canAct,
+  canLogDsar,
+}: {
+  userId: string;
+  canAct: boolean;
+  canLogDsar: boolean;
+}) {
   const n = await adminApi<AdminNotesResponse>(routes.admin.userNotes(userId));
   return (
     <div className="grid2" data-testid="support-tab">
@@ -411,6 +420,15 @@ export async function SupportTab({ userId, canAct }: { userId: string; canAct: b
         ) : (
           <Empty>Coin grants, streak restores and sign-outs are for support, admins and owners.</Empty>
         )}
+        {canLogDsar ? (
+          <>
+            <h2>A data request</h2>
+            <p className="muted small">
+              When the player asks by email or the help centre for their data or their account deleted.
+            </p>
+            <StartDsar userId={userId} />
+          </>
+        ) : null}
       </section>
     </div>
   );

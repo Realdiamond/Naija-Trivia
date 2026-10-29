@@ -131,6 +131,15 @@ export default function Home() {
         >
           <Icon name="bell" size={26} />
         </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('settings.title')}
+          hitSlop={8}
+          onPress={() => router.push('/settings')}
+          testID="open-settings"
+        >
+          <Icon name="settings" size={26} />
+        </Pressable>
         {status === 'account' ? (
           <Pressable
             accessibilityRole="button"
