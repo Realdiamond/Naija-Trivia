@@ -37,6 +37,8 @@ const Env = z.object({
   PUBLIC_WEB_URL: z.url().default('https://whosabi.ng'),
   /** HMAC key for the sign-in codes kept in Redis (32+ characters). */
   OTP_SECRET: z.string().min(32).optional(),
+  /** What RevenueCat sends as its webhook's Authorization header (step 2.4d). A secret. */
+  REVENUECAT_WEBHOOK_AUTH: z.string().min(16).optional(),
   OTP_SENDS_PER_IP_PER_HOUR: z.coerce.number().int().min(1).default(20),
   /** SMS (TRD §3): Termii first, Africa's Talking as the fallback. In production, phone sign-in is on only when one is set. */
   TERMII_API_KEY: z.string().min(1).optional(),
@@ -122,6 +124,8 @@ export interface Config {
   /** Phone codes: on outside production (codes go to the log), and in production once an SMS provider is set. */
   phoneSignIn: boolean;
   otpSecret: string;
+  /** Unset: the RevenueCat webhook refuses everything. */
+  revenueCatWebhookAuth?: string;
   otpSendsPerIpPerHour: number;
   sms: {
     termii?: { apiKey: string; senderId: string };
@@ -190,6 +194,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     publicWebUrl: e.PUBLIC_WEB_URL.replace(/\/+$/, ''),
     phoneSignIn: e.NODE_ENV !== 'production' || smsProvider,
     otpSecret: e.OTP_SECRET ?? DEV_OTP_SECRET,
+    revenueCatWebhookAuth: e.REVENUECAT_WEBHOOK_AUTH,
     otpSendsPerIpPerHour: e.OTP_SENDS_PER_IP_PER_HOUR,
     sms: {
       termii: e.TERMII_API_KEY ? { apiKey: e.TERMII_API_KEY, senderId: e.TERMII_SENDER_ID } : undefined,

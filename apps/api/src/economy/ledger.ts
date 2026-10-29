@@ -133,6 +133,40 @@ export async function spendCoins(
   };
 }
 
+/**
+ * Takes back up to `amount` coins (a refunded purchase): as many as the player still has, so a
+ * balance never goes below zero. Null when there is nothing to take or the key was used.
+ */
+export async function reclaimCoins(
+  client: PoolClient,
+  userId: string,
+  amount: number,
+  posting: Posting,
+): Promise<CoinChange | null> {
+  const account = await openAccount(client, userId, 'coins');
+  const balance = Number(
+    (
+      await client.query<{ balance: string }>(
+        'SELECT balance FROM ledger_accounts WHERE id = $1 FOR UPDATE',
+        [account],
+      )
+    ).rows[0]!.balance,
+  );
+  const taken = Math.min(balance, amount);
+  if (taken <= 0) return null;
+  const posted = await post(client, posting, [
+    { account, amount: -taken },
+    { account: REWARDS('coins'), amount: taken },
+  ]);
+  if (!posted) return null;
+  return {
+    userId,
+    delta: -taken,
+    reason: posting.reason,
+    balance: await addToBalance(client, account, -taken),
+  };
+}
+
 /** Moves all of one player's coins to another (a guest's into their account). */
 export async function moveAllCoins(
   client: PoolClient,

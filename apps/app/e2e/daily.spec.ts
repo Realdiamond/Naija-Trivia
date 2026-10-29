@@ -68,6 +68,13 @@ test('a guest plays the Daily, shares the grid and finds themselves on the board
   await page.getByTestId('open-coins').click();
   await expect(page.getByTestId('coins-balance')).toHaveText('20');
   await expect(page.getByTestId('coins-entry')).toHaveText(new RegExp(`Daily #${id}.*\\+20$`));
+  // The shop lists the coin packs; buying on the web comes with Paystack later (step 2.4d).
+  await page.getByTestId('open-shop').click();
+  await expect(page.getByTestId('shop-balance')).toHaveText('20 coins');
+  await expect(page.getByTestId('pack-coins_medium')).toContainText('1,500');
+  await expect(page.getByTestId('pack-coins_medium')).toContainText('₦800');
+  await expect(page.getByTestId('pack-coins_medium')).toBeDisabled();
+  await expect(page.getByTestId('shop-soon')).toContainText('coming soon');
 
   // A friend opens the shared link in their own browser and goes straight into today's Daily.
   const friend = await newPlayer(browser);
