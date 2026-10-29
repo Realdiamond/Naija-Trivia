@@ -64,6 +64,8 @@ export type PartySeatKind = 'app' | 'web' | 'web_guest';
 /** The public card for a room link ("You're joining ToluSabi's party · 7 people are in the lobby"). */
 export interface PartyRoomPreview {
   code: string;
+  /** The room's link to share: whosabi.ng/r/{CODE}. */
+  link: string;
   host: string;
   /** Still in the lobby, or already playing (late joiners come in at the next question). */
   status: 'lobby' | 'playing' | 'podium';
@@ -132,6 +134,8 @@ export interface PartyPlayer {
 export interface PartyRoomState {
   room_id: string;
   code: string;
+  /** The room's link to share: whosabi.ng/r/{CODE}. */
+  link: string;
   phase: PartyPhase;
   host_id: string;
   settings: PartySettings;

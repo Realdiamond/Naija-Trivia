@@ -133,7 +133,7 @@ export default function Home() {
           onPress={() => router.push('/challenge')}
           testID="challenge"
         />
-        <Action icon="users" label={t('home.party')} soon />
+        <Action icon="users" label={t('home.party')} onPress={() => router.push('/party')} testID="party" />
         <Action
           icon="shuffle"
           label={t('home.random')}

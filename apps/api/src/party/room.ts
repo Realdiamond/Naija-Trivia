@@ -204,6 +204,7 @@ export class PartyRoom {
     const players = this.players();
     return {
       code: this.code,
+      link: this.link(),
       host: this.seats.get(this.hostId)?.name ?? this.o.host.name,
       status: this.phase === 'LOBBY' ? 'lobby' : this.phase === 'PODIUM' ? 'podium' : 'playing',
       players: players.length,
@@ -590,7 +591,7 @@ export class PartyRoom {
         correct: s.correct,
       })),
       mvp: podiumMvp,
-      share_url: `${this.o.publicWebUrl}/r/${this.code}`,
+      share_url: this.link(),
     };
     this.enter('PODIUM', 0);
     this.broadcast(this.podium);
@@ -722,6 +723,7 @@ export class PartyRoom {
     return {
       room_id: this.id,
       code: this.code,
+      link: this.link(),
       phase: this.phase,
       host_id: this.hostId,
       settings: this.settings,
@@ -754,6 +756,10 @@ export class PartyRoom {
 
   private error(seat: Seat, code: PartyErrorCode, message: string): void {
     seat.conn?.send({ type: 'error', code, message });
+  }
+
+  private link(): string {
+    return `${this.o.publicWebUrl}/r/${this.code}`;
   }
 
   private perm(seat: Seat, q: PartyQuestion): number[] {

@@ -138,7 +138,8 @@ Party rooms run in the API process (build step 2.2a); these make rooms and hand 
 | Method | Path | Notes |
 |---|---|---|
 | POST | `/party/rooms` | Signed in. `{settings: {questions: 5|10|15|20, timer_s: 10|15|20, categories[], family_safe, wahala, host_plays}, nickname?}` → `201 {room, seat}`. A player with no username yet (a guest) gives a nickname (`NICKNAME_REQUIRED`). `host_plays: false` is host screen mode. 30 an hour per address |
-| GET | `/party/rooms/{code}` | Public, the card behind `/r/{CODE}`: `{code, host, status: lobby|playing|podium, players, max_players, names[], locked, settings}`. `PARTY_ROOM_NOT_FOUND` once it closed |
+| GET | `/party/rooms/{code}` | Public, the card behind `/r/{CODE}`: `{code, link, host, status: lobby|playing|podium, players, max_players, names[], locked, settings}`. `PARTY_ROOM_NOT_FOUND` once it closed |
+| GET | `/party/rooms/{code}/qr.svg` | Public: the room's link as a QR code, for the lobby |
 | POST | `/party/rooms/{code}/join` | Signed in (joins as yourself), or no session with `{nickname}` (a web guest, FR-PARTY-7) → a seat. `{screen: true}`: a big screen (a TV) that shows the game without playing, for the host only. `PARTY_ROOM_FULL` when full (20) or locked, `NICKNAME_NOT_ALLOWED` for a rude or official-looking name |
 | GET | `/party/games/{id}` | A finished game: `{game_id, room_code, ended_at, questions, ranking[{rank, name, kind, score, correct}], mvp}`. Deleted players show as "Deleted player" and 13–17s as "A player" |
 
@@ -218,7 +219,7 @@ The server pings each connection every 15 s at the WebSocket level, which keeps 
 ### 3.2 Room state
 A `state` message goes to everyone whenever something changes:
 ```ts
-{ room_id, code, phase,            // LOBBY|COUNTDOWN|QUESTION|REVEAL|LEADERBOARD|PODIUM|CLOSED
+{ room_id, code, link, phase,      // LOBBY|COUNTDOWN|QUESTION|REVEAL|LEADERBOARD|PODIUM|CLOSED
   host_id, settings, locked, max_players,
   q_index, q_total,                // q_index from 0; -1 before the first question
   ends_at,                         // when this phase ends, server epoch ms; 0 while it waits for the host
