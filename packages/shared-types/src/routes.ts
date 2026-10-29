@@ -139,6 +139,11 @@ export const routes = {
     dailyCandidates: (date: string, slot: number) =>
       `/admin/daily/${encodeURIComponent(date)}/candidates?slot=${slot}`,
     dailySwap: (date: string) => `/admin/daily/${encodeURIComponent(date)}/swap`,
+    /** Game and economy values (step 2.7g). */
+    config: () => '/admin/config',
+    configValue: (key: string) => `/admin/config/${encodeURIComponent(key)}`,
+    configHistory: (key: string) => `/admin/config/${encodeURIComponent(key)}/history`,
+    configRollback: (key: string) => `/admin/config/${encodeURIComponent(key)}/rollback`,
     flags: () => '/admin/flags',
     flag: (key: string) => `/admin/flags/${encodeURIComponent(key)}`,
     banner: () => '/admin/banner',

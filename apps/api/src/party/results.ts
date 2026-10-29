@@ -3,7 +3,7 @@
  * answer: those go to analytics. Signed-in players get their XP (GDD §5.1), and 100 coins for
  * each level it takes them to.
  */
-import { partyXp } from '@whosabi/game-rules';
+import { partyXp, type GameConfig } from '@whosabi/game-rules';
 import type { PartyGameResult, PartyMvp, PartySeatKind } from '@whosabi/shared-types';
 import { withTransaction, type Pool } from '../db';
 import type { CoinChange } from '../economy/ledger';
@@ -11,7 +11,7 @@ import { rewardPlayer } from '../economy/rewards';
 import type { FinishedGame } from './room';
 
 /** Saves the game and pays its players; returns the coins that moved, for `coins_changed`. */
-export async function saveGame(pool: Pool, game: FinishedGame): Promise<CoinChange[]> {
+export async function saveGame(pool: Pool, game: FinishedGame, config?: GameConfig): Promise<CoinChange[]> {
   return withTransaction(pool, async (client) => {
     await client.query(
       `INSERT INTO party_games (id, room_code, host_user_id, settings, player_count, started_at, ended_at,
@@ -43,6 +43,7 @@ export async function saveGame(pool: Pool, game: FinishedGame): Promise<CoinChan
       const reward = await rewardPlayer(client, p.userId!, {
         xp: partyXp(p.correct, p.answered),
         coins: 0,
+        config,
         reason: 'level_up',
         key: `party:${game.gameId}:${p.userId}`,
         refType: 'party',

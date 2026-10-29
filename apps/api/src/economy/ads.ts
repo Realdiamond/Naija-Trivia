@@ -5,8 +5,9 @@
  * transaction id), and only the first 10 a WAT day pay.
  */
 import { createPublicKey, verify, type KeyObject } from 'node:crypto';
-import { REWARDED_AD_COINS, REWARDED_DAILY_CAP, watDate } from '@whosabi/game-rules';
+import { watDate } from '@whosabi/game-rules';
 import type { AppDeps } from '../app';
+import { configOf } from '../liveops/store';
 import { withTransaction, type Pool, type PoolClient } from '../db';
 import type { EventContext } from '../events';
 import { grantCoins, type CoinChange } from './ledger';
@@ -106,8 +107,8 @@ async function rewardedToday(db: Pool | PoolClient, userId: string, now: number)
 }
 
 /** Rewarded videos that will still pay today. */
-export async function rewardedLeft(db: Pool, userId: string, now: number): Promise<number> {
-  return Math.max(0, REWARDED_DAILY_CAP - (await rewardedToday(db, userId, now)));
+export async function rewardedLeft(db: Pool, userId: string, now: number, cap: number): Promise<number> {
+  return Math.max(0, cap - (await rewardedToday(db, userId, now)));
 }
 
 /**
@@ -115,9 +116,11 @@ export async function rewardedLeft(db: Pool, userId: string, now: number): Promi
  * up to the day's cap. Every callback for a player is kept, paid or not.
  */
 export async function rewardAd(
-  deps: Pick<AppDeps, 'pool' | 'clock' | 'events'>,
+  deps: Pick<AppDeps, 'pool' | 'clock' | 'events'> & Partial<Pick<AppDeps, 'liveops'>>,
   cb: SsvCallback,
 ): Promise<AdRewardOutcome> {
+  const config = await configOf(deps);
+  const coins = config['econ.rewarded_ad_coins'];
   // Google's "verify URL" check, and anything not ours, carries no player or a placement we don't pay.
   if (!cb.userId || (cb.customData ?? 'coins') !== 'coins') return 'not_ours';
   const userId = cb.userId;
@@ -136,9 +139,9 @@ export async function rewardAd(
       [cb.transactionId, userId, cb.adUnit, cb.rewardItem, cb.rewardAmount, new Date(now)],
     );
     if (inserted.rowCount === 0) return { outcome: 'duplicate' as const };
-    if (paidToday >= REWARDED_DAILY_CAP) return { outcome: 'capped' as const };
+    if (paidToday >= config['ads.rewarded_daily_cap']) return { outcome: 'capped' as const };
     const key = `ad:${cb.transactionId}`;
-    const change = await grantCoins(client, userId, REWARDED_AD_COINS, {
+    const change = await grantCoins(client, userId, coins, {
       key,
       reason: 'rewarded_ad',
       refType: 'ad',
@@ -154,7 +157,7 @@ export async function rewardAd(
   });
   if (result.outcome === 'granted') {
     const ctx: EventContext = { userId, platform: result.platform };
-    await deps.events.emit('ad_reward_granted', { format: 'rewarded', amount: REWARDED_AD_COINS }, ctx);
+    await deps.events.emit('ad_reward_granted', { format: 'rewarded', amount: coins }, ctx);
     const change = result.change as CoinChange | null;
     if (change) {
       await deps.events.emit(

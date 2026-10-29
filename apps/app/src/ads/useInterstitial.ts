@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useRef } from 'react';
 import { adsAvailable, prepareInterstitial, showInterstitial } from '.';
-import { useFlag } from '../features/liveops/config';
+import { useFlag, useGameConfig } from '../features/liveops/config';
 import { countMatch } from './pacing';
 
 /** `matchKey` is null until there is a finished match to count. Returns a wrapper for leaving. */
@@ -12,14 +12,15 @@ export function useInterstitial(matchKey: string | null): (go: () => void) => Pr
   const due = useRef(false);
   // Staff can switch ads off (step 2.7c); a match then isn't counted towards one either.
   const adsOn = useFlag('ads.enabled');
+  const every = useGameConfig()['ads.interstitial_every_n_matches'];
   useEffect(() => {
     if (!matchKey || !adsAvailable || !adsOn) return;
-    void countMatch(matchKey).then((isDue) => {
+    void countMatch(matchKey, every).then((isDue) => {
       if (!isDue) return;
       due.current = true;
       prepareInterstitial();
     });
-  }, [matchKey, adsOn]);
+  }, [matchKey, adsOn, every]);
   return useCallback(async (go: () => void) => {
     if (due.current) {
       due.current = false;

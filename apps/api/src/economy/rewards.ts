@@ -2,7 +2,7 @@
  * What a game pays (GDD §5.1): XP, which moves the player's level, coins, and 100 coins for each
  * level reached. Written in the caller's transaction, with the game's own result.
  */
-import { levelForXp, levelUpCoins } from '@whosabi/game-rules';
+import { levelForXp, levelUpCoins, type GameConfig } from '@whosabi/game-rules';
 import type { LedgerReason } from '@whosabi/shared-types';
 import type { PoolClient } from '../db';
 import { grantCoins, type CoinChange } from './ledger';
@@ -16,6 +16,8 @@ export interface RewardInput {
   refType: string;
   refId: string;
   now: number;
+  /** The values in force, for the level-up coins (step 2.7g); the defaults without. */
+  config?: GameConfig;
 }
 
 export interface Reward {
@@ -56,7 +58,7 @@ export async function rewardPlayer(
   const posting = { reason: input.reason, refType: input.refType, refId: input.refId, now: input.now };
   const earned = await grantCoins(client, userId, input.coins, { ...posting, key: input.key });
   if (earned) changes.push(earned);
-  const bonus = await grantCoins(client, userId, levelUpCoins(before, level), {
+  const bonus = await grantCoins(client, userId, levelUpCoins(before, level, input.config), {
     key: `${input.key}:level`,
     reason: 'level_up',
     refType: 'level',

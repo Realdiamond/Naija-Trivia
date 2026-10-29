@@ -46,6 +46,7 @@ afterAll(async () => {
   await t.pool.query("DELETE FROM staff_alerts WHERE url = '/integrity'");
   await t.pool.query('DELETE FROM questions WHERE id = ANY($1)', [questions]);
   await t.pool.query("DELETE FROM categories WHERE id = 'integrity_test'");
+  await t.pool.query("UPDATE users SET last_seen_at = NULL WHERE last_seen_at >= '2027-09-01'");
   await t.close();
 });
 

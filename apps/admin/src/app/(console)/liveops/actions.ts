@@ -57,3 +57,25 @@ export async function saveBanner(_state: FormState, form: FormData): Promise<For
   revalidatePath('/liveops');
   return { done: takeDown ? 'The banner is down.' : 'The banner is up.', error: null };
 }
+
+/** A game or economy value (step 2.7g): a new value, or back to the one before. */
+export async function saveConfig(key: string, _state: FormState, form: FormData): Promise<FormState> {
+  const rollback = form.get('intent') === 'rollback';
+  try {
+    if (rollback) {
+      await adminApi(routes.admin.configRollback(key), {
+        method: 'POST',
+        body: { reason: text(form, 'reason') },
+      });
+    } else {
+      await adminApi(routes.admin.configValue(key), {
+        method: 'POST',
+        body: { value: Number(text(form, 'value')), reason: text(form, 'reason') },
+      });
+    }
+  } catch (e) {
+    return failed(e);
+  }
+  revalidatePath('/liveops');
+  return { done: rollback ? 'Rolled back.' : 'Saved. Players get it within a minute.', error: null };
+}

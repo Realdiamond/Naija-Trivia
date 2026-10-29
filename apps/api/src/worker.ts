@@ -20,6 +20,7 @@ import { ServerEvents } from './events';
 import { AnalyticsLoader } from './jobs/analyticsLoader';
 import { calibrateQuestions } from './jobs/calibration';
 import { checkIntegrity } from './jobs/integrity';
+import { LiveOpsStore } from './liveops/store';
 import { processCorrections } from './content/rescore';
 import { retireExpiredQuestions } from './jobs/contentExpiry';
 import { expireDueDuels } from './jobs/expiry';
@@ -43,7 +44,9 @@ const redis = createRedis(config, { maxRetriesPerRequest: 2 });
 // A blocking stream read holds its connection, so the loader gets one of its own.
 const streamRedis = createRedis(config, { maxRetriesPerRequest: null });
 const events = new ServerEvents(redis, config.analyticsKey, systemClock, log);
-const deps = { config, pool, redis, clock: systemClock, events, log };
+// The tuned game and economy values (step 2.7g), for duels the Sabi Bot finishes and re-scoring.
+const liveops = new LiveOpsStore(pool, systemClock.now);
+const deps = { config, pool, redis, clock: systemClock, events, log, liveops };
 const duels = new DuelService(deps);
 const daily = new DailyService(deps);
 // Real pushes once each service is set up; until then they go to the log.

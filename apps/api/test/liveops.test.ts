@@ -71,6 +71,14 @@ describe('flags and kill switches (step 2.7c)', () => {
     expect(anyone).toEqual({
       flags: { 'ads.enabled': true, 'party.enabled': true, 'shop.enabled': true },
       banner: null,
+      values: {
+        'econ.rewarded_ad_coins': 25,
+        'ads.interstitial_every_n_matches': 3,
+        'econ.lifeline_fifty': 60,
+        'econ.lifeline_ask_naija': 80,
+        'econ.lifeline_skip': 100,
+        'econ.lifeline_time': 40,
+      },
       refresh_s: 45,
     });
   });

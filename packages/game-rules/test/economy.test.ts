@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_CONFIG, TUNABLE } from '../src/config';
 import { dailyCoins, duelCoins, duelXp, levelUpCoins } from '../src/economy';
+import { lifelineCost } from '../src/lifelines';
 
 describe('coins (GDD §5.1)', () => {
   it('pays 30 for a win, 10 for a loss or a draw, and nothing for a forfeit', () => {
@@ -34,5 +36,28 @@ describe('duel XP', () => {
 
   it('keeps what the answers earned for a player who forfeits', () => {
     expect(duelXp(2, 3, false)).toBe(22);
+  });
+});
+
+describe('tuned values (step 2.7g)', () => {
+  it('pays what staff set instead of the defaults', () => {
+    const tuned = {
+      ...DEFAULT_CONFIG,
+      'econ.win_coins': 45,
+      'econ.level_up_coins': 150,
+      'econ.daily_coins_max': 30,
+    };
+    expect(duelCoins('win', tuned)).toBe(45);
+    expect(duelCoins('loss', tuned)).toBe(10);
+    expect(levelUpCoins(2, 4, tuned)).toBe(300);
+    expect(dailyCoins(7, tuned)).toBe(30);
+    expect(lifelineCost('skip', { ...DEFAULT_CONFIG, 'econ.lifeline_skip': 120 })).toBe(120);
+  });
+
+  it('only offers values that exist, with sensible bounds', () => {
+    for (const t of TUNABLE) {
+      expect(DEFAULT_CONFIG[t.key]).toBeGreaterThanOrEqual(t.min);
+      expect(DEFAULT_CONFIG[t.key]).toBeLessThanOrEqual(t.max);
+    }
   });
 });

@@ -13,6 +13,7 @@ import { useT, type MessageKey } from '../../i18n';
 import { Text } from '../../ui/Text';
 import { colors, radius } from '../../ui/theme';
 import { useWallet, walletKeys } from '../economy/api';
+import { useGameConfig } from '../liveops/config';
 import type { QuestionFlow } from '../play/useQuestionFlow';
 import { duels } from './api';
 
@@ -24,6 +25,8 @@ interface Props {
 
 export function LifelineRow({ duelId, round, flow }: Props) {
   const t = useT();
+  // Prices staff tuned (step 2.7g); the server charges the same.
+  const config = useGameConfig();
   const queryClient = useQueryClient();
   const wallet = useWallet(true);
   const [busy, setBusy] = useState<Lifeline | null>(null);
@@ -52,7 +55,7 @@ export function LifelineRow({ duelId, round, flow }: Props) {
     <View style={styles.wrap}>
       <View style={styles.row}>
         {LIFELINES.map((type) => {
-          const cost = lifelineCost(type);
+          const cost = lifelineCost(type, config);
           const spent = used.includes(type);
           // 50/50 needs four options to take two away.
           const fits = type !== 'fifty' || question.options.length === 4;

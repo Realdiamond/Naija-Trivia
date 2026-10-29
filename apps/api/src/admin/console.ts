@@ -274,9 +274,10 @@ export async function liveOnline(
   now: number,
   platform: 'android' | 'ios' | 'web' | undefined,
 ): Promise<LiveOnline> {
-  const since = new Date(now - ONLINE_MS);
-  const filter = platform ? 'AND last_platform = $2' : '';
-  const params = platform ? [since, platform] : [since];
+  // Seen in the last five minutes, and not after now (the console's clock, in tests).
+  const seen = 'last_seen_at >= $1 AND last_seen_at <= $2';
+  const filter = platform ? 'AND last_platform = $3' : '';
+  const params = [new Date(now - ONLINE_MS), new Date(now), ...(platform ? [platform] : [])];
   const [players, total, states] = await Promise.all([
     deps.pool.query<{
       id: string;
@@ -287,16 +288,16 @@ export async function liveOnline(
       last_seen_at: Date;
     }>(
       `SELECT id, username, last_platform AS platform, level, home_state, last_seen_at FROM users
-        WHERE last_seen_at >= $1 AND ${PLAYING} ${filter} ORDER BY last_seen_at DESC LIMIT 100`,
+        WHERE ${seen} AND ${PLAYING} ${filter} ORDER BY last_seen_at DESC LIMIT 100`,
       params,
     ),
     deps.pool.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM users WHERE last_seen_at >= $1 AND ${PLAYING} ${filter}`,
+      `SELECT count(*)::int AS n FROM users WHERE ${seen} AND ${PLAYING} ${filter}`,
       params,
     ),
     deps.pool.query<{ state: string; players: number }>(
       `SELECT home_state AS state, count(*)::int AS players FROM users
-        WHERE last_seen_at >= $1 AND ${PLAYING} AND home_state IS NOT NULL ${filter}
+        WHERE ${seen} AND ${PLAYING} AND home_state IS NOT NULL ${filter}
         GROUP BY 1 ORDER BY 2 DESC, 1`,
       params,
     ),

@@ -17,6 +17,8 @@ export type StatusBanner = z.infer<typeof StatusBanner>;
 export const ClientConfig = z.object({
   flags: z.record(z.string(), z.boolean()),
   banner: StatusBanner.nullable(),
+  /** The tuned values the apps use too: lifeline prices, rewarded video coins, ad pacing (step 2.7g). */
+  values: z.record(z.string(), z.number()),
   refresh_s: z.number().int(),
 });
 export type ClientConfig = z.infer<typeof ClientConfig>;
@@ -66,3 +68,44 @@ export const AdminBannerUpdate = z.object({
   reason: z.string().trim().min(3).max(300),
 });
 export type AdminBannerUpdate = z.infer<typeof AdminBannerUpdate>;
+
+// ----- Remote config: game and economy values (step 2.7g, doc 18 §11) -----
+
+export const AdminConfigValue = z.object({
+  key: z.string(),
+  label: z.string(),
+  value: z.number().int(),
+  default: z.number().int(),
+  min: z.number().int(),
+  max: z.number().int(),
+  /** The apps use it too (they pick a change up within a minute). */
+  client: z.boolean(),
+  changed_by: z.string().nullable(),
+  changed_at: z.iso.datetime().nullable(),
+});
+export type AdminConfigValue = z.infer<typeof AdminConfigValue>;
+export const AdminConfigResponse = z.object({ values: z.array(AdminConfigValue) });
+export type AdminConfigResponse = z.infer<typeof AdminConfigResponse>;
+
+export const AdminConfigChange = z.object({
+  value: z.number().int(),
+  reason: z.string().trim().min(3).max(300),
+});
+export type AdminConfigChange = z.infer<typeof AdminConfigChange>;
+/** Back to the value before the latest change. */
+export const AdminConfigRollback = z.object({ reason: z.string().trim().min(3).max(300) });
+
+export const AdminConfigHistory = z.object({
+  entries: z.array(
+    z.object({
+      id: z.number().int(),
+      /** Null before the first change: the default was in force. */
+      old_value: z.number().nullable(),
+      new_value: z.number(),
+      changed_by: z.string(),
+      reason: z.string().nullable(),
+      created_at: z.iso.datetime(),
+    }),
+  ),
+});
+export type AdminConfigHistory = z.infer<typeof AdminConfigHistory>;

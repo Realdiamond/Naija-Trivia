@@ -64,6 +64,7 @@ import {
   type TiebreakAnswerResponse,
 } from '@whosabi/shared-types';
 import type { AppDeps } from '../app';
+import { configOf } from '../liveops/store';
 import { overallRating, recordQuestionStats } from '../content/stats';
 import { withTransaction, type Pool, type PoolClient } from '../db';
 import { balances, spendCoins } from '../economy/ledger';
@@ -139,7 +140,8 @@ const duelFinished = (detail?: string) => conflict(ErrorCode.duelFinished, 'This
 const turnNotYours = (detail?: string) => conflict(ErrorCode.turnNotYours, 'It is not your turn', detail);
 
 /** What the duel engine needs: the API passes its own deps, and the worker builds these itself. */
-export type DuelDeps = Pick<AppDeps, 'config' | 'pool' | 'redis' | 'clock' | 'events' | 'log'>;
+export type DuelDeps = Pick<AppDeps, 'config' | 'pool' | 'redis' | 'clock' | 'events' | 'log'> &
+  Partial<Pick<AppDeps, 'liveops'>>;
 
 export class DuelService {
   /** `random` decides the Sabi Bot's answers; tests pass a repeatable one. */
@@ -511,7 +513,7 @@ export class DuelService {
       }
       if (type === 'fifty' && q.options.length !== 4) throw notAllowed('50/50 needs four options.');
 
-      const cost = lifelineCost(type);
+      const cost = lifelineCost(type, await configOf(this.deps));
       const paid = await spendCoins(client, viewer, cost, {
         key: `lifeline:${duel.id}:${viewer}:${type}`,
         reason: 'lifeline',
@@ -1213,6 +1215,7 @@ export class DuelService {
     const { client, duel, now, outbox } = tx;
     const answers = await getAnswers(client, [duel.id]);
     const players = await getPlayers(client, playersOf(duel));
+    const config = await configOf(this.deps);
     // In id order, so two duels between the same players finishing together never wait on each other.
     for (const userId of humansOf(duel).sort()) {
       const side = sideOf(duel, userId)!;
@@ -1221,10 +1224,11 @@ export class DuelService {
         result === 'loss' && duel.state === 'forfeit' ? 'forfeit' : (result ?? 'draw');
       const played = playedRows(answers, userId);
       const xp = duelXp(played.filter((a) => a.correct).length, played.length, outcome !== 'forfeit');
-      const coins = duelCoins(outcome);
+      const coins = duelCoins(outcome, config);
       const paid = await rewardPlayer(client, userId, {
         xp,
         coins,
+        config,
         reason: outcome === 'win' ? 'duel_win' : outcome === 'draw' ? 'duel_draw' : 'duel_loss',
         key: `duel:${duel.id}:${userId}`,
         refType: 'duel',
