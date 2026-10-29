@@ -1,7 +1,7 @@
 /**
  * LiveOps (doc 18 §11): flags and kill switches and the in-app status banner (build plan step
- * 2.7c, `liveops.flags`), and the game and economy values with their history and rollback (step
- * 2.7g, `liveops.config`). Apps look again every 45 seconds, so a change reaches every player
+ * 2.7c, `liveops.flags`), the game and economy values with their history and rollback (step
+ * 2.7g, `liveops.config`), and Home banners and events (step 2.7h, `liveops.config`). Apps look again every 45 seconds, so a change reaches every player
  * within a minute (AD-7); switching a kill switch is announced in the staff alerts.
  */
 import {
@@ -10,11 +10,13 @@ import {
   type AdminConfigResponse,
   type AdminFlag,
   type AdminFlagsResponse,
+  type AdminLiveEventsResponse,
   type AdminProfile,
 } from '@whosabi/shared-types';
+import { CATEGORY_NAME } from '../../../lib/content';
 import { AdminApiError, adminApi } from '../../../lib/api';
 import { watDateTime } from '../../../lib/format';
-import { BannerForm, ConfigForm, FlagForm } from './Forms';
+import { BannerForm, ConfigForm, EndEventForm, EventForm, FlagForm } from './Forms';
 
 function who(flag: AdminFlag): string {
   if (!flag.enabled) return 'Off for everyone';
@@ -135,6 +137,59 @@ function Values({ config }: { config: AdminConfigResponse }) {
   );
 }
 
+function Events({ events }: { events: AdminLiveEventsResponse }) {
+  return (
+    <section className="card">
+      <h2>Home banners and events</h2>
+      <p className="muted small">
+        What players see on Home while it runs: news, a flash pack, or Weekend Wahala&apos;s double XP in
+        duels. Home shows the two newest at once.
+      </p>
+      <table data-testid="events">
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>When (WAT)</th>
+            <th>State</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {events.events.map((e) => (
+            <tr key={e.id} data-testid={`event-${e.id}`}>
+              <td>
+                {e.title_en}
+                <div className="muted small">
+                  {e.kind === 'double_xp'
+                    ? `Double XP · ${e.category_id ? (CATEGORY_NAME[e.category_id] ?? e.category_id) : 'every category'}`
+                    : 'Home banner'}
+                  {e.platforms ? ` · ${e.platforms.join(', ')}` : ''} · {e.created_by}
+                </div>
+              </td>
+              <td className="small">
+                {watDateTime(e.starts_at)} → {watDateTime(e.ended_at ?? e.ends_at)}
+              </td>
+              <td>
+                <span
+                  className={e.state === 'live' ? 'badge' : 'badge off'}
+                  data-testid={`event-state-${e.id}`}
+                >
+                  {e.state === 'live' ? 'Running' : e.state === 'scheduled' ? 'Scheduled' : 'Ended'}
+                </span>
+              </td>
+              <td>{e.state === 'ended' ? null : <EndEventForm id={e.id} />}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <details>
+        <summary data-testid="event-new">Schedule one</summary>
+        <EventForm />
+      </details>
+    </section>
+  );
+}
+
 export default async function LiveOps() {
   const me = await adminApi<AdminProfile>('/admin/me');
   const canFlags = me.permissions.includes('liveops.flags');
@@ -142,11 +197,13 @@ export default async function LiveOps() {
   let flags: AdminFlagsResponse | null;
   let banner: AdminBannerResponse | null;
   let config: AdminConfigResponse | null;
+  let events: AdminLiveEventsResponse | null;
   try {
-    [flags, banner, config] = await Promise.all([
+    [flags, banner, config, events] = await Promise.all([
       canFlags ? adminApi<AdminFlagsResponse>(routes.admin.flags()) : null,
       canFlags ? adminApi<AdminBannerResponse>(routes.admin.banner()) : null,
       canConfig ? adminApi<AdminConfigResponse>(routes.admin.config()) : null,
+      canConfig ? adminApi<AdminLiveEventsResponse>(routes.admin.events()) : null,
     ]);
   } catch (e) {
     return <p className="error">{e instanceof AdminApiError ? e.message : 'Could not load LiveOps.'}</p>;
@@ -160,6 +217,7 @@ export default async function LiveOps() {
         </p>
       </div>
       {flags && banner ? <Flags flags={flags} banner={banner} /> : null}
+      {events ? <Events events={events} /> : null}
       {config ? <Values config={config} /> : null}
     </>
   );

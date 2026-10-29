@@ -5,6 +5,7 @@ export * from './content';
 export * from './daily';
 export * from './duel';
 export * from './economy';
+export * from './events';
 export * from './flags';
 export * from './hash';
 export * from './integrity';

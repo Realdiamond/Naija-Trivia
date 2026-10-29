@@ -454,7 +454,7 @@ Doc 18 §11.
 - ✅ The console's **Daily** page for owners, admins and LiveOps (`liveops.daily`): the next 30 days, each with its number, whether it is planned, fixed or open, how many played today's, and its categories from the easiest question to the boss
 - ✅ **Plan the next 30 days** in one go, with a reason: every missing Daily is picked as the game would pick it, numbered by calendar day. Days after tomorrow, and tomorrow until 22:00 WAT, stay open; the 23:00 job fixes tomorrow as before
 - ✅ **A day's preview**: exactly the seven questions players get (options in the order written, the right one marked, the fact), each with how it has done and when it was last in a Daily. **Swap** any question for one that fits (live, family-safe, in an open category, not already in that Daily; the same category and level first), with a reason in the audit log, until 22:00 WAT the day before
-- Left for later in 2.7: experiments, Home banners and events
+- Left for later in 2.7: experiments, and Home banners and events (done in 2.7h)
 - ✅ Tests: game rules (the 22:00 cut-off); the API (planning 30 days numbered in order, today fixed and later days open, planning again does nothing; candidates, a swap with its audit entry, refusals for a repeat, a question that doesn't fit, today and tomorrow after 22:00; who may); the console in the browser (LiveOps plans the month and swaps a question)
 
 ### Step 2.7g · Remote config: game and economy values ✅
@@ -465,6 +465,15 @@ GDD §10, doc 18 §8 and §11, TRD FR-ECO-5.
 - ✅ The console's LiveOps page for owners, admins and LiveOps (`liveops.config`): each value with its default, bounds and last change; a new value with a reason; **one click back** to the value before the latest change. Every change is in `config_history` and the audit log
 - Left for later: changes for one platform, app version or segment, and experiments
 - ✅ Tests: game rules (coins and prices from tuned values; every default within its bounds); the API (the list and who may; a change paying at once and reaching the apps, refusals out of range, unknown or unchanged; another process catching up within 10 seconds; rollback and the history; a stored value out of bounds ignored); the console in the browser (LiveOps changes rewarded video coins and rolls it back)
+
+### Step 2.7h · Home banners and events ✅
+Doc 18 §11, doc 16 §2.
+
+- ✅ LiveOps schedules **Home banners** (news, a flash pack) and **Weekend Wahala** (double XP in duels on one category, or on all) on the console's LiveOps page, each with a start and an end in Lagos time, an optional Pidgin title and line, the screen a tap opens, and optionally one platform; it can be ended early. Owners, admins and LiveOps (`liveops.config`); every change has a reason and is in the audit log
+- ✅ Apps get the running ones with their config (`home` in `GET /v1/config`, within a minute) and show the two newest on Home; closing one hides it on that device. While Weekend Wahala runs, its category shows "2× XP" when picking a round
+- ✅ Duels finished while it runs pay the boosted answers' XP twice (the 50 for finishing stays as it is); several at once never count one answer twice
+- Left for later: flash packs themselves (with packs), Live Party Nights, other events' rewards, experiments, and push campaigns (v1.1)
+- ✅ Tests: game rules (when an event runs; double XP for one category, all, or several at once); the API (who may, refusals, the running ones per platform, ending early, the list, the audit log; a duel paying double XP); the console in the browser (LiveOps schedules a banner that reaches the apps, then ends it); the app in the browser (a banner and Weekend Wahala on Home, closing one, tapping one)
 
 ### Step 2.8a · Account deletion and data requests ✅
 NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the first.
@@ -522,7 +531,7 @@ TRD §2 ("Crash / perf": Sentry), doc 18's `crash_free_sessions`.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |

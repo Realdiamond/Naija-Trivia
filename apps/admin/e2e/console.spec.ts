@@ -358,6 +358,41 @@ test('LiveOps changes a coin value with a reason and rolls it back', async ({ pa
   await expect(page.getByTestId('config-now-econ-rewarded_ad_coins')).toHaveText('25');
 });
 
+test('LiveOps schedules a Home banner that reaches the apps at once, and ends it', async ({
+  page,
+  request,
+}) => {
+  const email = `e2e-events-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'liveops');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await expect(page).toHaveURL(/\/overview$/);
+  await page.getByRole('link', { name: 'LiveOps' }).click();
+
+  const title = `E2E pack ${randomInt(1e6)}`;
+  // The console's times are Lagos time (UTC+1).
+  const wat = (offsetMs: number) => new Date(Date.now() + 3_600_000 + offsetMs).toISOString().slice(0, 16);
+  await page.getByTestId('event-new').click();
+  await page.getByTestId('event-title').fill(title);
+  await page.getByTestId('event-body').fill('Play it before Sunday.');
+  await page.getByTestId('event-action').selectOption('party');
+  await page.getByTestId('event-starts').fill(wat(-60_000));
+  await page.getByTestId('event-ends').fill(wat(2 * 3_600_000));
+  await page.getByTestId('event-reason').fill('E2E: flash pack');
+  await page.getByTestId('event-save').click();
+  await expect(page.getByTestId('event-done')).toBeVisible();
+
+  const row = page.getByRole('row').filter({ hasText: title });
+  await expect(row.getByText('Running')).toBeVisible();
+  const config = await (await request.get(`${API}/v1/config`, { headers: { 'x-platform': 'web' } })).json();
+  expect(config.home.map((b: { title_en: string }) => b.title_en)).toContain(title);
+
+  await row.getByPlaceholder('Reason').fill('E2E: pack pulled');
+  await row.getByRole('button', { name: 'End now' }).click();
+  await expect(row.getByText('Ended')).toBeVisible();
+});
+
 test('support logs a data request and the DPO erases the account, with reasons', async ({
   page,
   request,

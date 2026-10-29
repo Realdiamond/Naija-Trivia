@@ -158,6 +158,9 @@ export const routes = {
     flags: () => '/admin/flags',
     flag: (key: string) => `/admin/flags/${encodeURIComponent(key)}`,
     banner: () => '/admin/banner',
+    /** Home banners and events (step 2.7h). */
+    events: () => '/admin/events',
+    eventEnd: (id: number) => `/admin/events/${id}/end`,
     liveOnline: (platform?: string) => `/admin/live/online${platform ? `?platform=${platform}` : ''}`,
     liveRooms: () => '/admin/live/rooms',
     liveFeed: (after?: string) => `/admin/live/feed${after ? `?after=${encodeURIComponent(after)}` : ''}`,

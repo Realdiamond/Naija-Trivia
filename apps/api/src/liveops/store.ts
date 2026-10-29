@@ -1,22 +1,27 @@
 /**
- * Flags, kill switches, the status banner (doc 18 §11, build plan step 2.7c) and the game and
- * economy values staff tuned (step 2.7g), worked out on the server. Each API process keeps them for 10 seconds and apps look again every 45, so a
+ * Flags, kill switches, the status banner (doc 18 §11, build plan step 2.7c), the game and
+ * economy values staff tuned (step 2.7g) and the Home banners and events running (step 2.7h),
+ * worked out on the server. Each API process keeps them for 10 seconds and apps look again every 45, so a
  * kill switch reaches every player within a minute (doc 18 AD-7); a change made through this
  * process applies here at once.
  */
 import type { FastifyRequest } from 'fastify';
 import {
   DEFAULT_CONFIG,
+  eventLive,
   flagOn,
   KILL_SWITCHES,
+  MAX_HOME_BANNERS,
   TUNABLE,
   tunable,
+  XP_BOOST_MULTIPLIER,
   type Flag,
   type FlagAudience,
   type FlagPlatform,
   type GameConfig,
+  type XpBoost,
 } from '@whosabi/game-rules';
-import { ErrorCode, StatusBanner, type ClientConfig } from '@whosabi/shared-types';
+import { ErrorCode, StatusBanner, type ClientConfig, type HomeBanner } from '@whosabi/shared-types';
 import type { Pool } from '../db';
 import { ApiError } from '../errors';
 
@@ -24,13 +29,32 @@ const CACHE_MS = 10_000;
 export const CONFIG_REFRESH_S = 45;
 export const BANNER_KEY = 'status_banner';
 
+interface EventRow {
+  id: string;
+  kind: HomeBanner['kind'];
+  title_en: string;
+  title_pcm: string | null;
+  body_en: string | null;
+  body_pcm: string | null;
+  action: HomeBanner['action'];
+  category_id: string | null;
+  platforms: FlagPlatform[] | null;
+  starts_at: Date;
+  ends_at: Date;
+}
+
 interface Snapshot {
   at: number;
   flags: Map<string, Flag>;
   banner: StatusBanner | null;
   /** The defaults with staff's changes on top (step 2.7g). */
   values: GameConfig;
+  /** Running, or starting before the next look at the database (step 2.7h). */
+  events: EventRow[];
 }
+
+const live = (e: EventRow, now: number) =>
+  eventLive({ starts_at: e.starts_at.getTime(), ends_at: e.ends_at.getTime(), ended_at: null }, now);
 
 /** A stored value counts only if it is one staff may change, and within its bounds. */
 export function tunedValue(key: string, value: unknown): number | null {
@@ -67,11 +91,18 @@ export class LiveOpsStore {
   private async current(): Promise<Snapshot> {
     const now = this.now();
     if (this.snapshot && now - this.snapshot.at < CACHE_MS) return this.snapshot;
-    const [flags, config] = await Promise.all([
+    const [flags, config, events] = await Promise.all([
       this.pool.query<{ key: string; enabled: boolean; rules: Flag['rules'] }>(
         'SELECT key, enabled, rules FROM feature_flags',
       ),
       this.pool.query<{ key: string; value: unknown }>('SELECT key, value FROM app_config'),
+      this.pool.query<EventRow>(
+        `SELECT id, kind, title_en, title_pcm, body_en, body_pcm, action, category_id, platforms, starts_at, ends_at
+           FROM live_events
+          WHERE ended_at IS NULL AND ends_at > $1 AND starts_at <= $2
+          ORDER BY starts_at DESC, id DESC LIMIT 50`,
+        [new Date(now), new Date(now + CACHE_MS)],
+      ),
     ]);
     const values: Record<string, number> = { ...DEFAULT_CONFIG };
     let banner: unknown = null;
@@ -86,6 +117,7 @@ export class LiveOpsStore {
       flags: new Map(flags.rows.map((f) => [f.key, f])),
       banner: shown.success ? shown.data : null,
       values: values as GameConfig,
+      events: events.rows,
     };
     return this.snapshot;
   }
@@ -116,7 +148,35 @@ export class LiveOpsStore {
     for (const key of [...keys].sort()) flags[key] = await this.isOn(key, who);
     const values: Record<string, number> = {};
     for (const t of TUNABLE) if (t.client) values[t.key] = snap.values[t.key];
-    return { flags, banner: snap.banner, values, refresh_s: CONFIG_REFRESH_S };
+    return { flags, banner: snap.banner, home: this.home(snap, who), values, refresh_s: CONFIG_REFRESH_S };
+  }
+
+  /** The Home banners running now for this platform, newest first. */
+  private home(snap: Snapshot, who: FlagAudience): HomeBanner[] {
+    const now = this.now();
+    return snap.events
+      .filter(
+        (e) => live(e, now) && (!e.platforms || (who.platform != null && e.platforms.includes(who.platform))),
+      )
+      .slice(0, MAX_HOME_BANNERS)
+      .map((e) => ({
+        id: Number(e.id),
+        kind: e.kind,
+        title_en: e.title_en,
+        title_pcm: e.title_pcm,
+        body_en: e.body_en,
+        body_pcm: e.body_pcm,
+        action: e.action,
+        category_id: e.category_id,
+        ends_at: e.ends_at.toISOString(),
+      }));
+  }
+
+  /** Weekend Wahala's double XP running at `now`, for duels finishing then (step 2.7h). */
+  async xpBoosts(now: number): Promise<XpBoost[]> {
+    return (await this.current()).events
+      .filter((e) => e.kind === 'double_xp' && live(e, now))
+      .map((e) => ({ category: e.category_id, multiplier: XP_BOOST_MULTIPLIER }));
   }
 
   /** The game and economy values in force (step 2.7g). */

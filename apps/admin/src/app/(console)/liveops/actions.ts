@@ -1,7 +1,16 @@
 'use server';
-/** LiveOps changes (step 2.7c): a flag or kill switch, and the status banner. The API checks who may. */
+/**
+ * LiveOps changes: a flag or kill switch and the status banner (step 2.7c), game and economy
+ * values (step 2.7g), and Home banners and events (step 2.7h). The API checks who may.
+ */
 import { revalidatePath } from 'next/cache';
-import { routes, type AdminFlagRule, type AdminFlagUpdate, type StatusBanner } from '@whosabi/shared-types';
+import {
+  routes,
+  type AdminFlagRule,
+  type AdminFlagUpdate,
+  type AdminLiveEventCreate,
+  type StatusBanner,
+} from '@whosabi/shared-types';
 import { AdminApiError, adminApi } from '../../../lib/api';
 
 export interface FormState {
@@ -78,4 +87,48 @@ export async function saveConfig(key: string, _state: FormState, form: FormData)
   }
   revalidatePath('/liveops');
   return { done: rollback ? 'Rolled back.' : 'Saved. Players get it within a minute.', error: null };
+}
+
+/** A time typed in the console's date and time box, in Lagos time (WAT, UTC+1). */
+const fromWat = (value: string) => new Date(`${value}:00+01:00`).toISOString();
+
+export async function scheduleEvent(_state: FormState, form: FormData): Promise<FormState> {
+  const kind = text(form, 'kind') === 'double_xp' ? 'double_xp' : 'banner';
+  const platform = text(form, 'platform');
+  const body: AdminLiveEventCreate = {
+    kind,
+    title_en: text(form, 'title_en'),
+    title_pcm: text(form, 'title_pcm') || null,
+    body_en: text(form, 'body_en') || null,
+    body_pcm: text(form, 'body_pcm') || null,
+    action: (text(form, 'action') || null) as AdminLiveEventCreate['action'],
+    category_id: kind === 'double_xp' ? text(form, 'category_id') || null : null,
+    platforms: platform === 'android' || platform === 'ios' || platform === 'web' ? [platform] : null,
+    starts_at: '',
+    ends_at: '',
+    reason: text(form, 'reason'),
+  };
+  try {
+    body.starts_at = fromWat(text(form, 'starts_at'));
+    body.ends_at = fromWat(text(form, 'ends_at'));
+  } catch {
+    return { done: null, error: 'Pick when it starts and when it ends.' };
+  }
+  try {
+    await adminApi(routes.admin.events(), { method: 'POST', body });
+  } catch (e) {
+    return failed(e);
+  }
+  revalidatePath('/liveops');
+  return { done: 'Scheduled.', error: null };
+}
+
+export async function endEvent(id: number, _state: FormState, form: FormData): Promise<FormState> {
+  try {
+    await adminApi(routes.admin.eventEnd(id), { method: 'POST', body: { reason: text(form, 'reason') } });
+  } catch (e) {
+    return failed(e);
+  }
+  revalidatePath('/liveops');
+  return { done: 'Ended.', error: null };
 }

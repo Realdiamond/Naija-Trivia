@@ -13,6 +13,7 @@ import { SignInOptions } from '../features/auth/SignInOptions';
 import { useDailyToday } from '../features/daily/api';
 import { DailyBanner } from '../features/daily/DailyBanner';
 import { InstallCard } from '../features/install/InstallCard';
+import { HomeBanners } from '../features/liveops/HomeBanners';
 import { useDuelList } from '../features/duels/api';
 import { useWallet } from '../features/economy/api';
 import { currentRound, isUrgent, timeLeft } from '../features/duels/format';
@@ -161,6 +162,7 @@ export default function Home() {
           <WarningCard key={n.id} notice={n} />
         ))}
       {daily.data ? <DailyBanner today={daily.data} /> : null}
+      <HomeBanners />
       <InstallCard />
 
       {yourTurn.length > 0 ? (

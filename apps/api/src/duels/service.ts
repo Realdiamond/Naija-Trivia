@@ -27,7 +27,7 @@ import {
   lifelineCost,
   duelCoins,
   DuelTransitionError,
-  duelXp,
+  boostedDuelXp,
   isFinished,
   MATCH_WAIT_MS,
   NEW_PLAYER_RATING,
@@ -1208,14 +1208,17 @@ export class DuelService {
   /** `duel_completed`, one per player (doc 13). The player who timed out gets `forfeit`. */
   /**
    * Coins and XP for a finished duel (GDD §5.1), with its result: +30 a win, +10 a loss or draw,
-   * nothing for a forfeit, and XP for the answers plus 50 for seeing it through. Each level
-   * reached pays 100 more. The Sabi Bot earns nothing.
+   * nothing for a forfeit, and XP for the answers plus 50 for seeing it through, the answers in
+   * a Weekend Wahala category counting double (step 2.7h). Each level reached pays 100 more.
+   * The Sabi Bot earns nothing.
    */
   private async reward(tx: Tx, actor?: EventContext): Promise<void> {
     const { client, duel, now, outbox } = tx;
     const answers = await getAnswers(client, [duel.id]);
     const players = await getPlayers(client, playersOf(duel));
     const config = await configOf(this.deps);
+    const boosts = (await this.deps.liveops?.xpBoosts(now)) ?? [];
+    const categoryOf = new Map((await getRounds(client, [duel.id])).map((r) => [r.round_no, r.category_id]));
     // In id order, so two duels between the same players finishing together never wait on each other.
     for (const userId of humansOf(duel).sort()) {
       const side = sideOf(duel, userId)!;
@@ -1223,7 +1226,11 @@ export class DuelService {
       const outcome: DuelOutcome =
         result === 'loss' && duel.state === 'forfeit' ? 'forfeit' : (result ?? 'draw');
       const played = playedRows(answers, userId);
-      const xp = duelXp(played.filter((a) => a.correct).length, played.length, outcome !== 'forfeit');
+      const xp = boostedDuelXp(
+        played.map((a) => ({ correct: a.correct === true, category: categoryOf.get(a.round_no) ?? null })),
+        outcome !== 'forfeit',
+        boosts,
+      );
       const coins = duelCoins(outcome, config);
       const paid = await rewardPlayer(client, userId, {
         xp,
