@@ -5,6 +5,7 @@ export * from './daily';
 export * from './duel';
 export * from './economy';
 export * from './hash';
+export * from './lifelines';
 export * from './matchmaking';
 export * from './party';
 export * from './progression';

@@ -152,6 +152,24 @@ export function useQuestionFlow({ total, serve, answer, firstSeq = 1, enabled = 
     void load(seq + 1);
   }, [phase, seq, total, load]);
 
+  /**
+   * A lifeline changed the question (step 2.4b): Extra Time keeps the clock running with more
+   * time on it; Skip's new question starts its own.
+   */
+  const replace = useCallback(
+    (q: ServedQuestion) => {
+      if (phase !== 'asking') return;
+      if (question?.qid !== q.qid) {
+        shownAt.current = Date.now();
+        hiddenMs.current = 0;
+        hiddenSince.current = null;
+        setRemainingMs(q.time_limit_ms);
+      }
+      setQuestion(q);
+    },
+    [phase, question],
+  );
+
   /** After an error: serve again, or re-send the same answer (the server keeps the first one). */
   const retry = useCallback(() => {
     if (phase !== 'error') return;
@@ -159,7 +177,21 @@ export function useQuestionFlow({ total, serve, answer, firstSeq = 1, enabled = 
     else void load(seq);
   }, [phase, send, load, seq]);
 
-  return { phase, seq, total, question, chosen, result, played, error, remainingMs, submit, next, retry };
+  return {
+    phase,
+    seq,
+    total,
+    question,
+    chosen,
+    result,
+    played,
+    error,
+    remainingMs,
+    submit,
+    next,
+    retry,
+    replace,
+  };
 }
 
 export type QuestionFlow = ReturnType<typeof useQuestionFlow>;

@@ -140,7 +140,7 @@ points     = (base + speed + streak) × wahala
 | Skip ⏭️ | Swaps in another question from the same category and difficulty | 100 coins |
 | Extra Time ⏳ | +10 s | 40 coins |
 
-**Lifelines are disabled in Daily Challenge, Campus Clash and any sponsored-prize event** so those stay fair.
+**Lifelines are disabled in Daily Challenge, Campus Clash and any sponsored-prize event** so those stay fair, and in a duel's tie-break. Extra Time gives more time to answer, not more points: speed points still count against the usual limit. Skip's question is the same category and type, and gets its own clock. Ask Naija shows real players' picks; while a question is new, a stand-in crowd that leans to the right answer (narrowly on hard questions) fills in (build step 2.4b).
 
 ### 5.3 Sinks & sources balancing (targets)
 - An average free daily player earns about 150 coins a day: 2 duels (+60), Daily (+30), 2 rewarded ads (+50), plus misc.

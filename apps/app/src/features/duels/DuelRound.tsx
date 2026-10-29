@@ -7,6 +7,7 @@ import { useT } from '../../i18n';
 import { QuestionView } from '../play/QuestionView';
 import { useQuestionFlow } from '../play/useQuestionFlow';
 import { duels } from './api';
+import { LifelineRow } from './Lifelines';
 import { useOpponentName } from './parts';
 
 interface Props {
@@ -42,6 +43,7 @@ export function DuelRound({ duel, round, firstSeq, onDone }: Props) {
       overline={t('duel.roundOverline', { round, name })}
       finishLabel={t('duel.continue')}
       onLeave={() => router.replace('/home')}
+      lifelines={<LifelineRow duelId={id} round={round} flow={flow} />}
     />
   );
 }

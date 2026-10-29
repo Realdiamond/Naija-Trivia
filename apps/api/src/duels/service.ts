@@ -22,6 +22,9 @@ import {
   DEFAULT_CONFIG,
   displayOrder,
   DUEL_ROUNDS,
+  EXTRA_TIME_MS,
+  fiftyFifty,
+  lifelineCost,
   duelCoins,
   DuelTransitionError,
   duelXp,
@@ -51,6 +54,9 @@ import {
   type DuelSource,
   type DuelView,
   type InvitePreview,
+  type Lifeline,
+  type LifelineRequest,
+  type LifelineResponse,
   type ListDuelsQuery,
   type ListDuelsResponse,
   type ServedQuestion,
@@ -60,6 +66,7 @@ import {
 import type { AppDeps } from '../app';
 import { overallRating, recordQuestionStats } from '../content/stats';
 import { withTransaction, type Pool, type PoolClient } from '../db';
+import { balances, spendCoins } from '../economy/ledger';
 import { rewardPlayer } from '../economy/rewards';
 import { ApiError, conflict, notFound } from '../errors';
 import type { EventContext } from '../events';
@@ -69,12 +76,14 @@ import {
   loadQuestions,
   markSeen,
   pickRoundQuestions,
+  pickSkipQuestion,
   pickTiebreakQuestion,
   type DuelQuestion,
 } from './questions';
 import { duelKey, queuePush } from '../push/queue';
 import { rttFor } from '../rtt';
 import { canChallenge, isBlocked } from '../social/graph';
+import { askNaijaFor, lifelinesOf, questionLifelines, type LifelineRow } from './lifelines';
 import { applyDuelRatings } from './ratings';
 import {
   ACTIVE_STATES,
@@ -124,6 +133,8 @@ interface PlayerTx extends Tx {
   side: DuelSide;
 }
 
+const notAllowed = (detail: string) =>
+  conflict(ErrorCode.lifelineNotAllowed, "You can't use that lifeline now", detail);
 const duelFinished = (detail?: string) => conflict(ErrorCode.duelFinished, 'This duel is over', detail);
 const turnNotYours = (detail?: string) => conflict(ErrorCode.turnNotYours, 'It is not your turn', detail);
 
@@ -436,7 +447,9 @@ export class DuelService {
         }
       }
 
-      const qid = round.question_ids[seq - 1]!;
+      const existing = findAnswer(answers, roundNo, seq, viewer);
+      // After Skip, the player's question at this place is the one swapped in.
+      const qid = existing?.question_id ?? round.question_ids[seq - 1]!;
       const q = (await loadQuestions(client, [qid])).get(qid);
       if (!q) throw notFound('This question is no longer available.');
       const inserted = await client.query<{ served_at: Date }>(
@@ -449,22 +462,154 @@ export class DuelService {
         await markSeen(client, viewer, qid, now);
         outbox.push(() => this.deps.events.emit('question_served', { qid, mode: 'duel', seq }, ctx));
       } else {
-        servedAt = findAnswer(answers, roundNo, seq, viewer)!.served_at;
+        servedAt = existing!.served_at;
       }
-      const numeric = q.type === 'closest_number';
-      return {
-        qid,
-        seq,
-        total: round.question_ids.length,
-        type: q.type,
-        category_id: q.category_id,
-        text: q.text,
-        options: numeric ? [] : displayOrder(q.options, permFor(duel.id, viewer, q)),
-        media: null,
-        time_limit_ms: TIME_LIMIT_MS,
-        served_at: servedAt.toISOString(),
-      };
+      return this.served(client, duel, viewer, round, seq, q, servedAt, existing?.extra_ms ?? 0);
     });
+  }
+
+  /**
+   * A lifeline on the question being played (GDD §5.2): one of each per duel, paid for with coins
+   * before it takes effect, all in one transaction. Asking again for the same question gives the
+   * same answer without paying twice.
+   */
+  async useLifeline(
+    duelId: string,
+    body: LifelineRequest,
+    viewer: string,
+    ctx: EventContext,
+  ): Promise<LifelineResponse> {
+    return this.withDuel(duelId, viewer, async ({ client, duel, side, now, outbox }) => {
+      const { type, round: roundNo, seq } = body;
+      if (isFinished(duel.state)) throw duelFinished();
+      const turnRounds: number[] = roundsForTurn(duel.state);
+      if (turnSide(duel.state) !== side || !turnRounds.includes(roundNo)) throw turnNotYours();
+      const rounds = await getRounds(client, [duel.id]);
+      const round = rounds.find((r) => r.round_no === roundNo)!;
+      const row = findAnswer(await getAnswers(client, [duel.id]), roundNo, seq, viewer);
+      if (!row) throw conflict(ErrorCode.questionNotServed, 'This question has not been shown yet');
+      const used = await lifelinesOf(client, duel.id, viewer);
+      const before = used.find((l) => l.type === type);
+      const q = (await loadQuestions(client, [row.question_id])).get(row.question_id)!;
+      const respond = async (question: typeof q, servedAt: Date, extraMs: number) => ({
+        question: await this.served(client, duel, viewer, round, seq, question, servedAt, extraMs),
+        coins: (await balances(client, viewer)).coins,
+      });
+
+      if (before) {
+        // The same request again (a retry or double tap): what it showed, at no charge.
+        const sameQuestion =
+          type === 'skip' ? before.effect.to === row.question_id : before.question_id === q.id;
+        if (before.round_no === roundNo && before.seq === seq && sameQuestion && !row.received_at) {
+          return respond(q, row.served_at, row.extra_ms);
+        }
+        throw conflict(ErrorCode.lifelineUsed, 'Lifeline already used', 'Each lifeline works once a duel.');
+      }
+      if (row.received_at) throw notAllowed('This question is already answered.');
+      if (now - row.served_at.getTime() >= TIME_LIMIT_MS + row.extra_ms) {
+        throw notAllowed('Time is up for this question.');
+      }
+      if (type === 'fifty' && q.options.length !== 4) throw notAllowed('50/50 needs four options.');
+
+      const cost = lifelineCost(type);
+      const paid = await spendCoins(client, viewer, cost, {
+        key: `lifeline:${duel.id}:${viewer}:${type}`,
+        reason: 'lifeline',
+        refType: 'duel',
+        refId: duel.id,
+        now,
+      });
+
+      let shown = q;
+      let servedAt = row.served_at;
+      let extraMs = row.extra_ms;
+      let effect: LifelineRow['effect'] = {};
+      if (type === 'fifty') {
+        effect = { removed: fiftyFifty(4, q.correct_index!, `${duel.id}:${viewer}:${q.id}`) };
+      } else if (type === 'ask_naija') {
+        effect = { percents: await askNaijaFor(client, q) };
+      } else if (type === 'time') {
+        extraMs += EXTRA_TIME_MS;
+      } else {
+        const players = humansOf(duel);
+        const answers = await getAnswers(client, [duel.id]);
+        const next = await pickSkipQuestion(client, q, {
+          players,
+          familySafeOnly: await familySafeOnly(client, players),
+          exclude: [...rounds.flatMap((r) => r.question_ids), ...answers.map((a) => a.question_id)],
+          now,
+        });
+        if (!next) throw notAllowed('There is no other question to swap in.');
+        shown = (await loadQuestions(client, [next])).get(next)!;
+        // A new question gets its own clock; Extra Time was for the old one.
+        servedAt = new Date(now);
+        extraMs = 0;
+        effect = { to: next };
+        await markSeen(client, viewer, next, now);
+        outbox.push(() => this.deps.events.emit('question_served', { qid: next, mode: 'duel', seq }, ctx));
+      }
+      await client.query(
+        `INSERT INTO duel_lifelines (duel_id, user_id, type, round_no, seq, question_id, effect, paid_with, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'coins', $8)`,
+        [duel.id, viewer, type, roundNo, seq, q.id, JSON.stringify(effect), new Date(now)],
+      );
+      await client.query(
+        `UPDATE duel_answers SET question_id = $5, served_at = $6, extra_ms = $7, lifeline = $8
+          WHERE duel_id = $1 AND round_no = $2 AND seq = $3 AND user_id = $4`,
+        [duel.id, roundNo, seq, viewer, shown.id, servedAt, extraMs, type],
+      );
+      outbox.push(() =>
+        this.deps.events.emit('lifeline_used', { type, paid_with: 'coins', mode: 'duel' }, ctx),
+      );
+      if (paid) {
+        outbox.push(() =>
+          this.deps.events.emit(
+            'coins_changed',
+            { delta: paid.delta, reason: paid.reason, balance_after: paid.balance },
+            ctx,
+          ),
+        );
+      }
+      return respond(shown, servedAt, extraMs);
+    });
+  }
+
+  /** A question as one player sees it: their option order, their clock and, in rounds 1–3, their lifelines. */
+  private async served(
+    client: PoolClient,
+    duel: DuelRow,
+    viewer: string,
+    round: RoundRow,
+    seq: number,
+    q: DuelQuestion,
+    servedAt: Date,
+    extraMs: number,
+  ): Promise<ServedQuestion> {
+    const numeric = q.type === 'closest_number';
+    const perm = numeric ? [] : permFor(duel.id, viewer, q);
+    return {
+      qid: q.id,
+      seq,
+      total: round.question_ids.length,
+      type: q.type,
+      category_id: q.category_id,
+      text: q.text,
+      options: numeric ? [] : displayOrder(q.options, perm),
+      media: null,
+      time_limit_ms: TIME_LIMIT_MS + extraMs,
+      served_at: servedAt.toISOString(),
+      ...(round.round_no === TIEBREAK_ROUND
+        ? {}
+        : {
+            lifelines: questionLifelines(
+              await lifelinesOf(client, duel.id, viewer),
+              round.round_no,
+              seq,
+              q,
+              perm,
+            ),
+          }),
+    };
   }
 
   async answer(
@@ -496,7 +641,8 @@ export class DuelService {
         clientElapsedMs: body.client_elapsed_ms,
         serverElapsedMs: Math.max(0, now - row.served_at.getTime()),
         rttEstMs: rtt,
-        timeLimitMs: TIME_LIMIT_MS,
+        // Extra Time's 10 s more to answer; speed points still count against the usual limit.
+        timeLimitMs: TIME_LIMIT_MS + row.extra_ms,
         offlineGraceMs: OFFLINE_RESEND_GRACE_MS,
       });
       const perm = permFor(duel.id, viewer, q);
@@ -562,7 +708,7 @@ export class DuelService {
             accepted_elapsed_ms: timing.acceptedMs,
             points: score.points,
             mode: 'duel',
-            lifeline: null,
+            lifeline: (row.lifeline as Lifeline | null) ?? null,
             ...(body.tab_hidden_ms !== undefined ? { tab_hidden_ms: body.tab_hidden_ms } : {}),
           },
           ctx,
@@ -1412,7 +1558,7 @@ function timingOf(row: AnswerRow) {
     clientElapsedMs: row.client_elapsed_ms,
     serverElapsedMs: Math.max(0, row.received_at!.getTime() - row.served_at.getTime()),
     rttEstMs: row.rtt_est_ms ?? 0,
-    timeLimitMs: TIME_LIMIT_MS,
+    timeLimitMs: TIME_LIMIT_MS + row.extra_ms,
     offlineGraceMs: OFFLINE_RESEND_GRACE_MS,
   });
 }

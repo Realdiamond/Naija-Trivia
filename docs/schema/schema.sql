@@ -315,7 +315,7 @@ CREATE TABLE duel_answers (
   round_no          smallint NOT NULL,
   seq               smallint NOT NULL,
   user_id           text NOT NULL REFERENCES users(id),
-  question_id       text NOT NULL REFERENCES questions(id),
+  question_id       text NOT NULL REFERENCES questions(id),  -- after Skip, the question swapped in for this player
   served_at         timestamptz NOT NULL,
   received_at       timestamptz,
   client_elapsed_ms int,
@@ -325,12 +325,27 @@ CREATE TABLE duel_answers (
   chosen_index      smallint,                          -- canonical
   correct           boolean,
   points            int NOT NULL DEFAULT 0,
-  lifeline          text,
+  lifeline          text,                              -- the lifeline used on this question (0021)
+  extra_ms          int NOT NULL DEFAULT 0,             -- Extra Time's 10 s (0021)
   platform          text CHECK (platform IN ('android','ios','web')),
   tab_hidden_ms     int,                               -- web only: time the tab was hidden during the question (integrity signal)
   guess             numeric,                           -- tie-break (round 4) only
   idempotency_key   text,                              -- of the request that answered; a retry with another key gets 409
   PRIMARY KEY (duel_id, round_no, seq, user_id)
+);
+
+-- Lifelines (GDD §5.2, 0021): one of each per duel and player, paid through the ledger.
+CREATE TABLE duel_lifelines (
+  duel_id         text NOT NULL REFERENCES duels(id) ON DELETE CASCADE,
+  user_id         text NOT NULL REFERENCES users(id),
+  type            text NOT NULL CHECK (type IN ('fifty','ask_naija','skip','time')),
+  round_no        smallint NOT NULL CHECK (round_no BETWEEN 1 AND 3),
+  seq             smallint NOT NULL,
+  question_id     text NOT NULL,                       -- the question it was used on (Skip: the one skipped)
+  effect          jsonb NOT NULL DEFAULT '{}',         -- {removed} | {percents} | {to}, canonical order
+  paid_with       text NOT NULL CHECK (paid_with IN ('coins','ad')),
+  created_at      timestamptz NOT NULL,
+  PRIMARY KEY (duel_id, user_id, type)
 );
 
 -- ===================== PARTY =====================

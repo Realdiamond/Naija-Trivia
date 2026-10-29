@@ -21,6 +21,20 @@ export const StartRoundResponse = z.object({
 });
 export type StartRoundResponse = z.infer<typeof StartRoundResponse>;
 
+export const Lifeline = z.enum(['fifty', 'ask_naija', 'skip', 'time']);
+export type Lifeline = z.infer<typeof Lifeline>;
+
+/** A duel question's lifelines (step 2.4b): what is used up, and what this question shows. */
+export const QuestionLifelines = z.object({
+  /** Lifelines used in this duel already (one of each per duel). */
+  used: z.array(Lifeline),
+  /** 50/50: the two options taken away, as displayed. */
+  removed: z.array(z.number().int().min(0).max(3)).nullable(),
+  /** Ask Naija: the share of players who picked each option, as displayed. */
+  ask_naija: z.array(z.number().int().min(0).max(100)).nullable(),
+});
+export type QuestionLifelines = z.infer<typeof QuestionLifelines>;
+
 export const ServedQuestion = z
   .object({
     qid: z.string(),
@@ -32,8 +46,11 @@ export const ServedQuestion = z
     /** In this player's order; the server maps answers back. Empty for closest-number questions. */
     options: z.array(z.string()).max(4),
     media: z.null(),
+    /** With Extra Time, 10 s more (speed points still count against the usual limit). */
     time_limit_ms: z.number().int().positive(),
     served_at: z.iso.datetime(),
+    /** Duels only (rounds 1–3); absent where lifelines are off (the Daily, the tie-break). */
+    lifelines: QuestionLifelines.optional(),
   })
   .refine((q) => (q.type === 'closest_number' ? q.options.length === 0 : q.options.length >= 2), {
     message: 'closest_number questions have no options; every other type has 2 to 4',

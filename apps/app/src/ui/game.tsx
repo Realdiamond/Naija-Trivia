@@ -69,6 +69,8 @@ interface OptionProps {
   onPress: () => void;
   /** Shows the number key that picks it, on computers (FR-WEB-5). */
   keyHint?: boolean;
+  /** Ask Naija: the share of players who picked it (step 2.4b). */
+  share?: number | null;
 }
 
 const LETTERS = ['A', 'B', 'C', 'D'];
@@ -81,7 +83,15 @@ const optionLook: Record<OptionState, { bg: string; border: string; badge: strin
   faded: { bg: colors.surface, border: colors.border, badge: colors.sand, badgeText: colors.muted },
 };
 
-export function OptionButton({ index, text, state, disabled, onPress, keyHint = false }: OptionProps) {
+export function OptionButton({
+  index,
+  text,
+  state,
+  disabled,
+  onPress,
+  keyHint = false,
+  share = null,
+}: OptionProps) {
   const look = optionLook[state];
   const letter = LETTERS[index] ?? String(index + 1);
   return (
@@ -111,6 +121,11 @@ export function OptionButton({ index, text, state, disabled, onPress, keyHint = 
         )}
       </View>
       <Text style={styles.optionText}>{text}</Text>
+      {share !== null ? (
+        <Text variant="label" color={colors.primaryInk} testID={`share-${index}`}>
+          {share}%
+        </Text>
+      ) : null}
       {keyHint ? (
         <View style={styles.keyHint}>
           <Text variant="caption">{index + 1}</Text>

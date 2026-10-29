@@ -2,7 +2,7 @@
  * The question screen (mockups 02, 11 and 30), driven by useQuestionFlow. On computers the keys
  * play too: 1–4 or A–D answer, Enter continues, Esc asks to leave (FR-WEB-5).
  */
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { errorMessage } from '../../api';
 import { useT } from '../../i18n';
@@ -26,9 +26,11 @@ interface Props {
   finishLabel?: string;
   /** Leaving mid-round, after the player confirms. */
   onLeave: () => void;
+  /** Duels: the lifeline row under the options (mockup 11, step 2.4b). */
+  lifelines?: ReactNode;
 }
 
-export function QuestionView({ flow, overline, finishLabel, onLeave }: Props) {
+export function QuestionView({ flow, overline, finishLabel, onLeave, lifelines }: Props) {
   const t = useT();
   const desktop = useIsDesktop();
   const [leaving, setLeaving] = useState(false);
@@ -44,7 +46,13 @@ export function QuestionView({ flow, overline, finishLabel, onLeave }: Props) {
     }
     if (leaving) return false;
     const option = optionForKey(key);
-    if (option !== null && phase === 'asking' && question && option < question.options.length) {
+    if (
+      option !== null &&
+      phase === 'asking' &&
+      question &&
+      option < question.options.length &&
+      !question.lifelines?.removed?.includes(option)
+    ) {
       flow.submit(option);
       return true;
     }
@@ -61,8 +69,11 @@ export function QuestionView({ flow, overline, finishLabel, onLeave }: Props) {
   const done = phase === 'revealed' || phase === 'finished' ? seq : seq - 1;
   const band = question ? category(question.category_id).color : colors.primary;
 
+  // 50/50 takes two options away; Ask Naija shows how players answered.
+  const removed = question?.lifelines?.removed ?? [];
+  const shares = question?.lifelines?.ask_naija ?? null;
   const stateOf = (index: number): OptionState => {
-    if (!result) return chosen === index ? 'chosen' : 'idle';
+    if (!result) return chosen === index ? 'chosen' : removed.includes(index) ? 'faded' : 'idle';
     if (index === result.correct_display_index) return 'correct';
     if (index === chosen) return 'wrong';
     return 'faded';
@@ -124,12 +135,14 @@ export function QuestionView({ flow, overline, finishLabel, onLeave }: Props) {
                   index={index}
                   text={option}
                   state={stateOf(index)}
-                  disabled={phase !== 'asking'}
+                  disabled={phase !== 'asking' || removed.includes(index)}
                   onPress={() => flow.submit(index)}
                   keyHint={desktop}
+                  share={!result && shares ? (shares[index] ?? null) : null}
                 />
               ))}
             </View>
+            {phase === 'asking' || phase === 'sending' ? lifelines : null}
             {result ? <Reveal flow={flow} onReport={() => setReporting(true)} /> : null}
           </View>
         ) : null}
