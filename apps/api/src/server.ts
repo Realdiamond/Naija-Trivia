@@ -4,9 +4,11 @@ import { systemClock } from './clock';
 import { loadConfig } from './config';
 import { createPool } from './db';
 import { migrate } from './migrate';
+import { flushReports, startMonitoring } from './monitoring';
 import { createRedis } from './redis';
 
 const config = loadConfig();
+startMonitoring(config, 'api');
 const pool = createPool(config.databaseUrl);
 const redis = createRedis(config, { maxRetriesPerRequest: 2 });
 const tokens = await createTokenService(
@@ -22,7 +24,7 @@ if (!config.jwtPrivateKeyPem)
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'shutting down');
   await app.close();
-  await Promise.allSettled([pool.end(), redis.quit()]);
+  await Promise.allSettled([pool.end(), redis.quit(), flushReports()]);
   process.exit(0);
 };
 process.once('SIGTERM', () => void shutdown('SIGTERM'));

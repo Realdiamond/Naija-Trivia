@@ -505,6 +505,15 @@ Doc 10 §3.3, NDPA s.31.
 - Left for later: deleting accounts a parent never confirmed (with the retention jobs), and the console showing it on User 360
 - ✅ Tests: the API (text and email, the record, the name and friends refused then allowed, someone else's code, wrong codes, the player's own email, only for 13–17s); the app in the browser (a teen asks, the parent's code brings them home with their name; "Not now")
 
+### Step 2.8e · Crash and error reports ✅
+TRD §2 ("Crash / perf": Sentry), doc 18's `crash_free_sessions`.
+
+- ✅ The API and the worker report unexpected errors to Sentry once `SENTRY_DSN` is set: a request that ends in a 500 (with its request id, the route's pattern and method) and a worker job that starts failing (once per run of failures, not every tick). Errors players are meant to see are never reported
+- ✅ The Android app reports JavaScript errors and native crashes once the build has `EXPO_PUBLIC_SENTRY_DSN`, with the sessions Sentry counts crash-free sessions from; with `SENTRY_ORG`, `SENTRY_PROJECT` and `SENTRY_AUTH_TOKEN` the build uploads its source maps
+- ✅ No personal data in any report: no request bodies, headers, cookies, query strings, IP addresses, screenshots or breadcrumbs; on the server a player is their pseudonymous analytics id, in the app nobody
+- Left for later: the web app (Sentry's browser code would add about 70 KB to its first load, a fifth of the budget), performance tracing, and crash-free sessions and API latency on the console's Overview (from Sentry's API)
+- ✅ Tests: the API (off without a DSN; a 500 reported with the request id, route and pseudonymous id and none of the request's numbers, tokens, cookies or ids; an expected error not reported; a failing job); the Android bundle builds with reports on, and the web bundle has none of it
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
@@ -514,7 +523,7 @@ Doc 10 §3.3, NDPA s.31.
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
-| 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
+| 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |
 

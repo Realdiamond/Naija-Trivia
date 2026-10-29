@@ -26,6 +26,7 @@
     "@fastify/static": "^10.1.8",
     "@fastify/websocket": "^11.3.4",
     "@resvg/resvg-js": "2.6.2",
+    "@sentry/node": "11.10.0",
     "@whosabi/analytics": "workspace:*",
     "@whosabi/game-rules": "workspace:*",
     "@whosabi/ingest": "workspace:*",
