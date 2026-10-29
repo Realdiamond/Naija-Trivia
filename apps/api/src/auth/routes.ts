@@ -44,7 +44,7 @@ import {
 } from './tokens';
 
 export const REFRESH_COOKIE = 'ws_rt';
-const REFRESH_COOKIE_PATH = '/v1/auth';
+export const REFRESH_COOKIE_PATH = '/v1/auth';
 
 interface UserRow {
   id: string;

@@ -358,6 +358,50 @@ test('LiveOps changes a coin value with a reason and rolls it back', async ({ pa
   await expect(page.getByTestId('config-now-econ-rewarded_ad_coins')).toHaveText('25');
 });
 
+test('support logs a data request and the DPO erases the account, with reasons', async ({
+  page,
+  request,
+}) => {
+  const supportEmail = `e2e-support-${randomInt(1e9)}@whosabi.ng`;
+  const dpoEmail = `e2e-dpo-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(supportEmail, 'support');
+  addStaff(dpoEmail, 'dpo');
+  const guest = await (
+    await request.post(`${API}/v1/auth/guest`, {
+      data: { device_id: randomBytes(24).toString('base64url'), platform: 'android' },
+    })
+  ).json();
+  const signIn = async (email: string) => {
+    await page.goto('/login');
+    await page.getByTestId('dev-email').fill(email);
+    await page.getByTestId('dev-sign-in').click();
+    await expect(page.getByTestId('staff-name')).toBeVisible();
+  };
+
+  await signIn(supportEmail);
+  await page.goto(`/players/${guest.user.id}?tab=support`);
+  await page.getByTestId('dsar-kind').selectOption('erasure');
+  await page.getByTestId('dsar-note').fill('E2E: email to help@ asking to be deleted');
+  await page.getByTestId('dsar-log').click();
+  await expect(page.getByTestId('dsar-done')).toContainText('Logged');
+  await page.getByRole('button', { name: 'Sign out' }).click();
+
+  await signIn(dpoEmail);
+  await page.getByRole('link', { name: 'Data requests' }).click();
+  await expect(page).toHaveURL(/\/compliance$/);
+  const row = page.getByTestId('dsar-queue').locator('tr', { hasText: 'E2E: email to help@' });
+  await expect(row).toContainText('Delete the account');
+  await row.locator('input[name="reason"]').fill('E2E: their email');
+  await row.locator('input[name="confirm"]').fill('ERASE');
+  await row.getByRole('button', { name: 'Erase now' }).click();
+  // Done: it leaves the open queue.
+  await expect(row).toHaveCount(0);
+  const refresh = await request.post(`${API}/v1/auth/refresh`, { data: { refresh: guest.refresh } });
+  expect(refresh.status()).toBe(401);
+  await page.goto('/compliance?status=done');
+  await expect(page.getByTestId('dsar-queue')).toContainText('E2E: email to help@');
+});
+
 test('someone not on the staff list is turned away', async ({ page }) => {
   await page.goto('/login');
   await page.getByTestId('dev-email').fill('stranger@example.com');

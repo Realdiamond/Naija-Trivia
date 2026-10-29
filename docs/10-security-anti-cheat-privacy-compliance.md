@@ -117,7 +117,7 @@ NDPA s.31 defines a child as anyone **under 18** and requires **parent or guardi
 ## 6. App store compliance checklist
 - [ ] Play Data Safety form matches the §3.1 inventory.
 - [ ] Target audience 13+, content rating via IARC (expect "Teen"/PEGI 12 because of mild references; family-safe filter available).
-- [ ] Account deletion available in-app **and** via a web URL (a Google Play requirement). The web app provides the URL.
+- [x] Account deletion available in-app **and** via a web URL (a Google Play requirement). The web app provides the URL: `https://whosabi.ng/delete-account` (step 2.8a).
 - [ ] Web purchases (v1.1) are never mentioned or linked inside the Android and iOS apps (store anti-steering rules); re-check the rules before launch.
 - [ ] Web: cookie and consent banner, privacy policy and terms available on whosabi.ng.
 - [ ] Subscription disclosure: price, period, auto-renew, and how to cancel, shown before purchase.
