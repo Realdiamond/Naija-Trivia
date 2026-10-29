@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { routes, type DuelView, type Me } from '@whosabi/shared-types';
+import { ResultsBanner } from '../../ads/ResultsBanner';
 import { useInterstitial } from '../../ads/useInterstitial';
 import { trackEvent } from '../../analytics';
 import { errorMessage } from '../../api';
@@ -254,6 +255,7 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
               testID="result-home"
             />
           </View>
+          {played ? <ResultsBanner /> : null}
         </View>
       </ScrollView>
     </SafeAreaView>

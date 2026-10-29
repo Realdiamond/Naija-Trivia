@@ -1,3 +1,5 @@
+import zlib from 'node:zlib';
+import compress from '@fastify/compress';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
@@ -90,6 +92,15 @@ export async function buildApp(options: BuildOptions): Promise<FastifyInstance> 
   } else {
     registerErrorHandlers(app);
   }
+  // Replies of 1 KB or more go out compressed (Data Saver, step 2.8b): JSON shrinks several
+  // times over. Brotli at a low level is quick on the dyno; the web app's own files are
+  // compressed once at build time (scripts/precompress.mjs). The event intake reads gzipped
+  // batches itself, so request bodies are left alone.
+  await app.register(compress, {
+    encodings: ['br', 'gzip'],
+    brotliOptions: { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4 } },
+    globalDecompression: false,
+  });
   await app.register(cors, {
     origin: options.config.corsOrigins,
     credentials: true,

@@ -30,7 +30,7 @@ interface MeRow {
   avatar_id: string | null;
   home_state: string | null;
   language: Me['language'];
-  data_saver: boolean;
+  data_saver: boolean | null;
   family_mode: boolean;
   discoverable: boolean;
   push_off: Me['push_off'];

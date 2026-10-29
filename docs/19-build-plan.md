@@ -380,7 +380,7 @@ TRD FR-ECO-2, doc 11 §2, API §2.8, PRD US-10.
 - ✅ Every request is for non-personalised ads (the consent banner promises no ad tracking) rated PG; gambling and betting are blocked in AdMob as well (doc 11 §7, deploy guide)
 - ✅ AdMob in the Android build (`react-native-google-mobile-ads`): `ADMOB_ANDROID_APP_ID` and the two ad unit ids; without them, Google's test ads (which never pay)
 - ✅ Analytics: `ad_requested`, `ad_shown`, `ad_reward_granted`, `coins_changed`
-- Left for later: paying for 50/50 with a video (a video can't play during a question, US-10), the results-screen banner (with Data Saver, 2.8), and web ads (v1.1)
+- Left for later: paying for 50/50 with a video (a video can't play during a question, US-10), the results-screen banner (done with Data Saver in 2.8b), and web ads (v1.1)
 - ✅ Tests: the rules (25 coins, 10 a day, every 3rd match, not in the first session or with the pass); the API (a signed callback paying once, Google's retries, tampered or unsigned or unknown-key callbacks refused, the day's cap and the next day, Google's URL check, fetching Google's keys); the app (interstitial pacing on the device)
 
 ### Step 2.4d · The shop and coin packs ✅
@@ -476,6 +476,16 @@ NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the f
 - Left for later in 2.8: ClickHouse deletion when it arrives, rectification and objection requests, and the retention jobs
 - ✅ Tests: the API (the export's contents and record; deletion: what goes and what stays, signed out, can't come back; the queue, a request logged, exported and erased, who may, all audited); the console in the browser (support logs a request and the DPO erases the account); the app in the browser (a player downloads their data and deletes their account; the web page for a signed-out visitor)
 
+### Step 2.8b · Data Saver ✅
+PRD F15, UX §4, TRD FR-WEB-6, doc 11 §2, doc 18 §15.
+
+- ✅ **Data Saver** in Settings, for guests and accounts: automatic until the player chooses, on when the browser sends Save-Data or reports 2G or 3G, or when a phone is on 2G or 3G mobile data. Their choice is kept in their profile (`data_saver`: true, false, or null for automatic) and on the device, so it applies from the first screen; "Let the app decide" hands it back
+- ✅ While it's on: ads between games wait for Wi-Fi (a duel without one doesn't count towards the next), the results banner stays away, and analytics go every 2 minutes instead of every 30 seconds. Rewarded videos still play, since the player asks for them. Questions are text-only already (none has a picture yet) and nothing in the app autoplays, so nothing else had to change
+- ✅ **The results banner** (left over from step 2.4c): an adaptive AdMob banner under duel and Daily results on phones, non-personalised and rated PG, never in Data Saver and gone when staff switch ads off. `EXPO_PUBLIC_ADMOB_BANNER_UNIT` gives its unit; without it Google's test banner shows
+- ✅ **Compression** for everyone: the API sends replies of 1 KB or more Brotli- or gzip-compressed, and the web app's and party client's files get Brotli and gzip copies at build time (6.4 MB of files down to 1.8 MB)
+- Left for later: picture questions and their text-only stand-ins (when the first picture questions arrive), and gzipped event batches from the apps
+- ✅ Tests: the API (bundles, pages and bigger replies compressed, small ones not; Data Saver back to automatic); the app's rules (when Data Saver is on, what may show); the app in the browser (Data Saver on by itself with Save-Data, switched off and kept in the profile, back to automatic)
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
@@ -485,7 +495,7 @@ NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the f
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
 | 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
-| 2.8 Platform & compliance (2.8a ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
+| 2.8 Platform & compliance (2.8a ✅, 2.8b ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |
 
