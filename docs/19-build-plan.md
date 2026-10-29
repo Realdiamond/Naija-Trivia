@@ -479,7 +479,7 @@ Doc 18 §11, doc 16 §2.
 Doc 18 §13, doc 11.
 
 - ✅ The console's **Commerce** page for owners, admins and finance (`commerce.view`): money in today, in 7 and in 30 days (real purchases only, refunded ones left out), each day's naira for 30 days, packs side by side, and the purchases themselves (all, refunds only, store tests shown or not) with whether the coins arrived; a link to the player for staff who can see players
-- ✅ **Each month as CSV for finance** (the last three months on the page): purchase, time in Lagos, store, pack, store transaction, price, currency, coins, state, refund time, store test or not, and the player as their pseudonymous id. Every export is in the audit log
+- ✅ **Each month as CSV for finance** (the last three months on the page): purchase, time in Lagos, store, pack, store transaction, price, currency, coins, state, refund time, store test or not, and the player as their pseudonymous id. Text a spreadsheet would run as a formula is kept as text. Every export is in the audit log
 - ✅ **Purchases without their coins**: the page shows how many paid purchases older than 10 minutes never reached the player's balance, and the nightly ledger check raises a staff alert about them
 - Left for later: reconciling against RevenueCat's own records (needs its API key), chargebacks, subscriptions (the Sabi Pass, v1.1) and Paystack (v1.1)
 - ✅ Tests: the API (who may; totals that leave out store tests and refunds; refunds; missing coins; filters; the CSV with pseudonymous players; the nightly alert); the console in the browser (finance sees a purchase and its refund and downloads the month)

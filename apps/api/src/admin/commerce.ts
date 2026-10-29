@@ -60,8 +60,10 @@ const money = (rows: { currency: string | null; micros: string | null }[]): Mone
 };
 
 const csvCell = (value: unknown) => {
-  const text = value === null || value === undefined ? '' : String(value);
-  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+  let text = value === null || value === undefined ? '' : String(value);
+  // Text a spreadsheet would run as a formula is kept as text.
+  if (typeof value === 'string' && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 
 /** A time in Lagos, as finance reads it: 2026-10-29 14:05. */
@@ -109,7 +111,7 @@ export function adminCommerceRoutes(app: FastifyInstance, deps: AppDeps, ctx: Ad
                 sum(p.price_micros) FILTER (WHERE p.status = 'completed' AND p.currency = 'NGN') AS micros
            FROM generate_series($1::date, $2::date, interval '1 day') AS d(day)
            LEFT JOIN purchases p
-             ON (p.created_at + interval '1 hour')::date = d.day::date
+             ON (p.created_at AT TIME ZONE 'Africa/Lagos')::date = d.day::date
             AND p.environment = 'production' AND p.status <> 'pending' AND p.created_at <= $3
           GROUP BY d.day ORDER BY d.day`,
         [

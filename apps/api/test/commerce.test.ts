@@ -127,7 +127,8 @@ describe('Commerce (step 2.7i)', () => {
     await t.pool.query(
       `INSERT INTO purchases (id, user_id, store, product_id, store_tx_id, price_micros, currency, status, coins, created_at)
        VALUES ($1, $2, 'play', 'coins_small', $3, 300000000, 'NGN', 'completed', 500, $4)`,
-      [newId('pu'), player.user.id, `GPA.${randomUUID()}`, new Date(t.clock.now() - 20 * MINUTE)],
+      // A transaction id a spreadsheet would read as a formula.
+      [newId('pu'), player.user.id, `=1+${randomUUID()}`, new Date(t.clock.now() - 20 * MINUTE)],
     );
 
     const after = (
@@ -174,6 +175,7 @@ describe('Commerce (step 2.7i)', () => {
     expect(ours.find((l) => l.includes('coins_large'))).toContain(
       ',1500,NGN,3500,refunded,2028-04-12 14:01,',
     );
+    expect(ours.find((l) => l.includes('coins_small'))).toContain(",'=1+");
     expect(
       (
         await t.app.inject({
