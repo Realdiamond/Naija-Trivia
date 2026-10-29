@@ -481,6 +481,20 @@ test('an analyst reads the KPI dashboards and narrows them to a platform', async
   await page.getByRole('link', { name: 'Economy' }).click();
   await expect(page.getByTestId('coins-earned')).toBeVisible();
   await expect(page.getByLabel('Platform')).toHaveCount(0);
+
+  // A funnel of their own: the shop, then paying.
+  await page.getByRole('link', { name: 'Funnels' }).click();
+  await expect(page.getByTestId('funnel')).toBeVisible();
+  await page.getByLabel('Events in order, with commas').fill('store_viewed,purchase_completed');
+  await page.getByRole('button', { name: 'Build' }).click();
+  await expect(page).toHaveURL(/funnel=custom/);
+  await expect(page.getByTestId('funnel')).toContainText('purchase_completed');
+  await page.getByRole('link', { name: 'Content', exact: true }).click();
+  await expect(page.getByTestId('answers')).toBeVisible();
+  await page.getByRole('link', { name: 'Tech health' }).click();
+  await expect(page.getByTestId('cold-start')).toBeVisible();
+  await page.getByRole('navigation', { name: 'Dashboards' }).getByRole('link', { name: 'Integrity' }).click();
+  await expect(page.getByTestId('open-now')).toBeVisible();
 });
 
 test('finance sees Monetisation and Economy, and not the other dashboards', async ({ page }) => {

@@ -1,6 +1,7 @@
 /**
- * Analytics dashboards (doc 18 §9, build plan steps 2.7j–2.7k): Engagement & time, Growth &
- * invites, Retention, Gameplay, Monetisation and Economy, each over a range of WAT days and a
+ * Analytics dashboards (doc 18 §9, build plan steps 2.7j–2.7l): Engagement & time, Growth &
+ * invites, Retention, Funnels, Gameplay, Content performance, Monetisation, Economy, Platforms &
+ * tech health and Integrity, each over a range of WAT days and a
  * platform. Every number follows its one definition in doc 18 §10. Players are counted, never named.
  */
 import Link from 'next/link';
@@ -11,13 +12,17 @@ import {
   type AdminProfile,
   type AnalyticsBoard,
   type AnalyticsResponse,
+  type ContentBoard,
   type EconomyBoard,
   type EngagementBoard,
+  type FunnelsBoard,
   type GameplayBoard,
   type GrowthBoard,
+  type IntegrityBoard,
   type MonetisationBoard,
   type MoneyByCurrency,
   type RetentionBoard,
+  type TechBoard,
 } from '@whosabi/shared-types';
 import { AdminApiError, adminApi } from '../../../lib/api';
 import { BarList, DayBars, HourHeatmap, ShareCurve } from '../../../lib/charts';
@@ -26,12 +31,16 @@ const TITLES: Record<AnalyticsBoard, string> = {
   engagement: 'Engagement & time',
   growth: 'Growth & invites',
   retention: 'Retention',
+  funnels: 'Funnels',
   gameplay: 'Gameplay',
+  content: 'Content',
   monetisation: 'Monetisation',
   economy: 'Economy',
+  tech: 'Tech health',
+  integrity: 'Integrity',
 };
 /** Dashboards whose numbers come from places that know no platform. */
-const EVERY_PLATFORM: readonly AnalyticsBoard[] = ['economy'];
+const EVERY_PLATFORM: readonly AnalyticsBoard[] = ['economy', 'integrity'];
 const PLATFORMS = [
   ['all', 'All platforms'],
   ['android', 'Android'],
@@ -497,10 +506,362 @@ function Economy({ b }: { b: EconomyBoard }) {
   );
 }
 
+function Funnels({ b, filters }: { b: FunnelsBoard; filters: Record<string, string> }) {
+  const custom = b.funnel === 'custom';
+  return (
+    <>
+      <nav className="row small funnel-picks" aria-label="Funnels">
+        {b.ready.map((f) => (
+          <Link
+            key={f.id}
+            href={`/analytics?${new URLSearchParams({ ...filters, board: 'funnels', funnel: f.id }).toString()}`}
+            aria-current={b.funnel === f.id ? 'page' : undefined}
+          >
+            {f.title}
+          </Link>
+        ))}
+      </nav>
+      <form className="inline filters" method="get" action="/analytics" data-testid="funnel-builder">
+        <input type="hidden" name="board" value="funnels" />
+        <input type="hidden" name="funnel" value="custom" />
+        {Object.entries(filters).map(([key, value]) => (
+          <input key={key} type="hidden" name={key} value={value} />
+        ))}
+        <label>
+          Events in order, with commas
+          <input
+            name="steps"
+            list="funnel-events"
+            size={48}
+            defaultValue={custom ? b.steps.map((s) => s.events[0]).join(',') : ''}
+            placeholder="store_viewed,purchase_started,purchase_completed"
+          />
+        </label>
+        <datalist id="funnel-events">
+          {b.events.map((e) => (
+            <option key={e} value={e} />
+          ))}
+        </datalist>
+        <label>
+          Within (hours)
+          <input type="number" name="window" min={1} max={168} defaultValue={b.window_hours} />
+        </label>
+        <button type="submit">Build</button>
+      </form>
+      <section className="card">
+        <h2>
+          {custom ? 'Your funnel' : (b.ready.find((f) => f.id === b.funnel)?.title ?? b.funnel)} · within{' '}
+          {b.window_hours} hours of the first step
+        </h2>
+        <table data-testid="funnel">
+          <thead>
+            <tr>
+              <th>Step</th>
+              <th>Players</th>
+              <th>Of the first step</th>
+              <th>Of the step before</th>
+            </tr>
+          </thead>
+          <tbody>
+            {b.steps.map((s, i) => (
+              <tr key={`${i}-${s.label}`}>
+                <td>
+                  {i + 1}. {s.label}
+                  {s.events.length > 1 || custom ? null : <div className="muted small">{s.events[0]}</div>}
+                  {s.events.length > 1 ? <div className="muted small">{s.events.join(' or ')}</div> : null}
+                </td>
+                <td>{n(s.players)}</td>
+                <td>{pct(s.of_first)}</td>
+                <td>{pct(s.of_previous)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <BarList
+          rows={b.steps.map((s, i) => ({ label: `${i + 1}. ${s.label}`, value: s.players }))}
+          empty="Nobody yet."
+        />
+      </section>
+    </>
+  );
+}
+
+function Content({ b }: { b: ContentBoard }) {
+  const s = b.summary;
+  return (
+    <>
+      <div className="tiles six">
+        <Tile
+          title="Answers"
+          value={n(s.answers)}
+          note={`${n(s.questions_played)} questions`}
+          testId="answers"
+        />
+        <Tile title="Right" value={pct(s.correct_rate)} note="of all answers" />
+        <Tile
+          title="Reports"
+          value={n(s.reports)}
+          note={s.reports_per_1k === null ? undefined : `${one(s.reports_per_1k)} per 1,000 answers`}
+          testId="reports"
+        />
+        <Tile
+          title="Too easy"
+          value={n(s.too_easy)}
+          note="90% or more right, 30+ answers"
+          testId="too-easy"
+        />
+        <Tile
+          title="Too hard"
+          value={n(s.too_hard)}
+          note="15% or fewer right, 30+ answers"
+          testId="too-hard"
+        />
+      </div>
+      <section className="card">
+        <h2>By category</h2>
+        {b.categories.length === 0 ? (
+          <p className="muted small">No answers in this range.</p>
+        ) : (
+          <table data-testid="content-categories">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Answers</th>
+                <th>Right</th>
+                <th>Time to answer</th>
+                <th>Reports</th>
+              </tr>
+            </thead>
+            <tbody>
+              {b.categories.map((c) => (
+                <tr key={c.category}>
+                  <td>{c.category}</td>
+                  <td>{n(c.answers)}</td>
+                  <td>{pct(c.correct_rate)}</td>
+                  <td>{one(c.avg_ms / 1000)} s</td>
+                  <td>{n(c.reports)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+      <section className="card">
+        <h2>Most played questions</h2>
+        {b.questions.length === 0 ? (
+          <p className="muted small">No answers in this range.</p>
+        ) : (
+          <table data-testid="content-questions">
+            <thead>
+              <tr>
+                <th>Question</th>
+                <th>Plays</th>
+                <th>Right</th>
+                <th>Time</th>
+                <th>Reports</th>
+              </tr>
+            </thead>
+            <tbody>
+              {b.questions.map((q) => (
+                <tr key={q.id}>
+                  <td>
+                    <Link href={`/questions/${q.id}`}>{q.text}</Link>
+                    <div className="muted small">
+                      {q.category} · difficulty {q.difficulty}
+                      {q.flag === 'too_easy' ? <span className="badge warn">too easy</span> : null}
+                      {q.flag === 'too_hard' ? <span className="badge warn">too hard</span> : null}
+                    </div>
+                  </td>
+                  <td>{n(q.plays)}</td>
+                  <td>{pct(q.correct_rate)}</td>
+                  <td>{one(q.avg_ms / 1000)} s</td>
+                  <td>{n(q.reports)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <p className="muted small">Reports come from every platform.</p>
+      </section>
+    </>
+  );
+}
+
+const ms = (value: number | null) => (value === null ? '—' : `${n(Math.round(value))} ms`);
+
+function Tech({ b }: { b: TechBoard }) {
+  const s = b.summary;
+  return (
+    <>
+      <p className="muted small">
+        Crash-free sessions and API latency come from Sentry once its API key is set; not on this page yet.
+      </p>
+      <div className="tiles six">
+        <Tile
+          title="Cold start"
+          value={ms(s.cold_start_p50_ms)}
+          note={`slowest tenth ${ms(s.cold_start_p90_ms)}`}
+          testId="cold-start"
+        />
+        <Tile
+          title="Sign-in codes"
+          value={pct(s.otp_success)}
+          note="verified of those sent"
+          testId="otp-success"
+        />
+        <Tile title="Pushes opened" value={pct(s.push_opened)} note="of those sent" testId="push-opened" />
+        <Tile
+          title="Back online"
+          value={pct(s.reconnected)}
+          note="connections restored of those lost"
+          testId="reconnected"
+        />
+        <Tile
+          title="Web LCP"
+          value={ms(s.web_lcp_p75_ms)}
+          note={`INP ${ms(s.web_inp_p75_ms)} · 75th percentile`}
+        />
+        <Tile
+          title="Web CLS"
+          value={s.web_cls_p75 === null ? '—' : s.web_cls_p75.toFixed(2)}
+          note="75th percentile"
+        />
+      </div>
+      <div className="grid2">
+        <section className="card">
+          <h2>Cold start by phone memory</h2>
+          <BarList
+            rows={b.cold_start_by_ram.map((x) => ({
+              label: `${x.ram} · ${ms(x.p50_ms)} middle`,
+              value: x.opens,
+            }))}
+            empty="No cold starts reported in this range."
+          />
+          <h2>Pushes</h2>
+          {b.push.length === 0 ? (
+            <p className="muted small">No pushes in this range.</p>
+          ) : (
+            <table data-testid="tech-push">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Sent</th>
+                  <th>Received</th>
+                  <th>Opened</th>
+                </tr>
+              </thead>
+              <tbody>
+                {b.push.map((p) => (
+                  <tr key={p.type}>
+                    <td>{p.type}</td>
+                    <td>{n(p.sent)}</td>
+                    <td>{n(p.received)}</td>
+                    <td>{n(p.opened)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+        <section className="card">
+          <h2>App versions</h2>
+          <BarList
+            rows={b.versions.map((v) => ({ label: `${v.platform} ${v.app_version}`, value: v.players }))}
+            empty="No versions reported in this range."
+          />
+          <h2>Sign-in codes by provider</h2>
+          <BarList
+            rows={b.otp.map((o) => ({
+              label: `${o.provider} · ${n(o.verified)} verified, ${n(o.failed)} failed`,
+              value: o.sent,
+            }))}
+            empty="No codes sent in this range."
+          />
+          <h2>Connections lost</h2>
+          <BarList
+            rows={b.connection.map((c) => ({
+              label: `${c.mode} · ${n(c.restored)} back, ${ms(c.gap_p50_ms)} gap`,
+              value: c.lost,
+            }))}
+            empty="No connections lost in this range."
+          />
+        </section>
+      </div>
+    </>
+  );
+}
+
+function Integrity({ b }: { b: IntegrityBoard }) {
+  const last = b.days.at(-1)?.day;
+  const s = b.summary;
+  return (
+    <>
+      <p className="muted small">
+        Flags from the nightly checks and moderators&apos; actions, from every platform.
+      </p>
+      <div className="tiles four">
+        <Tile
+          title="Flags raised"
+          value={n(s.flags)}
+          note={`${n(s.actioned)} acted on · ${n(s.dismissed)} dismissed`}
+          testId="flags"
+        />
+        <Tile
+          title="Open now"
+          value={n(s.open_now)}
+          note="waiting in the integrity queue"
+          testId="open-now"
+        />
+        <Tile title="Moderator actions" value={n(s.actions)} testId="actions" />
+      </div>
+      <div className="grid2">
+        <section className="card">
+          <h2>Flags a day</h2>
+          <DayBars
+            rows={b.days.map((d) => ({ day: d.day, value: d.flags }))}
+            label="Flags a day"
+            lastLabel={last?.slice(5)}
+          />
+          <h2>Actions a day</h2>
+          <DayBars
+            rows={b.days.map((d) => ({ day: d.day, value: d.actions }))}
+            label="Actions a day"
+            lastLabel={last?.slice(5)}
+          />
+        </section>
+        <section className="card">
+          <h2>Flags by kind</h2>
+          <BarList
+            rows={b.kinds.map((k) => ({
+              label: `${k.kind} · ${n(k.actioned)} acted on, ${n(k.dismissed)} dismissed`,
+              value: k.flags,
+            }))}
+            testId="flag-kinds"
+            empty="No flags in this range."
+          />
+          <h2>Actions</h2>
+          <BarList
+            rows={b.actions.map((a) => ({ label: a.action, value: a.count }))}
+            empty="No actions in this range."
+          />
+        </section>
+      </div>
+    </>
+  );
+}
+
 export default async function Analytics({
   searchParams,
 }: {
-  searchParams: Promise<{ board?: string; from?: string; to?: string; platform?: string }>;
+  searchParams: Promise<{
+    board?: string;
+    from?: string;
+    to?: string;
+    platform?: string;
+    funnel?: string;
+    steps?: string;
+    window?: string;
+  }>;
 }) {
   const asked = await searchParams;
   const me = await adminApi<AdminProfile>('/admin/me');
@@ -513,7 +874,15 @@ export default async function Analytics({
     ...(asked.to ? { to: asked.to } : {}),
     ...(platform !== 'all' ? { platform } : {}),
   };
-  const query = new URLSearchParams(filters).toString();
+  const funnel =
+    board === 'funnels'
+      ? {
+          ...(asked.funnel ? { funnel: asked.funnel } : {}),
+          ...(asked.steps ? { steps: asked.steps } : {}),
+          ...(asked.window ? { window: asked.window } : {}),
+        }
+      : {};
+  const query = new URLSearchParams({ ...filters, ...funnel }).toString();
 
   let data: AnalyticsResponse;
   try {
@@ -543,6 +912,9 @@ export default async function Analytics({
       </nav>
       <form className="inline filters" method="get" action="/analytics">
         <input type="hidden" name="board" value={board} />
+        {Object.entries(funnel).map(([key, value]) => (
+          <input key={key} type="hidden" name={key} value={value} />
+        ))}
         <label>
           From
           <input type="date" name="from" defaultValue={data.from} />
@@ -573,6 +945,10 @@ export default async function Analytics({
       {data.board === 'gameplay' ? <Gameplay b={data} platform={platform} /> : null}
       {data.board === 'monetisation' ? <Monetisation b={data} /> : null}
       {data.board === 'economy' ? <Economy b={data} /> : null}
+      {data.board === 'funnels' ? <Funnels b={data} filters={filters} /> : null}
+      {data.board === 'content' ? <Content b={data} /> : null}
+      {data.board === 'tech' ? <Tech b={data} /> : null}
+      {data.board === 'integrity' ? <Integrity b={data} /> : null}
     </>
   );
 }

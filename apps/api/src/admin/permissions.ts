@@ -39,6 +39,9 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'analytics.kpi',
     'analytics.product',
     'analytics.money',
+    'analytics.content',
+    'analytics.tech',
+    'analytics.integrity',
   ],
   admin: [
     ...PLAYER_SUPPORT,
@@ -55,6 +58,9 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'analytics.kpi',
     'analytics.product',
     'analytics.money',
+    'analytics.content',
+    'analytics.tech',
+    'analytics.integrity',
   ],
   dpo: [
     ...PLAYER_SUPPORT.filter((p) => p !== 'players.support'),
@@ -64,8 +70,24 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
   ],
   support: PLAYER_SUPPORT,
   // Moderators see players masked only.
-  moderator: ['players.search', 'players.view', 'overview.view', 'live.manage', 'players.moderate'],
-  analyst: ['content.view', 'overview.view', 'analytics.kpi', 'analytics.product', 'analytics.money'],
+  moderator: [
+    'players.search',
+    'players.view',
+    'overview.view',
+    'live.manage',
+    'players.moderate',
+    'analytics.integrity',
+  ],
+  analyst: [
+    'content.view',
+    'overview.view',
+    'analytics.kpi',
+    'analytics.product',
+    'analytics.money',
+    'analytics.content',
+    'analytics.tech',
+    'analytics.integrity',
+  ],
   growth: ['overview.view', 'analytics.kpi'],
   liveops: [
     'content.view',
@@ -74,15 +96,16 @@ export const ROLE_PERMISSIONS: Record<AdminRole, readonly AdminPermission[]> = {
     'liveops.daily',
     'liveops.config',
     'analytics.product',
+    'analytics.content',
   ],
-  editor: CONTENT_ALL,
+  editor: [...CONTENT_ALL, 'analytics.content'],
   fact_checker: ['content.view', 'content.write', 'content.review'],
   // Writers see and edit their own questions only.
   writer: ['content.view', 'content.write'],
   finance: ['overview.view', 'commerce.view', 'analytics.money'],
   sponsor_manager: [],
   // On call: the live numbers and rooms (doc 18 §6), and the kill switches (§8).
-  engineer: ['overview.view', 'live.manage', 'liveops.flags'],
+  engineer: ['overview.view', 'live.manage', 'liveops.flags', 'analytics.tech'],
   viewer: ['overview.view', 'analytics.kpi'],
 };
 
