@@ -132,6 +132,13 @@ export const routes = {
       `/admin/integrity${status ? `?status=${encodeURIComponent(status)}` : ''}`,
     integrityReview: (id: number) => `/admin/integrity/${id}`,
     /** LiveOps: flags, kill switches and the status banner (step 2.7c). */
+    /** The Daily scheduler (step 2.7f). */
+    dailyCalendar: () => '/admin/daily',
+    dailyPlan: () => '/admin/daily/plan',
+    daily: (date: string) => `/admin/daily/${encodeURIComponent(date)}`,
+    dailyCandidates: (date: string, slot: number) =>
+      `/admin/daily/${encodeURIComponent(date)}/candidates?slot=${slot}`,
+    dailySwap: (date: string) => `/admin/daily/${encodeURIComponent(date)}/swap`,
     flags: () => '/admin/flags',
     flag: (key: string) => `/admin/flags/${encodeURIComponent(key)}`,
     banner: () => '/admin/banner',

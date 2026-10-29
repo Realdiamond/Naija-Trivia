@@ -52,13 +52,15 @@ export async function dailyById(db: Db, id: number): Promise<DailyRow | null> {
 /**
  * The Daily for `date`, picked now if nobody has yet. Its number counts calendar days from the
  * first Daily, so a day without one still moves the count on. Several callers at once end up
- * with the same row. Null when there are too few live questions.
+ * with the same row. Null when there are too few live questions. One planned ahead in the
+ * console starts unlocked, so LiveOps can still swap its questions (step 2.7f).
  */
 export async function ensureDaily(
   pool: Pool,
   log: FastifyBaseLogger,
   date: string,
   random: () => number = Math.random,
+  locked = true,
 ): Promise<DailyRow | null> {
   const existing = await dailyByDate(pool, date);
   if (existing) return existing;
@@ -72,9 +74,9 @@ export async function ensureDaily(
   if (reused > 0) log.warn({ date, reused }, 'Daily reuses questions from the last year: add more questions');
   await pool.query(
     `INSERT INTO daily_challenges (id, play_date, question_ids, locked)
-     SELECT COALESCE((SELECT max(id) + ($2::date - max(play_date)) FROM daily_challenges), 1), $2::date, $1, true
+     SELECT COALESCE((SELECT max(id) + ($2::date - max(play_date)) FROM daily_challenges), 1), $2::date, $1, $3
      ON CONFLICT DO NOTHING`,
-    [ids, date],
+    [ids, date, locked],
   );
   return dailyByDate(pool, date);
 }
@@ -83,7 +85,7 @@ export async function ensureDaily(
  * Live, family-safe multiple-choice or true/false questions in active categories (everyone gets
  * the same Daily, 13–17s included), with when each was last in a Daily.
  */
-async function dailyCandidates(db: Db, date: string): Promise<DailyCandidate[]> {
+export async function dailyCandidates(db: Db, date: string): Promise<DailyCandidate[]> {
   const result = await db.query<{
     id: string;
     category: string;

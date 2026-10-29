@@ -306,6 +306,35 @@ test('a moderator warns a player and bans them for a week, with reasons', async 
   await expect(page.getByTestId('mod-error')).toContainText('needs an admin');
 });
 
+test('LiveOps plans the Dailies and swaps a question in one, with a reason', async ({ page }) => {
+  const email = `e2e-liveops-${randomInt(1e9)}@whosabi.ng`;
+  addStaff(email, 'liveops');
+  await page.goto('/login');
+  await page.getByTestId('dev-email').fill(email);
+  await page.getByTestId('dev-sign-in').click();
+  await page.getByRole('link', { name: 'Daily', exact: true }).click();
+  await expect(page).toHaveURL(/\/daily$/);
+
+  // The e2e database starts empty of Dailies: plan the month.
+  await page.getByTestId('plan-reason').fill('E2E: plan the month');
+  await page.getByTestId('plan').click();
+  await expect(page.getByTestId('plan-done')).toContainText('Planned');
+  const calendar = page.getByTestId('daily-calendar');
+  await expect(calendar.getByText('Not planned')).toHaveCount(0);
+
+  // Three days on is still open: swap its third question.
+  const later = new Date(Date.now() + 3 * 86_400_000 + 3_600_000).toISOString().slice(0, 10);
+  await page.goto(`/daily/${later}`);
+  const before = await page.getByTestId('slot-3').locator('b').first().textContent();
+  await page.getByTestId('swap-3').click();
+  const first = page.getByTestId('slot-3').locator('.candidate').first();
+  const replacement = await first.locator('b').first().textContent();
+  await first.locator('input[name="reason"]').fill('E2E: too close to last week');
+  await first.getByRole('button', { name: 'Use this one' }).click();
+  await expect(page.getByTestId('slot-3').locator('b').first()).toHaveText(replacement!);
+  expect(replacement).not.toBe(before);
+});
+
 test('someone not on the staff list is turned away', async ({ page }) => {
   await page.goto('/login');
   await page.getByTestId('dev-email').fill('stranger@example.com');

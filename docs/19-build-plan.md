@@ -448,6 +448,15 @@ Doc 10 §2, doc 18 §12.
 - Left for later: the Daily's answers, multi-accounting by device, collusion rings, ad reward abuse and the Play Integrity verdict
 - ✅ Tests: game rules (each check's thresholds and scores); the API (a bot-like reader, a faked clock and a tab-hider flagged and an honest player not, on the right night only, once a night, once a week, with the staff alert)
 
+### Step 2.7f · The Daily scheduler ✅
+Doc 18 §11.
+
+- ✅ The console's **Daily** page for owners, admins and LiveOps (`liveops.daily`): the next 30 days, each with its number, whether it is planned, fixed or open, how many played today's, and its categories from the easiest question to the boss
+- ✅ **Plan the next 30 days** in one go, with a reason: every missing Daily is picked as the game would pick it, numbered by calendar day. Days after tomorrow, and tomorrow until 22:00 WAT, stay open; the 23:00 job fixes tomorrow as before
+- ✅ **A day's preview**: exactly the seven questions players get (options in the order written, the right one marked, the fact), each with how it has done and when it was last in a Daily. **Swap** any question for one that fits (live, family-safe, in an open category, not already in that Daily; the same category and level first), with a reason in the audit log, until 22:00 WAT the day before
+- Left for later in 2.7: remote config with history and rollback, experiments, Home banners and events
+- ✅ Tests: game rules (the 22:00 cut-off); the API (planning 30 days numbered in order, today fixed and later days open, planning again does nothing; candidates, a swap with its audit entry, refusals for a repeat, a question that doesn't fit, today and tomorrow after 22:00; who may); the console in the browser (LiveOps plans the month and swaps a question)
+
 | Step | Scope | Main docs |
 |---|---|---|
 | 2.1 Daily & leaderboards ✅ | Daily Sabi Challenge, share grid, streaks and freezes, global/state/friends leaderboards, nightly snapshots | PRD US-8, TRD §4.5, §5.5, API §2.6 |
@@ -456,7 +465,7 @@ Doc 10 §2, doc 18 §12.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance ⬜ | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |

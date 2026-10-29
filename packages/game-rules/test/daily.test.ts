@@ -8,6 +8,7 @@ import {
   percentBeaten,
   pickDailyQuestions,
   pointsFromBoardScore,
+  dailyEditable,
   restoreStreak,
   streakOn,
   type DailyCandidate,
@@ -181,5 +182,17 @@ describe('restoreStreak', () => {
     const again = played(['2026-10-01', '2026-11-08']);
     expect(restoreStreak(again, '2026-11-09', { streak: 1, lastPlayDate: '2026-10-01' })).toBeNull();
     expect(restoreStreak(NEW_STREAK, '2026-11-09', null)).toBeNull();
+  });
+});
+
+describe('dailyEditable', () => {
+  // 2 November 2026, as WAT hours.
+  const at = (hour: number, day = 2) => Date.UTC(2026, 10, day, hour - 1, 0);
+  it('lets a Daily change until 22:00 WAT the day before, never on its day or after', () => {
+    expect(dailyEditable('2026-11-05', at(23))).toBe(true);
+    expect(dailyEditable('2026-11-03', at(21))).toBe(true);
+    expect(dailyEditable('2026-11-03', at(22))).toBe(false);
+    expect(dailyEditable('2026-11-02', at(9))).toBe(false);
+    expect(dailyEditable('2026-11-01', at(9))).toBe(false);
   });
 });

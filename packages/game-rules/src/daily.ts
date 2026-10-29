@@ -3,7 +3,7 @@
  * a share grid that gives no answers away, a streak that survives one missed day a week, and
  * the order of the day's leaderboard.
  */
-import { addDays, daysBetween, isoWeek, type StreakState } from './calendar';
+import { addDays, daysBetween, isoWeek, watDate, type StreakState } from './calendar';
 import { XP_REWARDS } from './progression';
 
 export const DAILY_QUESTIONS = 7;
@@ -75,6 +75,18 @@ export function streakOn(state: StreakState, today: string): StreakView {
   if (gap <= 0) return { ...view, current: state.current, playedToday: true };
   if (gap === 1 || (gap === 2 && freezesLeft > 0)) return { ...view, current: state.current };
   return view;
+}
+
+/** LiveOps can swap a planned Daily's questions until 22:00 WAT the day before (doc 18 §11). */
+export const DAILY_EDIT_CUTOFF_HOUR = 22;
+export const DAILY_PLAN_DAYS = 30;
+
+/** Whether a Daily on `playDate` can still change at `now`: after today, and before tomorrow's cut-off. */
+export function dailyEditable(playDate: string, now: number): boolean {
+  const today = watDate(now);
+  const ahead = daysBetween(today, playDate);
+  if (ahead >= 2) return true;
+  return ahead === 1 && new Date(now + 3_600_000).getUTCHours() < DAILY_EDIT_CUTOFF_HOUR;
 }
 
 /** Support restores only a streak that broke recently (doc 18 §8), at most once every 30 days. */
