@@ -8,8 +8,10 @@ import Link from 'next/link';
 import {
   ANALYTICS_BOARD_PERMISSION,
   ANALYTICS_BOARDS,
+  FILTERED_BOARDS,
   routes,
   type AdminProfile,
+  type AdminSegmentsResponse,
   type AnalyticsBoard,
   type AnalyticsResponse,
   type ContentBoard,
@@ -861,6 +863,8 @@ export default async function Analytics({
     funnel?: string;
     steps?: string;
     window?: string;
+    version?: string;
+    segment?: string;
   }>;
 }) {
   const asked = await searchParams;
@@ -873,7 +877,14 @@ export default async function Analytics({
     ...(asked.from ? { from: asked.from } : {}),
     ...(asked.to ? { to: asked.to } : {}),
     ...(platform !== 'all' ? { platform } : {}),
+    // Step 2.7q: kept from board to board; only the boards in FILTERED_BOARDS use them.
+    ...(asked.version?.trim() ? { version: asked.version.trim() } : {}),
+    ...(asked.segment ? { segment: asked.segment } : {}),
   };
+  const filtered = FILTERED_BOARDS.includes(board);
+  const segments = me.permissions.includes('segments.manage')
+    ? ((await adminApi<AdminSegmentsResponse>(routes.admin.segments).catch(() => null))?.segments ?? [])
+    : [];
   const funnel =
     board === 'funnels'
       ? {
@@ -901,6 +912,10 @@ export default async function Analytics({
         <p className="muted">
           {data.from} to {data.to} (WAT)
           {data.platform === 'all' ? '' : ` · ${PLATFORMS.find(([p]) => p === data.platform)![1]}`}
+          {data.version ? ` · version ${data.version}` : ''}
+          {data.segment
+            ? ` · ${data.segment.name} (${data.segment.players.toLocaleString('en-NG')} players now)`
+            : ''}
         </p>
       </div>
       <nav className="tabs" aria-label="Dashboards">
@@ -937,8 +952,49 @@ export default async function Analytics({
             </select>
           </label>
         )}
+        {filtered ? (
+          <>
+            <label>
+              App version
+              <input
+                name="version"
+                defaultValue={asked.version ?? ''}
+                placeholder="Any"
+                size={8}
+                pattern="[0-9A-Za-z.+\-]{1,32}"
+                data-testid="filter-version"
+              />
+            </label>
+            {segments.length > 0 ? (
+              <label>
+                Segment
+                <select name="segment" defaultValue={asked.segment ?? ''} data-testid="filter-segment">
+                  <option value="">Everyone</option>
+                  {segments.map((sg) => (
+                    <option key={sg.id} value={sg.id}>
+                      {sg.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : asked.segment ? (
+              <input type="hidden" name="segment" value={asked.segment} />
+            ) : null}
+          </>
+        ) : (
+          <>
+            {asked.version ? <input type="hidden" name="version" value={asked.version} /> : null}
+            {asked.segment ? <input type="hidden" name="segment" value={asked.segment} /> : null}
+          </>
+        )}
         <button type="submit">Show</button>
       </form>
+      {!filtered && (asked.version || asked.segment) ? (
+        <p className="muted small">
+          The app version and segment narrow Engagement, Growth, Retention, Funnels and Tech health; this
+          dashboard shows everyone.
+        </p>
+      ) : null}
       {data.board === 'engagement' ? <Engagement b={data} /> : null}
       {data.board === 'growth' ? <Growth b={data} /> : null}
       {data.board === 'retention' ? <Retention b={data} /> : null}
