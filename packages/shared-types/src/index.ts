@@ -1,6 +1,7 @@
 export * from './admin';
 export * from './adminAlertRules';
 export * from './adminAnalytics';
+export * from './adminCompliance';
 export * from './adminContent';
 export * from './auth';
 export * from './common';

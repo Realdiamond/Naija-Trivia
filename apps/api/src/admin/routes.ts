@@ -31,6 +31,7 @@ import { adminContentRoutes } from './content';
 import { adminPhoneRoutes } from './phoneRoutes';
 import { isPhoneToken, phoneSessionFor, revokePhoneSession } from './phones';
 import { adminComplianceRoutes } from './compliance';
+import { adminComplianceOverviewRoutes } from './complianceOverview';
 import { adminAlertRuleRoutes } from './alertRules';
 import { adminAnalyticsRoutes } from './analytics';
 import { adminCommerceRoutes } from './commerce';
@@ -288,6 +289,7 @@ export function adminRoutes(app: FastifyInstance, deps: AppDeps): void {
   adminCommerceRoutes(app, deps, ctx);
   adminAnalyticsRoutes(app, deps, ctx);
   adminAlertRuleRoutes(app, deps, ctx);
+  adminComplianceOverviewRoutes(app, deps, ctx);
   adminModerationRoutes(app, deps, ctx);
   adminDailyRoutes(app, deps, ctx);
   adminComplianceRoutes(app, deps, ctx);

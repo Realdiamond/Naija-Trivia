@@ -522,6 +522,15 @@ Doc 18 §9 "Reports & alerts", §4 (Settings → alert rules).
 - Left for later: scheduled email reports and anomaly alerts (v1.1), alert rules on Sentry's crash-free sessions and API latency
 - ✅ Tests: the API (who may; bad rules; changes keep what isn't sent; audited); the job (crossed and back to normal, once each, on each channel; a drop on last week; too few attempts; a rule switched off; once a minute); the console in the browser (an owner adds a rule, switches it off and deletes it)
 
+### Step 2.7n · Retention, consent rates and the access review ✅
+Doc 18 §14, doc 08 §4.
+
+- ✅ **The retention job**, each night after 03:00 WAT, in batches: duel answers lose their raw timing after 180 days (the answers, points and server-accepted time stay); party games and results, Daily results, integrity flags and question reports go after 2 years; consent records 6 years after the account was deleted. Each run is recorded. Raw analytics events already go with the analytics loader; the admin audit log is kept 6 years and the app cannot delete from it
+- ✅ The console's **Compliance** page (was Data requests) for the DPO, owners and admins (`compliance.view`) gains three tabs: **Data kept** (each line of doc 08 §4 with its last run, rows removed and the oldest record still held, marked behind if that is past its time), **Consent** (each player's latest answer per purpose, as a share by platform) and **Access review** (every staff member with their roles, who granted and approved them and when they last signed in)
+- ✅ **The quarterly access review**: the DPO or an owner (`compliance.review`) records it with a note, in the audit log; the page says when the next one is due
+- Left for later: ClickHouse rows (when it arrives, M3), backups' 35 days (set on the database host)
+- ✅ Tests: the API (the job removes only what is past its time, keeps answers' points, runs once a night after 03:00 and records each rule; the overview; who may record a review); the console in the browser (the DPO checks the tabs and records a review)
+
 ### Step 2.8a · Account deletion and data requests ✅
 NDPA 2023, doc 08 §4, doc 10 §6, doc 18 §14. Step 2.8 is split; this is the first.
 
@@ -578,7 +587,7 @@ TRD §2 ("Crash / perf": Sentry), doc 18's `crash_free_sessions`.
 | 2.4 Economy & monetisation ✅ (2.4a, 2.4b, 2.4c, 2.4d) | Ledger and coins, lifelines, rewarded ads with SSV, interstitial caps, RevenueCat | GDD §5, TRD §4.7, API §2.8, doc 11 |
 | 2.5 Sharing, links & push ✅ (2.5a, 2.5b, 2.5c) | Share cards, link service (OG previews, deep links), FCM and web push | TRD §4.8, API §4–5, UX §3.3 |
 | 2.6 Content tools ✅ (2.6a, 2.6b-1, 2.6b-2, 2.6b-3) | CMS (CRUD, CSV import with validation), reports and auto-suspend, re-scoring, difficulty recalibration, `valid_until` expiry | TRD §4.2, GDD §6, doc 04, PRD US-9 |
-| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
+| 2.7 Admin MVP modules (2.7a ✅, 2.7b ✅, 2.7c ✅, 2.7d ✅, 2.7e ✅, 2.7f ✅, 2.7g ✅, 2.7h ✅, 2.7i ✅, 2.7j ✅, 2.7k ✅, 2.7l ✅, 2.7m ✅, 2.7n ✅) | Overview, Live, dashboards, Explore and segments, LiveOps (Daily scheduler, config, flags, kill switches), moderation and integrity, support, commerce, compliance, alerts | doc 18 §4–§14, PRD US-13, US-14 |
 | 2.8 Platform & compliance (2.8a ✅, 2.8b ✅, 2.8c ✅, 2.8d ✅, 2.8e ✅) | Data Saver, Sentry, account deletion and DSAR, guardian consent for 13–17s, iOS build (after the Android launch), practice packs offline, PWA | PRD F15, doc 10, TRD §4.10 |
 | 2.9 Staff on the phone ✅ (2.9a, 2.9b) | Native Google sign-in, the Staff tab (live numbers, player lookup), staff alerts by push | doc 18 |
 | 2.10 Email sign-in codes ✅ | Codes by email through Resend | TRD §4.1 |
