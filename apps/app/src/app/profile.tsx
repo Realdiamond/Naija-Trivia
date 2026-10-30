@@ -327,8 +327,8 @@ const styles = StyleSheet.create({
   select: {
     padding: 14,
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderWidth: 2,
+    borderColor: colors.inputBorder,
     backgroundColor: colors.surface,
   },
   states: { maxHeight: 240 },

@@ -7,7 +7,11 @@ import { Icon } from '../../ui/icons';
 import { Text } from '../../ui/Text';
 import { colors, radius } from '../../ui/theme';
 
-export function DailyBanner({ today }: { today: DailyToday }) {
+/**
+ * `quiet`: something else on Home is the main action (a turn waiting), so the Daily steps back to
+ * a light card instead of the solid orange one.
+ */
+export function DailyBanner({ today, quiet = false }: { today: DailyToday; quiet?: boolean }) {
   const t = useT();
   const done = today.played;
   const subtitle = done
@@ -24,7 +28,12 @@ export function DailyBanner({ today }: { today: DailyToday }) {
     <Pressable
       accessibilityRole="button"
       onPress={() => router.push(done ? `/daily/${today.id}` : '/daily/play')}
-      style={({ pressed }) => [styles.card, done && styles.done, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.card,
+        quiet && styles.quiet,
+        done && styles.done,
+        pressed && styles.pressed,
+      ]}
       testID="daily-banner"
     >
       <View style={styles.badge}>
@@ -56,6 +65,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     marginTop: 8,
   },
+  quiet: { backgroundColor: colors.accentTint },
   done: { backgroundColor: colors.primaryTint },
   pressed: { opacity: 0.88 },
   badge: {

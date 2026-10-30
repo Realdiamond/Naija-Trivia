@@ -23,7 +23,11 @@ export function afterSignIn(user: PublicUser): void {
   router.replace(user.username ? '/home' : '/profile-setup');
 }
 
-export function SignInOptions({ showCodes = true }: { showCodes?: boolean }) {
+/**
+ * `lead`: the first way in is the one filled button, the others outlines. The sign-in page turns
+ * it off while its own "Send code" is the main button.
+ */
+export function SignInOptions({ showCodes = true, lead = true }: { showCodes?: boolean; lead?: boolean }) {
   const t = useT();
   const methods = useAuthMethods();
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +45,12 @@ export function SignInOptions({ showCodes = true }: { showCodes?: boolean }) {
   const phoneOn = methods.data?.phone === true;
   const emailOn = methods.data?.email === true;
   const withGoogle = methods.data?.google === true && googleAvailable;
+  const shown = [
+    showCodes && phoneOn ? 'phone' : null,
+    withGoogle ? 'google' : null,
+    showCodes && emailOn ? 'email' : null,
+  ].filter(Boolean);
+  const main = lead ? shown[0] : null;
 
   return (
     <View style={styles.wrap}>
@@ -48,18 +58,23 @@ export function SignInOptions({ showCodes = true }: { showCodes?: boolean }) {
         <Button
           label={t('signin.phoneButton')}
           icon="phone"
+          variant={main === 'phone' ? 'primary' : 'outline'}
           onPress={() => router.push('/sign-in?with=phone')}
           testID="signin-phone"
         />
       ) : null}
       {withGoogle ? (
-        <GoogleButton label={t('signin.google')} onToken={(token) => void google(token)} />
+        <GoogleButton
+          label={t('signin.google')}
+          primary={main === 'google'}
+          onToken={(token) => void google(token)}
+        />
       ) : null}
       {showCodes && emailOn ? (
         <Button
           label={t('signin.emailButton')}
           icon="mail"
-          variant={phoneOn || withGoogle ? 'outline' : 'primary'}
+          variant={main === 'email' ? 'primary' : 'outline'}
           onPress={() => router.push('/sign-in?with=email')}
           testID="signin-email"
         />

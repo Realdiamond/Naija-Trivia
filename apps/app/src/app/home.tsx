@@ -9,7 +9,6 @@ import { useQuery } from '@tanstack/react-query';
 import { routes, type DuelSummary, type Me } from '@whosabi/shared-types';
 import { api } from '../api';
 import { signOut, updateUser, useSession } from '../auth/session';
-import { SignInOptions } from '../features/auth/SignInOptions';
 import { useDailyToday } from '../features/daily/api';
 import { DailyBanner } from '../features/daily/DailyBanner';
 import { InstallCard } from '../features/install/InstallCard';
@@ -80,6 +79,17 @@ export default function Home() {
   const theirTurn = duels.filter((d) => !d.your_turn);
   const results = done.data?.duels ?? [];
   const nothingYet = active.isSuccess && done.isSuccess && duels.length === 0 && results.length === 0;
+  // One main action (Hick's law): the turn at the top, else today's Daily, else a new challenge.
+  // Everything else on Home stays quieter than it. Chosen once both lists are in, so nothing flips.
+  const settled = active.isSuccess && (daily.isSuccess || daily.isError);
+  const dailyOpen = daily.data ? !daily.data.played : false;
+  const main: 'turn' | 'daily' | 'challenge' | null = !settled
+    ? null
+    : yourTurn.length > 0
+      ? 'turn'
+      : dailyOpen
+        ? 'daily'
+        : 'challenge';
 
   return (
     <Screen>
@@ -165,15 +175,15 @@ export default function Home() {
         .map((n) => (
           <WarningCard key={n.id} notice={n} />
         ))}
-      {daily.data ? <DailyBanner today={daily.data} /> : null}
+      {daily.data ? <DailyBanner today={daily.data} quiet={main === 'turn'} /> : null}
       <HomeBanners />
       <InstallCard />
 
       {yourTurn.length > 0 ? (
         <>
           <SectionTitle title={t('home.yourTurn')} count={yourTurn.length} />
-          {yourTurn.map((duel) => (
-            <TurnCard key={duel.id} duel={duel} />
+          {yourTurn.map((duel, i) => (
+            <TurnCard key={duel.id} duel={duel} main={i === 0} />
           ))}
         </>
       ) : null}
@@ -182,6 +192,7 @@ export default function Home() {
         <Action
           icon="swords"
           label={t('home.challenge')}
+          main={main === 'challenge'}
           onPress={() => router.push('/challenge')}
           testID="challenge"
         />
@@ -240,7 +251,13 @@ export default function Home() {
         <View style={styles.save}>
           <Text variant="heading">{t('home.saveTitle')}</Text>
           <Text variant="bodySoft">{t('home.saveBody')}</Text>
-          <SignInOptions />
+          {/* One plain button: playing stays the main thing on Home; the ways in are on the next page. */}
+          <Button
+            label={t('home.saveButton')}
+            variant="outline"
+            onPress={() => router.push('/sign-in')}
+            testID="home-save"
+          />
         </View>
       ) : null}
 
@@ -277,7 +294,8 @@ function useTimeText() {
   };
 }
 
-function TurnCard({ duel }: { duel: DuelSummary }) {
+/** `main`: the top turn, whose Play is Home's one filled button; the others are outlines. */
+function TurnCard({ duel, main }: { duel: DuelSummary; main: boolean }) {
   const t = useT();
   const timeText = useTimeText();
   const name = useOpponentName(duel);
@@ -307,7 +325,14 @@ function TurnCard({ duel }: { duel: DuelSummary }) {
           ) : null}
         </>
       }
-      right={<Button label={t('home.play')} size="medium" onPress={() => router.push(`/duel/${duel.id}`)} />}
+      right={
+        <Button
+          label={t('home.play')}
+          size="medium"
+          variant={main ? 'primary' : 'outline'}
+          onPress={() => router.push(`/duel/${duel.id}`)}
+        />
+      }
     />
   );
 }
@@ -377,12 +402,15 @@ function Action({
   soon = false,
   paused = false,
   busy = false,
+  main = false,
   testID,
 }: {
   icon: IconName;
   label: string;
   onPress?: () => void;
   soon?: boolean;
+  /** Home's main action when nothing else is waiting: the one filled tile. */
+  main?: boolean;
   /** Switched off by staff for now (a kill switch, step 2.7c). */
   paused?: boolean;
   busy?: boolean;
@@ -397,11 +425,16 @@ function Action({
       accessibilityState={{ disabled: Boolean(note) || busy, busy }}
       disabled={Boolean(note) || busy}
       onPress={onPress}
-      style={({ pressed }) => [styles.action, note && styles.actionSoon, (pressed || busy) && styles.pressed]}
+      style={({ pressed }) => [
+        styles.action,
+        main && styles.actionMain,
+        note && styles.actionSoon,
+        (pressed || busy) && styles.pressed,
+      ]}
       testID={testID}
     >
-      <Icon name={icon} size={28} color={colors.primaryInk} />
-      <Text variant="label" align="center">
+      <Icon name={icon} size={28} color={main ? colors.white : colors.primaryInk} />
+      <Text variant="label" align="center" color={main ? colors.white : colors.ink}>
         {label}
       </Text>
       {note ? <Text variant="caption">{note}</Text> : null}
@@ -430,8 +463,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 6,
     borderRadius: radius.card,
-    backgroundColor: colors.primaryTint,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
+  actionMain: { backgroundColor: colors.primary, borderColor: colors.primary },
   actionSoon: { opacity: 0.6 },
   error: { marginTop: 8 },
   pressed: { opacity: 0.85 },

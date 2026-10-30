@@ -221,16 +221,8 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
               {error ?? random.error}
             </Text>
           ) : null}
+          {/* Playing again comes first and is the one filled button; sharing is the next thing. */}
           <View style={styles.actions}>
-            {played ? (
-              <SharePicture
-                path={routes.shareDuelCard(duel.id)}
-                fileName={`whosabi-duel-${duel.id}.png`}
-                text={t('share.duelText')}
-                onShared={() => trackEvent('invite_shared', { channel: 'status', context: 'duel' })}
-                testID="duel-share-picture"
-              />
-            ) : null}
             {canRematch ? (
               <Button
                 label={t('duel.rematch')}
@@ -245,6 +237,16 @@ export function DuelResult({ duel, onReview }: { duel: DuelView; onReview: () =>
                 loading={random.busy}
                 onPress={() => void random.start()}
                 testID="new-random"
+              />
+            ) : null}
+            {played ? (
+              <SharePicture
+                path={routes.shareDuelCard(duel.id)}
+                fileName={`whosabi-duel-${duel.id}.png`}
+                text={t('share.duelText')}
+                onShared={() => trackEvent('invite_shared', { channel: 'status', context: 'duel' })}
+                variant={canRematch || bot ? 'outline' : 'accent'}
+                testID="duel-share-picture"
               />
             ) : null}
             {played ? <Button label={t('duel.review')} variant="outline" onPress={onReview} /> : null}

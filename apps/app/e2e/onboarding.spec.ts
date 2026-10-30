@@ -77,3 +77,31 @@ test('a returning guest goes straight home and can play again', async ({ page })
   await page.getByTestId('play-again').click();
   await expect(page.getByText('Question 1 of 3')).toBeVisible();
 });
+
+test("sign-in says what's wrong with a number or email, and Home's guest card leads there", async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByTestId('start').click();
+  await playTasteTest(page);
+  await page.getByTestId('later').click();
+  await expect(page.getByTestId('greeting')).toHaveText('Hi, Guest');
+
+  // Home keeps playing as its main thing: one plain button to the ways in.
+  await page.getByTestId('home-save').click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+
+  // "Send code" says what's missing instead of staying greyed out, and the message goes once it's right.
+  await page.getByTestId('phone').fill('0803 123');
+  await page.getByTestId('send-code').click();
+  await expect(page.getByText(/not a Nigerian mobile number yet/)).toBeVisible();
+  await page.getByTestId('phone').fill('0803 123 4567');
+  await expect(page.getByText(/not a Nigerian mobile number yet/)).toBeHidden();
+
+  await page.getByTestId('switch-channel').click();
+  await page.getByTestId('email').fill('you@example');
+  await page.getByTestId('email').blur();
+  await expect(page.getByText('Check the email address. It looks like you@example.com.')).toBeVisible();
+  await page.getByTestId('email').fill('you@example.com');
+  await expect(page.getByText('Check the email address. It looks like you@example.com.')).toBeHidden();
+});

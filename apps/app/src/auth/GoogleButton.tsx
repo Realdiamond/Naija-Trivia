@@ -12,7 +12,13 @@ interface GoogleId {
   initialize(options: { client_id: string; callback: (response: { credential: string }) => void }): void;
   renderButton(
     element: HTMLElement,
-    options: { theme: 'outline'; size: 'large'; text: 'continue_with'; shape: 'rectangular'; width: number },
+    options: {
+      theme: 'outline' | 'filled_blue';
+      size: 'large';
+      text: 'continue_with';
+      shape: 'rectangular';
+      width: number;
+    },
   ): void;
 }
 
@@ -23,7 +29,14 @@ export async function googleIdToken(): Promise<string | null> {
   throw new Error('Google sign-in by picker is for the phone app');
 }
 
-export function GoogleButton({ onToken, label }: { onToken: (idToken: string) => void; label: string }) {
+interface Props {
+  onToken: (idToken: string) => void;
+  label: string;
+  /** The main way in on this screen: Google's filled button rather than its outline. */
+  primary?: boolean;
+}
+
+export function GoogleButton({ onToken, label, primary = false }: Props) {
   const host = useRef<ComponentRef<typeof View>>(null);
   const callback = useRef(onToken);
   const [failed, setFailed] = useState(false);
@@ -41,8 +54,10 @@ export function GoogleButton({ onToken, label }: { onToken: (idToken: string) =>
         if (cancelled || !element) return;
         const id = (window as unknown as { google: { accounts: { id: GoogleId } } }).google.accounts.id;
         id.initialize({ client_id: GOOGLE_WEB_CLIENT_ID, callback: (r) => callback.current(r.credential) });
+        // Drawn again if it becomes (or stops being) the main button: never two side by side.
+        element.replaceChildren();
         id.renderButton(element, {
-          theme: 'outline',
+          theme: primary ? 'filled_blue' : 'outline',
           size: 'large',
           text: 'continue_with',
           shape: 'rectangular',
@@ -53,10 +68,10 @@ export function GoogleButton({ onToken, label }: { onToken: (idToken: string) =>
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [primary]);
 
   if (!googleAvailable) return null;
-  if (failed) return <Button label={label} variant="outline" disabled />;
+  if (failed) return <Button label={label} variant={primary ? 'primary' : 'outline'} disabled />;
   return <View ref={host} style={styles.host} />;
 }
 
