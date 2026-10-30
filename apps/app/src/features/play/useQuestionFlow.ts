@@ -47,6 +47,8 @@ export function useQuestionFlow({ total, serve, answer, firstSeq = 1, enabled = 
   const load = useCallback(
     async (n: number) => {
       setPhase('loading');
+      // The question just answered goes, so it can't be read under the next one's counter.
+      setQuestion(null);
       setChosen(null);
       setResult(null);
       pending.current = null;

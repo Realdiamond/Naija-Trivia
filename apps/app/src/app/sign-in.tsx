@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ErrorCode } from '@whosabi/shared-types';
+import { ErrorCode, normalizeNigerianPhone } from '@whosabi/shared-types';
 import { api, ApiError, errorMessage } from '../api';
 import { captchaAvailable, captchaToken } from '../auth/captcha';
 import { googleAvailable } from '../auth/GoogleButton';
@@ -37,6 +37,9 @@ export default function SignIn() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set once the player leaves the field or taps "Send code": from then on, what's wrong shows
+  // under it until it's right (not while they are still typing it the first time).
+  const [checking, setChecking] = useState<Channel | null>(null);
   const now = useNow(step.kind === 'code');
 
   const phoneOn = methods.data?.phone === true;
@@ -45,7 +48,19 @@ export default function SignIn() {
   const channel: Channel | null =
     picked === 'email' && emailOn ? 'email' : phoneOn ? 'phone' : emailOn ? 'email' : null;
 
+  const phoneProblem =
+    checking === 'phone' && phone.trim() !== '' && !normalizeNigerianPhone(phone)
+      ? t('signin.phoneInvalid')
+      : null;
+  const emailProblem =
+    checking === 'email' && email.trim() !== '' && !looksLikeEmail(email) ? t('signin.emailInvalid') : null;
+
   const sendCode = async (via: Channel) => {
+    const ok = via === 'phone' ? normalizeNigerianPhone(phone) !== null : looksLikeEmail(email);
+    if (!ok) {
+      setChecking(via);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -171,13 +186,14 @@ export default function SignIn() {
               textContentType="telephoneNumber"
               autoComplete="tel"
               hint={t('signin.phoneHint')}
-              error={error}
+              error={phoneProblem ?? error}
+              onBlur={() => setChecking('phone')}
               testID="phone"
             />
             <Button
               label={t('signin.sendCode')}
               loading={busy}
-              disabled={phone.replace(/\D/g, '').length < 10}
+              disabled={phone.trim() === ''}
               onPress={() => void sendCode('phone')}
               testID="send-code"
             />
@@ -196,13 +212,14 @@ export default function SignIn() {
               autoCapitalize="none"
               autoCorrect={false}
               hint={t('signin.emailHint')}
-              error={error}
+              error={emailProblem ?? error}
+              onBlur={() => setChecking('email')}
               testID="email"
             />
             <Button
               label={t('signin.sendCode')}
               loading={busy}
-              disabled={!looksLikeEmail(email)}
+              disabled={email.trim() === ''}
               onPress={() => void sendCode('email')}
               testID="send-code"
             />
@@ -227,7 +244,8 @@ export default function SignIn() {
           </View>
         ) : null}
 
-        <SignInOptions showCodes={false} />
+        {/* With a code form above, its "Send code" is the main button; Google is the other way in. */}
+        <SignInOptions showCodes={false} lead={!channel} />
         {!channel ? (
           <Button label={t('taste.result.later')} variant="link" onPress={() => router.replace('/')} />
         ) : null}

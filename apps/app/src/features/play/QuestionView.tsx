@@ -3,7 +3,7 @@
  * play too: 1–4 or A–D answer, Enter continues, Esc asks to leave (FR-WEB-5).
  */
 import { useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { errorMessage } from '../../api';
 import { useT } from '../../i18n';
 import { Button } from '../../ui/Button';
@@ -118,9 +118,7 @@ export function QuestionView({ flow, overline, finishLabel, onLeave, lifelines }
         </View>
         <ProgressSegments total={total} done={done} />
 
-        {!question && phase === 'loading' ? (
-          <ActivityIndicator style={styles.loading} color={colors.primary} size="large" />
-        ) : null}
+        {!question && phase === 'loading' ? <QuestionSkeleton label={t('question.loading')} /> : null}
 
         {question ? (
           <View style={styles.body}>
@@ -178,6 +176,29 @@ export function QuestionView({ flow, overline, finishLabel, onLeave, lifelines }
   );
 }
 
+/** The question card's outline while it loads, in the same place, so nothing moves when it lands. */
+function QuestionSkeleton({ label }: { label: string }) {
+  return (
+    <View
+      style={styles.body}
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      testID="question-loading"
+    >
+      <View style={styles.skeletonText}>
+        <View style={[styles.skeletonLine, { width: '100%' }]} />
+        <View style={[styles.skeletonLine, { width: '65%' }]} />
+      </View>
+      <View style={styles.skeletonTimer} />
+      <View style={styles.options}>
+        {[0, 1, 2, 3].map((i) => (
+          <View key={i} style={styles.skeletonOption} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function Reveal({ flow, onReport }: { flow: QuestionFlow; onReport: () => void }) {
   const t = useT();
   const result = flow.result!;
@@ -228,7 +249,16 @@ const styles = StyleSheet.create({
   },
   headerText: { gap: 2, flexShrink: 1, flexGrow: 1 },
   leave: { width: 32, height: 44, justifyContent: 'center', marginLeft: -6 },
-  loading: { marginTop: 64 },
+  skeletonText: { gap: 10 },
+  skeletonLine: { height: 26, borderRadius: 8, backgroundColor: colors.sand },
+  skeletonTimer: { height: 10, borderRadius: 5, backgroundColor: colors.sand },
+  skeletonOption: {
+    minHeight: 58,
+    borderRadius: radius.card,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
   body: { gap: 20, marginTop: 24 },
   options: { gap: 12 },
   reveal: { borderRadius: radius.card, padding: 16, gap: 6 },

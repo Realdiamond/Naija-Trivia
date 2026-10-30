@@ -15,6 +15,8 @@ export const colors = {
   muted: '#5A6660',
   border: '#E8E2D2',
   borderStrong: '#D9D1BE',
+  /** The outline of a text box or picker at rest: 3.5:1 on white, so the field itself is seen (WCAG 1.4.11). */
+  inputBorder: '#858B80',
   correct: '#1DB954',
   correctInk: '#0B6B33',
   correctTint: '#E6F7EC',

@@ -37,7 +37,14 @@ export async function googleIdToken(): Promise<string | null> {
   return isSuccessResponse(result) ? result.data.idToken : null;
 }
 
-export function GoogleButton({ onToken, label }: { onToken: (idToken: string) => void; label: string }) {
+interface Props {
+  onToken: (idToken: string) => void;
+  label: string;
+  /** The main way in on this screen: a filled button. */
+  primary?: boolean;
+}
+
+export function GoogleButton({ onToken, label, primary = false }: Props) {
   const t = useT();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -63,7 +70,7 @@ export function GoogleButton({ onToken, label }: { onToken: (idToken: string) =>
     <View style={styles.root}>
       <Button
         label={label}
-        variant="outline"
+        variant={primary ? 'primary' : 'outline'}
         loading={busy}
         onPress={() => void press()}
         testID="google-sign-in"

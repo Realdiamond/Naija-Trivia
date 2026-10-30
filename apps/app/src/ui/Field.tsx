@@ -16,7 +16,7 @@ interface Props extends Omit<TextInputProps, 'style'> {
 
 export function Field({ label, hint, error, prefix, trailing, hintColor, ...input }: Props) {
   const [focused, setFocused] = useState(false);
-  const borderColor = error ? colors.wrong : focused ? colors.primary : colors.borderStrong;
+  const borderColor = error ? colors.wrong : focused ? colors.primary : colors.inputBorder;
   return (
     <View style={styles.wrap}>
       <Text variant="label">{label}</Text>

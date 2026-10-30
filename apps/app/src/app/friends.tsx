@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     minHeight: 50,
     paddingHorizontal: 16,
     borderWidth: 2,
-    borderColor: colors.borderStrong,
+    borderColor: colors.inputBorder,
     borderRadius: radius.button + 4,
     backgroundColor: colors.surface,
     fontFamily: fonts.bold,
